@@ -47,24 +47,27 @@ class MeetingRecordingSegment extends Model
 
     public function formattedDuration(): string
     {
-        $minutes = intdiv($this->duration_seconds, 60);
-        $seconds = $this->duration_seconds % 60;
+        $total = (int) ($this->duration_seconds ?? 0);
+        $minutes = intdiv($total, 60);
+        $seconds = $total % 60;
 
         return sprintf('%d:%02d', $minutes, $seconds);
     }
 
     public function formattedStartTime(): string
     {
-        $minutes = intdiv($this->start_seconds, 60);
-        $seconds = $this->start_seconds % 60;
+        $total = (int) ($this->start_seconds ?? 0);
+        $minutes = intdiv($total, 60);
+        $seconds = $total % 60;
 
         return sprintf('%d:%02d', $minutes, $seconds);
     }
 
     public function formattedEndTime(): string
     {
-        $minutes = intdiv($this->end_seconds, 60);
-        $seconds = $this->end_seconds % 60;
+        $total = (int) ($this->end_seconds ?? 0);
+        $minutes = intdiv($total, 60);
+        $seconds = $total % 60;
 
         return sprintf('%d:%02d', $minutes, $seconds);
     }

@@ -5134,14 +5134,22 @@ document.addEventListener(
                     }
                 );
 
-                const payload = await response.json();
+                const payload = await response.json().catch(() => null);
 
-                if (payload.ok && payload.segments) {
-                    listEl.innerHTML = '';
+                if (!response.ok || !payload || !payload.ok || !Array.isArray(payload.segments)) {
+                    throw new Error((payload && payload.message) || 'Failed to load segments.');
+                }
 
-                    if (countEl) {
-                        countEl.textContent = payload.segments.length + ' segment' + (payload.segments.length !== 1 ? 's' : '');
-                    }
+                listEl.innerHTML = '';
+
+                if (countEl) {
+                    countEl.textContent = payload.segments.length + ' segment' + (payload.segments.length !== 1 ? 's' : '');
+                }
+
+                if (payload.segments.length === 0) {
+                    listEl.innerHTML = '<p class="text-xs text-slate-500">No segments yet. Use Edit Audio (Cut/Trim) to cut one from this recording.</p>';
+                    return;
+                }
 
                     payload.segments.forEach(segment => {
                         const item = document.createElement('div');
@@ -5210,9 +5218,12 @@ document.addEventListener(
                             playSegmentAudio(this.dataset.audioUrl, this.closest('.meeting-segment-item'));
                         });
                     });
-                }
             } catch (e) {
                 console.error('Failed to load segments:', e);
+                if (countEl) {
+                    countEl.textContent = 'Could not load segments';
+                }
+                listEl.innerHTML = '<p class="text-xs text-red-500">Could not load segments. Please refresh the page and try again.</p>';
             }
         }
 
