@@ -6,6 +6,7 @@ use App\Mail\MeetingSummaryMail;
 use App\Models\Meeting;
 use App\Models\MeetingAuditLog;
 use App\Models\MeetingRecording;
+use App\Services\Ai\AiCredentialResolver;
 use App\Services\MeetingSummaryService;
 use App\Services\TranscriptionService;
 use Illuminate\Http\JsonResponse;
@@ -392,7 +393,8 @@ class MeetingRecordingController extends Controller
         }
         $fileSizeMb = round($fileSizeBytes / (1024 * 1024), 1);
 
-        $apiKey = $this->resolveOpenAiApiKey($user);
+        $resolvedKey = app(AiCredentialResolver::class)->resolveForUser($user, 'openai');
+        $apiKey = is_array($resolvedKey) ? (string) ($resolvedKey['api_key'] ?? '') : '';
         $openAiConfigured = $apiKey !== '';
 
         if (! $openAiConfigured) {

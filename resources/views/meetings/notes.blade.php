@@ -567,6 +567,32 @@
                                             {{ $recording->formattedDuration() }}
                                         </span>
 
+
+                                        @if($recording->audio_path && $recording->file_size_mb !== null)
+
+                                            <span
+                                                class="text-xs text-slate-500"
+                                                data-file-size-mb="{{ $recording->file_size_mb }}"
+                                            >
+                                                <i class="fa-solid fa-hard-drive mr-1"></i>
+                                                {{ number_format((float) $recording->file_size_mb, 1) }} MB
+                                            </span>
+
+                                            @if($recording->file_size_mb > 30)
+
+                                                <a
+                                                    href="{{ route('extra-requests.create') }}"
+                                                    class="apple-btn rounded-xl px-3 py-2 text-xs font-bold"
+                                                    data-top-up-link
+                                                >
+                                                    <i class="fa-solid fa-plus mr-1"></i>
+                                                    Top-up
+                                                </a>
+
+                                            @endif
+
+                                        @endif
+
                                     </div>
 
                                 </div>
@@ -2806,22 +2832,26 @@ document.addEventListener(
                 );
 
 
-                if (
-                    name === 'notes'
-                ) {
-                    history.replaceState(
-                        null,
-                        '',
-                        location.pathname
-                        + location.search
-                    );
-                } else {
-                    history.replaceState(
-                        null,
-                        '',
-                        '#'
-                        + name
-                    );
+                try {
+                    if (
+                        name === 'notes'
+                    ) {
+                        history.replaceState(
+                            null,
+                            '',
+                            location.pathname
+                            + location.search
+                        );
+                    } else {
+                        history.replaceState(
+                            null,
+                            '',
+                            '#'
+                            + name
+                        );
+                    }
+                } catch (e) {
+                    console.error('Failed to update URL for meeting tab:', e);
                 }
 
                 // Load segments when transcripts-summary tab is activated
@@ -2868,6 +2898,29 @@ document.addEventListener(
                 ? initialHash
                 : 'notes'
         );
+
+        // Safety net: if the initial activation could not trigger segment loading,
+        // load any never-attempted sections while the transcripts-summary panel is visible.
+        try {
+            const transcriptsPanel = panels.find(function (p) {
+                return p.dataset.meetingPanel === 'transcripts-summary';
+            });
+
+            if (transcriptsPanel && !transcriptsPanel.hidden) {
+                document.querySelectorAll('.meeting-segments-section').forEach(function (section) {
+                    const recordingId = section.dataset.recordingId;
+                    const stateEl = recordingId
+                        ? document.getElementById('segments-count-' + recordingId)
+                        : null;
+
+                    if (recordingId && stateEl && !stateEl.dataset.segmentsState) {
+                        refreshSegments(recordingId);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Failed to run segments load safety net:', e);
+        }
 
 
         /*
@@ -5122,15 +5175,33 @@ document.addEventListener(
         async function refreshSegments(recordingId) {
             const listEl = document.getElementById('segments-list-' + recordingId);
             const countEl = document.getElementById('segments-count-' + recordingId);
+            let abortController, timeoutId;
 
-            if (!listEl) return;
+            if (!listEl && !countEl) return;
+
+            if (countEl) {
+                countEl.dataset.segmentsState = 'loading';
+                countEl.textContent = 'Loading…';
+            }
+
+            if (!listEl) {
+                if (countEl) {
+                    countEl.textContent = '';
+                    countEl.dataset.segmentsState = 'error';
+                }
+                return;
+            }
 
             try {
+                abortController = new AbortController();
+                timeoutId = setTimeout(function () { abortController.abort(); }, 15000);
+
                 const response = await fetch(
                     @json(route('meeting-recordings.segments.index', ['recording' => '__ID__'])).replace('__ID__', recordingId),
                     {
                         credentials: 'same-origin',
                         headers: { 'Accept': 'application/json' },
+                        signal: abortController.signal,
                     }
                 );
 
@@ -5144,6 +5215,7 @@ document.addEventListener(
 
                 if (countEl) {
                     countEl.textContent = payload.segments.length + ' segment' + (payload.segments.length !== 1 ? 's' : '');
+                    countEl.dataset.segmentsState = 'loaded';
                 }
 
                 if (payload.segments.length === 0) {
@@ -5222,8 +5294,15 @@ document.addEventListener(
                 console.error('Failed to load segments:', e);
                 if (countEl) {
                     countEl.textContent = 'Could not load segments';
+                    countEl.dataset.segmentsState = 'error';
                 }
                 listEl.innerHTML = '<p class="text-xs text-red-500">Could not load segments. Please refresh the page and try again.</p>';
+            } finally {
+                if (typeof timeoutId !== 'undefined' && timeoutId) clearTimeout(timeoutId);
+                if (countEl && countEl.dataset.segmentsState === 'loading') {
+                    countEl.textContent = 'Could not load segments';
+                    countEl.dataset.segmentsState = 'error';
+                }
             }
         }
 
@@ -5451,7 +5530,7 @@ document.addEventListener(
                         <footer class="meeting-dialog-footer">
                             <button type="button" data-close-capacity-modal class="apple-btn rounded-xl px-4 py-2.5 text-sm font-bold">OK</button>
                             ${data.reason === 'quota_exceeded' || data.reason === 'file_too_large' ? `
-                                <a href="{{ route('subscription.plans') }}" class="btn-primary rounded-xl px-5 py-2.5 text-sm font-bold text-white">
+                                <a href="{{ route('subscription.show') }}" class="btn-primary rounded-xl px-5 py-2.5 text-sm font-bold text-white">
                                     <i class="fa-solid fa-plus mr-1"></i> Get More Minutes
                                 </a>
                             ` : ''}
