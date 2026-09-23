@@ -41,12 +41,11 @@ use Illuminate\Support\Facades\Route;
 | API Routes (Flutter mobile app)
 |--------------------------------------------------------------------------
 |
-| ADD this require to bootstrap/app.php's routing config, same pattern as
-| routes/admin.php — see the withRouting() closure:
+| Registered in bootstrap/app.php via withRouting():
 |
 |   ->withRouting(
 |       web: __DIR__.'/../routes/web.php',
-|       api: __DIR__.'/../routes/api.php',   <-- add this line
+|       api: __DIR__.'/../routes/api.php',
 |       commands: __DIR__.'/../routes/console.php',
 |       health: '/up',
 |   )

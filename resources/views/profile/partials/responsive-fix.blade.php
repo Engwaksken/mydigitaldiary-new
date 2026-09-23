@@ -1,6 +1,5 @@
-{{-- Compatibility include.
-The full responsive CSS now lives inside profile/edit.blade.php so this file
-can remain included by older deployments without duplicating rules. --}}
+{{-- Legacy orphan — no longer @include'd anywhere. The responsive tab CSS
+lives in profile/edit.blade.php; kept only for older external deployments. --}}
 <style>
     .profile-tabs,
     .pm-profile-tabs {

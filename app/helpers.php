@@ -51,10 +51,8 @@ if (! function_exists('format_short_money')) {
 }
 
 
-// Backward-compatible alias used by the dashboard KPI cards.
-// Some earlier dashboard patches called format_money_short() while the
-// shared helper was named format_short_money(). Keep both names valid so
-// cached/older Blade views cannot crash.
+// Compatibility alias for older call sites that used format_money_short()
+// instead of format_short_money(). No current call sites remain in-app.
 if (! function_exists('format_money_short')) {
     function format_money_short(float|int|string $amount): string
     {

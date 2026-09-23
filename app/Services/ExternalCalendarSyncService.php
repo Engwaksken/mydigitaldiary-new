@@ -20,7 +20,7 @@ class ExternalCalendarSyncService
      */
     public function syncUser(int $userId, ?Carbon $from = null, ?Carbon $to = null, ?string $provider = null, bool $includeRecurring = true): array
     {
-        // Calendar history is intentionally never imported.  Apply this at
+        // Calendar history is intentionally never imported. Apply this at
         // the service boundary so web, API, OAuth callback, and scheduled
         // sync callers all share the same lower bound.
         $from = $this->currentMonthStart($from);

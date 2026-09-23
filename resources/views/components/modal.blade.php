@@ -116,21 +116,19 @@
             dialog.showModal();
         }
 
-        // Close button inside the modal.
         var closeBtn = dialog.querySelector('[data-modal-close]');
         if (closeBtn) {
             closeBtn.addEventListener('click', function () { dialog.close(); });
         }
 
-        // Backdrop click closes (only when clicking the dialog itself, not children).
+        // Backdrop click closes when the dialog itself is the target.
         if (dialog.dataset.closeOnBackdrop === 'true') {
             dialog.addEventListener('click', function (e) {
                 if (e.target === dialog) { dialog.close(); }
             });
         }
 
-        // Escape key closes (native dialog already does this, but keep for safety).
-        // Native <dialog> handles Escape automatically.
+        // Escape is handled natively by <dialog>.
 
         // Legacy event listeners for open-modal / close-modal dispatch.
         var modalName = dialog.dataset.modalName;

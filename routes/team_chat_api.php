@@ -3,11 +3,6 @@
 use App\Http\Controllers\Api\TeamChatController;
 use Illuminate\Support\Facades\Route;
 
-/*
- * Add once to routes/api.php:
- * require __DIR__.'/team_chat_api.php';
- */
-
 Route::middleware('auth:sanctum')
     ->prefix('team-chat')
     ->group(function (): void {

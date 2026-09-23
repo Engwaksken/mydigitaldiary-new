@@ -1002,8 +1002,8 @@
 
 {{-- =============================================================
      SHARE MEETING INFORMATION MODAL
-     FIX: fixed header/footer + body-only scrolling
-============================================================== --}}
+     (fixed header/footer + body-only scrolling)
+ ============================================================== --}}
 <dialog
     id="meeting-share-dialog"
     class="meeting-share-dialog"

@@ -3,11 +3,6 @@
 use App\Http\Controllers\TeamChatController;
 use Illuminate\Support\Facades\Route;
 
-/*
- * Add once to routes/web.php:
- * require __DIR__.'/team_chat.php';
- */
-
 Route::middleware(['auth', 'verified', 'subscribed'])
     ->prefix('team-chat')
     ->name('team-chat.')

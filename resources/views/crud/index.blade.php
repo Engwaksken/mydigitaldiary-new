@@ -67,7 +67,7 @@
         </div>
     @endif
 
-    {{-- Stats cards are always visible  not tabbed  so they read like
+    {{-- Stats cards are always visible — not tabbed — so they read like
          the at-a-glance summary they're meant to be, with the Chart/Table
          tabs underneath for the more detailed views. --}}
     @if (!empty($stats))
@@ -108,13 +108,12 @@
     @endif
 
     @php
-        // Only Chart and Table are tabbed now. Table is the default active
-        // tab  visiting a module page is usually about the actual
-        // records, with the chart as a secondary, occasional-use view. If
-        // there's no chart yet, there's nothing to tab between at all 
-        // Table is still the default active tab. Tabs are now always
-        // shown (previously only when a chart existed) since Calendar is
-        // always available, regardless of whether this module has a chart.
+        // Chart and Table are tabbed; Table is the default active
+        // tab — visiting a module page is usually about the actual
+        // records, with the chart as a secondary, occasional-use view.
+        // Tabs are always shown (previously only when a chart existed)
+        // since Calendar is always available, with or without a chart.
+        // If there's no chart yet, only Table/Calendar show — no strip.
         $pmShowTabs = true;
 
         // Resolve bulk-delete support once in a normal Blade PHP block.
@@ -172,7 +171,7 @@
     @if (!empty($chart))
         @php
             // Built as a plain string here rather than nesting loop/conditional
-            // directives directly inside the aria-label="..." attribute  that
+            // directives directly inside the aria-label="..." attribute — that
             // inline-nested-directives-inside-an-attribute pattern is fragile
             // to parse and caused a real ParseError in testing.
             $chartAriaParts = [];
@@ -239,7 +238,7 @@
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                // Always shown now  a doughnut's colored
+                                // Always shown now — a doughnut's colored
                                 // slices are meaningless without a key
                                 // mapping each color back to its category,
                                 // and this used to be hidden for every
@@ -250,7 +249,7 @@
                                 position: 'bottom',
                                 labels: chartType === 'doughnut' ? {
                                     // Default doughnut legend only shows the
-                                    // label (e.g. "Groceries")  this adds
+                                    // label (e.g. "Groceries") — this adds
                                     // the actual value too (e.g.
                                     // "Groceries: 120"), so the key doubles
                                     // as a real reference, not just a color
@@ -280,7 +279,7 @@
 
             document.addEventListener('DOMContentLoaded', function () {
                 // No tabs at all (chart is the only section) means the
-                // panel is never hidden in the first place  safe to
+                // panel is never hidden in the first place — safe to
                 // initialize right away.
                 var chartPanel = document.getElementById('pm-crud-panel-chart');
                 if (chartPanel && !chartPanel.hasAttribute('hidden')) {
@@ -1074,12 +1073,12 @@
             }
         }
 
-        // Calendar tab's "click a day to add"  opens the same create
+        // Calendar tab's "click a day to add" — opens the same create
         // modal as the "Add" button (same fields, same validation), then
         // pre-fills whichever field maps to this module's date column
         // (see CrudController's editableDateFieldName()) with the clicked
         // day. Modules with no editable date field of their own (e.g.
-        // Feedback) just open the plain create modal  there's nothing to
+        // Feedback) just open the plain create modal — there's nothing to
         // pre-fill. Styled visibly smaller/lighter (.pm-dialog-quick) and
         // titled with the actual date, closer to the compact "quick add
         // event" popup Google Calendar/Teams show for this exact
@@ -1211,7 +1210,7 @@
                 // Checkbox fields render TWO inputs sharing the same name
                 // (a hidden "0" fallback + the real checkbox), so
                 // form.elements[name] is a RadioNodeList, not a single
-                // element  .value doesn't check/uncheck it correctly.
+                // element — .value doesn't check/uncheck it correctly.
                 if (el instanceof RadioNodeList) {
                     var checkbox = form.querySelector('input[type="checkbox"][name="' + name + '"]');
                     if (checkbox) { checkbox.checked = !!values[name]; }

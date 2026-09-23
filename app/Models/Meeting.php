@@ -110,7 +110,7 @@ class Meeting extends Model
     }
 
     /**
-     * Calendar imports retain one of these source markers.  A diary-created
+     * Calendar imports retain one of these source markers. A diary-created
      * meeting has no such marker. A calendar copy inherits its source type
      * through copied_from_meeting_id, even though its own source columns are
      * intentionally empty.
