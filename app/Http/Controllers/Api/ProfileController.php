@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BiometricDevice;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,11 @@ class ProfileController extends Controller
         ]);
 
         $request->user()->update(['password' => Hash::make($data['password'])]);
+
+        // A password/security change invalidates every previously trusted
+        // biometric device. The user can enrol a device again after the next
+        // successful password + OTP login.
+        BiometricDevice::where('user_id', $request->user()->id)->delete();
 
         return response()->json(['message' => 'Password updated.']);
     }

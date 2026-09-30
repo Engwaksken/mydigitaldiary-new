@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\SavingsOverviewController;
 use App\Http\Controllers\Api\DebtReminderController;
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BiometricAuthController;
 use App\Http\Controllers\Api\AdminSocialMediaController;
 use App\Http\Controllers\Api\EngagementReviewController;
 use App\Http\Controllers\Api\SocialMediaAccountController;
@@ -63,6 +64,8 @@ Route::post('login', [AuthController::class, 'login']);
 Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+Route::post('biometric/login', [BiometricAuthController::class, 'login'])
+    ->middleware('throttle:6,1');
 
 // Every route name in this group gets an 'api.' prefix — Route::apiResource()
 // auto-generates names (plans.index, incomes.index, etc.) using the exact
@@ -79,6 +82,12 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
         ->where('attachment', '[^/]+')
         ->name('support.attachment.download');
     Route::get('me', [AuthController::class, 'me']);
+
+    // Biometric enrolment stores only a revocable device credential hash.
+    // Raw fingerprint/face data never leaves the phone.
+    Route::get('biometric/status', [BiometricAuthController::class, 'status']);
+    Route::post('biometric/register', [BiometricAuthController::class, 'register']);
+    Route::delete('biometric/device', [BiometricAuthController::class, 'destroy']);
     Route::get('sync/status', [\App\Http\Controllers\Api\SyncStatusController::class, 'show']);
 
     Route::get('api-credentials', [\App\Http\Controllers\Api\ApiCredentialController::class, 'index']);
