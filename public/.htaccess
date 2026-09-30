@@ -3,6 +3,17 @@
         Options -MultiViews -Indexes
     </IfModule>
 
+    # PWA icons are addressed by the name in the manifest, so they can never
+    # be given a content hash the way Vite does. Cache them hard instead: the
+    # filenames carry a size/purpose suffix and change only when the artwork
+    # does, which is when an install should pick up a new icon anyway.
+    <IfModule mod_expires.c>
+        ExpiresActive On
+        <FilesMatch "\.(png|ico|svg|webmanifest)$">
+            ExpiresDefault "access plus 30 days"
+        </FilesMatch>
+    </IfModule>
+
     RewriteEngine On
 
     # Handle Authorization Header

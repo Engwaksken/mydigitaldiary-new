@@ -32,6 +32,7 @@ use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectTaskController;
+use App\Http\Controllers\PwaController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SavingsContributionController;
@@ -66,6 +67,23 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect()->route('dashboard');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Progressive Web App
+|--------------------------------------------------------------------------
+|
+| Public, and deliberately outside every auth and subscription middleware
+| group: a browser fetches the manifest from the <head> of the login page and
+| checks the worker script before anyone has signed in, and a PWA that cannot
+| be installed while logged out is a PWA nobody installs.
+|
+| /sw.js is a route rather than a file in public/ so its cache key and its
+| precache list are derived from the current build. See PwaController.
+|
+*/
+Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
+Route::get('/sw.js', [PwaController::class, 'serviceWorker'])->name('pwa.service-worker');
 
 // Public — reachable without an account, since it's linked from the
 // registration consent checkbox.

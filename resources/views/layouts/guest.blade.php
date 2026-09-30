@@ -20,6 +20,11 @@
     <link rel="stylesheet" href="{{ asset('css/guest.css') }}">
     <link rel="stylesheet" href="{{ asset('css/professional-forms.css') }}">
 
+    {{-- PWA install metadata. Needed here too: the manifest is fetched from the
+         login page, so without this the app cannot be installed until after the
+         user has already signed in. No banner on this layout on purpose. --}}
+    @include('partials.pwa-head')
+
     @stack('styles')
 </head>
 <body class="antialiased">

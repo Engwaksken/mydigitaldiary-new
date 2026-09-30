@@ -45,6 +45,9 @@
 
     {{-- Global professional 12-hour time controls --}}
     <link rel="stylesheet" href="{{ asset('css/time-12h.css') }}">
+
+    {{-- PWA install metadata (manifest link, theme colour, iOS icons) --}}
+    @include('partials.pwa-head')
     @stack('styles')
 </head>
 <body class="pm-professional-shell text-slate-800 {{ request()->routeIs('admin.*') ? 'pm-admin-page' : '' }}">
@@ -894,6 +897,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 })();
 </script>
+
+{{-- Install / update prompt for the installable web app --}}
+@include('partials.pwa-install')
 
 </body>
 </html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>You&rsquo;re offline &middot; My Digital Diary</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    {{--
+        Deliberately self-contained: NO Tailwind CDN, no webfont, no icon font.
+        This page is served by the service worker when the network is gone, so
+        anything it loads from a third party would be exactly as unavailable as
+        the app itself.
+    --}}
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: linear-gradient(160deg, #009688 0%, #00695C 100%);
+            color: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .pm-offline-card {
+            width: 100%;
+            max-width: 30rem;
+            padding: 2rem 1.75rem;
+            border-radius: 1.25rem;
+            background: #ffffff;
+            box-shadow: 0 1.5rem 3rem rgba(0, 53, 47, 0.28);
+            text-align: center;
+        }
+
+        .pm-offline-card img {
+            width: 4.5rem;
+            height: 4.5rem;
+            border-radius: 1rem;
+        }
+
+        h1 {
+            margin: 1.25rem 0 0.5rem;
+            font-size: 1.375rem;
+            line-height: 1.3;
+            color: #0f172a;
+        }
+
+        p {
+            margin: 0 0 1rem;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+            color: #475569;
+        }
+
+        .pm-offline-note {
+            margin-top: 1.25rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.8125rem;
+            color: #64748b;
+        }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.75rem 1.25rem;
+            border: 0;
+            border-radius: 0.75rem;
+            background: #00897B;
+            color: #ffffff;
+            font: inherit;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:hover { background: #00695C; }
+        button:focus-visible { outline: 3px solid #73BEB6; outline-offset: 2px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <main class="pm-offline-card">
+        <img src="/icons/icon-192.png" alt="" width="72" height="72">
+        <h1>You&rsquo;re offline</h1>
+        <p>
+            My Digital Diary needs a connection to load your diary, so this page
+            can&rsquo;t show your entries right now.
+        </p>
+        <button type="button" onclick="window.location.reload()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                <path d="M21 3v6h-6"></path>
+            </svg>
+            Try again
+        </button>
+        <p class="pm-offline-note">
+            Nothing is saved offline. Your diary is stored on the server, so
+            reconnecting brings back everything exactly as it was.
+        </p>
+    </main>
+</body>
+</html>

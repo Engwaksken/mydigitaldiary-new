@@ -8,6 +8,11 @@
 
     <meta name="robots" content="noindex,nofollow">
 
+    {{-- An offline navigation lands on the app's offline page, and an error
+         page can be the first thing an installed app renders. Either way the
+         manifest link has to be here for the install prompt to stay valid. --}}
+    @include('partials.pwa-head')
+
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif

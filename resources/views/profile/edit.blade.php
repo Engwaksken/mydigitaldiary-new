@@ -463,6 +463,50 @@
                     <div class="grid sm:grid-cols-2 gap-3 mt-5"><a href="{{ route('activity') }}" class="apple-btn justify-start"><i class="fa-solid fa-clock-rotate-left"></i> Activity log</a><a href="{{ route('account-data.index') }}" class="apple-btn apple-btn-primary justify-start"><i class="fa-solid fa-cloud-arrow-down"></i> Backup, Trash & Usage</a></div></div>
                 </div>
             </div>
+
+            {{-- The permanent home for the install option.
+
+                 The floating banner is deliberately temporary: it is the first
+                 thing a user dismisses. This row is the one that is still there
+                 next week, so it is also where a browser with no
+                 beforeinstallprompt (desktop Safari, Firefox) is told what to do
+                 by hand instead of being shown a button that cannot work. --}}
+            <div class="apple-surface mt-4">
+                <div class="flex items-start gap-4">
+                    <div class="apple-icon-chip light"><i class="fa-solid fa-download"></i></div>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-lg font-bold text-slate-900">Install this app</h2>
+                        <p class="text-sm text-slate-500 mt-1">Add {{ trim((string) ($siteSettings->site_name ?? '')) ?: 'My Digital Diary' }} to your home screen or computer so it opens in its own window, like an app.</p>
+
+                        <div id="pm-pwa-settings" class="mt-5">
+                            <p id="pm-pwa-settings-status" class="text-sm text-slate-600" role="status">
+                                Checking whether this browser can install it&hellip;
+                            </p>
+
+                            <div class="flex flex-wrap gap-3 mt-3">
+                                <button type="button" id="pm-pwa-settings-install" class="apple-btn apple-btn-primary justify-start" hidden>
+                                    <i class="fa-solid fa-download"></i> <span id="pm-pwa-settings-install-label">Install</span>
+                                </button>
+                                <button type="button" id="pm-pwa-settings-update" class="apple-btn justify-start" hidden>
+                                    <i class="fa-solid fa-rotate"></i> Update to the latest version
+                                </button>
+                                <button type="button" id="pm-pwa-settings-reset" class="apple-btn justify-start" hidden>
+                                    <i class="fa-solid fa-bell"></i> Show the install prompt again
+                                </button>
+                            </div>
+
+                            <details id="pm-pwa-settings-manual" class="mt-4 text-sm text-slate-600" hidden>
+                                <summary class="cursor-pointer font-medium text-slate-700">Install it by hand</summary>
+                                <ul class="mt-2 list-disc pl-5 space-y-1">
+                                    <li><strong>iPhone / iPad:</strong> open this site in Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</li>
+                                    <li><strong>Android:</strong> open the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+                                    <li><strong>Chrome / Edge on a computer:</strong> click the install icon in the address bar, or the app menu &rarr; <strong>Install My Digital Diary</strong>.</li>
+                                </ul>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </div>
 
@@ -783,6 +827,94 @@
             event.preventDefault();
             pmSelectProfileTab(tabs[nextIndex]);
         }
+    </script>
+
+    {{-- Binds the "Install this app" row above to window.pmPwa.
+
+         pwa.js is loaded by partials/pwa-install in the layout, so this waits
+         for it rather than assuming the two script tags arrived in a particular
+         order. When it never arrives — no service workers, JS off — the row is
+         removed entirely instead of leaving a dead button on the page. --}}
+    <script>
+        (function () {
+            'use strict';
+
+            function bind() {
+                var api = window.pmPwa;
+                var panel = document.getElementById('pm-pwa-settings');
+
+                if (!api) {
+                    if (panel) { panel.remove(); }
+                    return;
+                }
+
+                var status = document.getElementById('pm-pwa-settings-status');
+                var installButton = document.getElementById('pm-pwa-settings-install');
+                var installLabel = document.getElementById('pm-pwa-settings-install-label');
+                var updateButton = document.getElementById('pm-pwa-settings-update');
+                var resetButton = document.getElementById('pm-pwa-settings-reset');
+                var manual = document.getElementById('pm-pwa-settings-manual');
+
+                function render(state) {
+                    // Already installed: the row's whole job is done, and the
+                    // only thing left to say is that an update may exist.
+                    if (state.updateWaiting) {
+                        status.textContent = 'A new version is ready to install.';
+                        updateButton.hidden = false;
+                        installButton.hidden = true;
+                        resetButton.hidden = true;
+                        manual.hidden = true;
+                        return;
+                    }
+
+                    if (state.installed) {
+                        status.textContent = 'Installed. It opens from your home screen.';
+                        installButton.hidden = true;
+                        updateButton.hidden = true;
+                        resetButton.hidden = true;
+                        manual.hidden = true;
+                        return;
+                    }
+
+                    status.textContent = state.canPromptDirectly
+                        ? 'This browser can install it in one tap.'
+                        : (state.isIos
+                            ? 'On iPhone and iPad, Safari installs it from the Share menu.'
+                            : 'Your browser can install it from its own menu.');
+
+                    // Firefox and desktop Safari never fire beforeinstallprompt,
+                    // so a button here would be a control that cannot work.
+                    installButton.hidden = !state.canPromptDirectly;
+                    updateButton.hidden = true;
+                    resetButton.hidden = !state.dismissed;
+                    manual.hidden = state.canPromptDirectly && !state.isIos;
+                }
+
+                installButton.addEventListener('click', function () {
+                    api.install();
+                });
+
+                updateButton.addEventListener('click', function () {
+                    if (api.update()) {
+                        status.textContent = 'Updating… reopen the app if it does not refresh itself.';
+                        render(api.state());
+                    }
+                });
+
+                resetButton.addEventListener('click', function () {
+                    api.undismiss();
+                });
+
+                api.onChange(render);
+                render(api.state());
+            }
+
+            if (window.pmPwa) {
+                bind();
+            } else {
+                window.addEventListener('load', bind, { once: true });
+            }
+        })();
     </script>
 </div>
 @endsection
