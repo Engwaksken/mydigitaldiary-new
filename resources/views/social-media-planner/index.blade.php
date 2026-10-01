@@ -678,168 +678,162 @@
 
         <div class="pm-modal-body">
             <div class="grid gap-3 md:grid-cols-2">
-                <div class="md:col-span-2">
-                    <div class="flex items-center justify-between gap-3">
-                        <label class="text-xs font-bold">Post title</label>
-                        <button type="button"
-                                id="post-ai-generate"
-                                onclick="generateSocialPostAiDraft()"
-                                class="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-100">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            <span>AI Generate</span>
-                        </button>
+                <div class="pm-form-tabs md:col-span-2" role="tablist" aria-label="Post sections" data-pm-form-tabs>
+                    <button type="button" role="tab" id="social-post-tab-0" aria-controls="social-post-panel-0" aria-selected="true" tabindex="0" data-pm-form-tab="0" class="pm-form-tab is-active">Content</button>
+                    <button type="button" role="tab" id="social-post-tab-1" aria-controls="social-post-panel-1" aria-selected="false" tabindex="-1" data-pm-form-tab="1" class="pm-form-tab">Media &amp; Link</button>
+                    <button type="button" role="tab" id="social-post-tab-2" aria-controls="social-post-panel-2" aria-selected="false" tabindex="-1" data-pm-form-tab="2" class="pm-form-tab">Schedule &amp; Publish</button>
+                </div>
+
+                <div class="pm-form-panel md:col-span-2 grid gap-3 md:grid-cols-2" role="tabpanel" id="social-post-panel-0" aria-labelledby="social-post-tab-0" data-pm-form-panel="0">
+                    <div class="md:col-span-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="text-xs font-bold">Post title</label>
+                            <button type="button"
+                                    id="post-ai-generate"
+                                    onclick="generateSocialPostAiDraft()"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-100">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>AI Generate</span>
+                            </button>
+                        </div>
+                        <input name="title"
+                               id="post-title"
+                               required
+                               class="pm-input mt-1 w-full"
+                               placeholder="Enter the post title or topic first">
+                        <p id="post-ai-status" class="mt-1 text-[11px] text-slate-500" aria-live="polite"></p>
                     </div>
-                    <input name="title"
-                           id="post-title"
-                           required
-                           class="pm-input mt-1 w-full"
-                           placeholder="Enter the post title or topic first">
-                    <p id="post-ai-status" class="mt-1 text-[11px] text-slate-500">
-                        Enter a title, then AI Generate will create a 3–5 paragraph caption and populate the other editable post fields.
-                    </p>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="text-xs font-bold">Caption</label>
-                    <textarea name="caption"
-                              id="post-caption"
-                              rows="10"
-                              class="pm-input mt-1 w-full"
-                              placeholder="AI Generate creates 3–5 short, natural paragraphs here. Hashtags stay in the Hashtags field below."></textarea>
-                    <p class="mt-1 text-[11px] text-slate-500">
-                        AI keeps the caption short, natural and easy to read, with 3–5 brief paragraphs. Hashtags stay separate.
-                    </p>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold">Hashtags</label>
-                    <textarea name="hashtags" id="post-hashtags" rows="3" class="pm-input mt-1 w-full"></textarea>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold">Content objective</label>
-                    <input name="content_objective"
-                           id="post-content-objective"
-                           class="pm-input mt-1 w-full"
-                           placeholder="e.g. awareness, engagement, promotion">
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="text-xs font-bold">Media idea</label>
-                    <textarea name="media_idea"
-                              id="post-media-idea"
-                              rows="2"
-                              class="pm-input mt-1 w-full"
-                              placeholder="Suggested image, video or carousel idea"></textarea>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="text-xs font-bold">Call to action</label>
-                    <input name="call_to_action"
-                           id="post-call-to-action"
-                           class="pm-input mt-1 w-full"
-                           placeholder="What should the audience do next?">
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold">Schedule</label>
-                    <input type="hidden" name="scheduled_at" id="post-schedule">
-
-                    <div class="smp-schedule-trigger mt-1">
-                        <input type="text"
-                               id="post-schedule-display"
-                               class="pm-input w-full"
-                               placeholder="Choose date and time"
-                               autocomplete="off"
-                               readonly
-                               onclick="openSchedulePicker()">
-                        <span class="smp-schedule-icon">
-                            <i class="fa-regular fa-calendar"></i>
-                        </span>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Caption</label>
+                        <textarea name="caption"
+                                  id="post-caption"
+                                  rows="10"
+                                  class="pm-input mt-1 w-full"
+                                  placeholder="Write the caption, or use AI Generate"></textarea>
                     </div>
-
-                    <p class="mt-1 text-[11px] text-slate-500">
-                        One schedule only. Time is shown in 12-hour AM/PM format.
-                    </p>
-                </div>
-
-                <div class="md:col-span-2 rounded-xl border border-slate-200 p-3">
-                    <label class="text-xs font-bold">Attach image or video</label>
-                    <input type="file"
-                           name="attachment"
-                           id="post-attachment"
-                           accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
-                           class="pm-input mt-1 w-full">
-                    <p class="mt-1 text-[11px] text-slate-500">Images and videos up to 50 MB. A new upload replaces the current media.</p>
-                    <div id="new-media-preview" class="mt-2 hidden rounded-xl border border-slate-200 bg-slate-50 p-2"></div>
-                    <div id="current-media-row" class="mt-2 hidden items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs">
-                        <a id="current-media-link" href="#" target="_blank" rel="noopener" class="font-bold text-sky-700">View current media</a>
-                        <label class="flex items-center gap-2 font-bold text-rose-600">
-                            <input type="checkbox" name="remove_media" value="1" id="remove-media"> Remove
-                        </label>
+                    <div>
+                        <label class="text-xs font-bold">Hashtags</label>
+                        <textarea name="hashtags" id="post-hashtags" rows="3" class="pm-input mt-1 w-full" placeholder="#brand #launch (optional)"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold">Content objective</label>
+                        <input name="content_objective"
+                               id="post-content-objective"
+                               class="pm-input mt-1 w-full"
+                               placeholder="e.g. awareness, engagement, promotion">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Media idea</label>
+                        <textarea name="media_idea"
+                                  id="post-media-idea"
+                                  rows="2"
+                                  class="pm-input mt-1 w-full"
+                                  placeholder="Suggested image, video or carousel idea"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Call to action</label>
+                        <input name="call_to_action"
+                               id="post-call-to-action"
+                               class="pm-input mt-1 w-full"
+                               placeholder="What should the audience do next?">
                     </div>
                 </div>
 
-                <div class="md:col-span-2">
-                    <label class="text-xs font-bold">Attach link</label>
-                    <input type="url" name="link_url" id="post-link-url" placeholder="https://example.com/..." class="pm-input mt-1 w-full">
-                    <p class="mt-1 text-[11px] text-slate-500">The link is included with the post text and can be used together with an image or video.</p>
+                <div class="pm-form-panel md:col-span-2 grid gap-3 md:grid-cols-2" role="tabpanel" id="social-post-panel-1" aria-labelledby="social-post-tab-1" data-pm-form-panel="1" hidden>
+                    <div class="md:col-span-2 rounded-xl border border-slate-200 p-3">
+                        <label class="text-xs font-bold">Attach image or video</label>
+                        <input type="file"
+                               name="attachment"
+                               id="post-attachment"
+                               accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+                               class="pm-input mt-1 w-full">
+                        <div id="new-media-preview" class="mt-2 hidden rounded-xl border border-slate-200 bg-slate-50 p-2"></div>
+                        <div id="current-media-row" class="mt-2 hidden items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs">
+                            <a id="current-media-link" href="#" target="_blank" rel="noopener" class="font-bold text-sky-700">View current media</a>
+                            <label class="flex items-center gap-2 font-bold text-rose-600">
+                                <input type="checkbox" name="remove_media" value="1" id="remove-media"> Remove
+                            </label>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Attach link</label>
+                        <input type="url" name="link_url" id="post-link-url" placeholder="https://example.com/… (optional)" class="pm-input mt-1 w-full">
+                    </div>
                 </div>
 
-                <div class="md:col-span-2">
-                    <label class="text-xs font-bold">Posting method</label>
-                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                        <label class="flex items-start gap-2 rounded-xl border border-slate-200 p-3">
-                            <input type="radio"
-                                   name="posting_mode"
-                                   value="automatic"
-                                   id="posting-mode-automatic">
-                            <span>
-                                <strong class="block text-xs">Automatic posting</strong>
-                                <span class="block text-[11px] text-slate-500">
-                                    App posts at the scheduled time when the selected account has authorised API/provider access. WhatsApp Status/Channel requires a configured automation provider.
-                                </span>
+                <div class="pm-form-panel md:col-span-2 grid gap-3 md:grid-cols-2" role="tabpanel" id="social-post-panel-2" aria-labelledby="social-post-tab-2" data-pm-form-panel="2" hidden>
+                    <div>
+                        <label class="text-xs font-bold">Schedule</label>
+                        <input type="hidden" name="scheduled_at" id="post-schedule">
+
+                        <div class="smp-schedule-trigger mt-1">
+                            <input type="text"
+                                   id="post-schedule-display"
+                                   class="pm-input w-full"
+                                   placeholder="Choose date and time"
+                                   autocomplete="off"
+                                   readonly
+                                   onclick="openSchedulePicker()">
+                            <span class="smp-schedule-icon">
+                                <i class="fa-regular fa-calendar"></i>
                             </span>
-                        </label>
-
-                        <label class="flex items-start gap-2 rounded-xl border border-slate-200 p-3">
-                            <input type="radio"
-                                   name="posting_mode"
-                                   value="manual"
-                                   id="posting-mode-manual"
-                                   checked>
-                            <span>
-                                <strong class="block text-xs">Remind me to post</strong>
-                                <span class="block text-[11px] text-slate-500">
-                                    Move the item to Ready to Post and send a reminder.
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Posting method</label>
+                        <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                            <label class="flex items-start gap-2 rounded-xl border border-slate-200 p-3">
+                                <input type="radio"
+                                       name="posting_mode"
+                                       value="automatic"
+                                       id="posting-mode-automatic">
+                                <span>
+                                    <strong class="block text-xs">Automatic posting</strong>
+                                    <span class="block text-[11px] text-slate-500">
+                                        Posts at the scheduled time from a connected account.
+                                    </span>
                                 </span>
-                            </span>
-                        </label>
+                            </label>
+
+                            <label class="flex items-start gap-2 rounded-xl border border-slate-200 p-3">
+                                <input type="radio"
+                                       name="posting_mode"
+                                       value="manual"
+                                       id="posting-mode-manual"
+                                       checked>
+                                <span>
+                                    <strong class="block text-xs">Remind me to post</strong>
+                                    <span class="block text-[11px] text-slate-500">
+                                        You post it yourself after a reminder.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Platforms</label>
+                        <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        @foreach([
+                            'instagram' => 'Instagram',
+                            'facebook' => 'Facebook',
+                            'x' => 'X (Twitter)',
+                            'tiktok' => 'TikTok',
+                            'linkedin' => 'LinkedIn',
+                            'whatsapp_status' => 'WhatsApp Status',
+                            'whatsapp_channel' => 'WhatsApp Channel',
+                        ] as $value => $label)
+                            <label class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-bold">
+                                <input type="checkbox"
+                                       name="platforms[]"
+                                       value="{{ $value }}"
+                                       class="platform-checkbox">
+                                {{ $label }}
+                            </label>
+                        @endforeach
+                        </div>
                     </div>
                 </div>
 
-                <div class="md:col-span-2">
-                    <label class="text-xs font-bold">Platforms</label>
-                    <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    @foreach([
-                        'instagram' => 'Instagram',
-                        'facebook' => 'Facebook',
-                        'x' => 'X (Twitter)',
-                        'tiktok' => 'TikTok',
-                        'linkedin' => 'LinkedIn',
-                        'whatsapp_status' => 'WhatsApp Status',
-                        'whatsapp_channel' => 'WhatsApp Channel',
-                    ] as $value => $label)
-                        <label class="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-xs font-bold">
-                            <input type="checkbox"
-                                   name="platforms[]"
-                                   value="{{ $value }}"
-                                   class="platform-checkbox">
-                            {{ $label }}
-                        </label>
-                    @endforeach
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -856,6 +850,7 @@
     </form>
 </dialog>
 
+@include('partials.form-tabs')
 
 <dialog id="social-schedule-picker" class="smp-picker-dialog">
     <div class="border-b border-slate-100 px-4 py-4">

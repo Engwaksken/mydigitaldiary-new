@@ -15,20 +15,20 @@ class PersonalGoalController extends CrudController
     protected string $dateField = 'target_date';
 
     protected array $fields = [
-        ['name'=>'module','label'=>'Life Area','type'=>'select','required'=>true,'options'=>[
+        ['tab'=>'Goal','name'=>'module','label'=>'Life Area','type'=>'select','required'=>true,'options'=>[
             'finance'=>'Finance','savings'=>'Savings','education'=>'Education','spiritual'=>'Spiritual Growth','health'=>'Health & Self-care','exercise'=>'Exercise & Fitness','diet'=>'Diet & Nutrition','productivity'=>'Productivity','projects'=>'Projects','personal'=>'Personal Development'
         ]],
-        ['name'=>'title','label'=>'Goal','type'=>'text','required'=>true],
-        ['name'=>'description','label'=>'Why this matters','type'=>'textarea'],
-        ['name'=>'start_date','label'=>'Start Date','type'=>'date'],
-        ['name'=>'target_date','label'=>'Target Date','type'=>'date'],
-        ['name'=>'target_value','label'=>'Target Value (optional)','type'=>'number'],
-        ['name'=>'current_value','label'=>'Current Value (optional)','type'=>'number','hint'=>'Health goals are calculated automatically from Steps, Diet, Sleep, Exercise and Health Checkups.'],
-        ['name'=>'progress_percent','label'=>'Progress %','type'=>'number','required'=>true,'hint'=>'For Health goals, progress updates automatically from your health records.'],
-        ['name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>['not_started'=>'Not started','in_progress'=>'In progress','completed'=>'Completed','paused'=>'Paused']],
-        ['name'=>'priority','label'=>'Priority','type'=>'select','required'=>true,'options'=>['low'=>'Low','medium'=>'Medium','high'=>'High']],
-        ['name'=>'reminder_at','label'=>'Reminder Date & Time','type'=>'datetime-local','hint'=>'Optional. Use the 12-hour clock with AM or PM.'],
-        ['name'=>'notes','label'=>'Notes','type'=>'textarea'],
+        ['tab'=>'Goal','name'=>'title','label'=>'Goal','type'=>'text','required'=>true],
+        ['tab'=>'Goal','name'=>'description','label'=>'Why this matters','type'=>'textarea'],
+        ['tab'=>'Progress','name'=>'start_date','label'=>'Start Date','type'=>'date'],
+        ['tab'=>'Progress','name'=>'target_date','label'=>'Target Date','type'=>'date'],
+        ['tab'=>'Progress','name'=>'target_value','label'=>'Target Value (optional)','type'=>'number'],
+        ['tab'=>'Progress','name'=>'current_value','label'=>'Current Value (optional)','type'=>'number', 'placeholder'=>'Auto-filled for health goals'],
+        ['tab'=>'Progress','name'=>'progress_percent','label'=>'Progress %','type'=>'number','required'=>true, 'placeholder'=>'0–100 (auto for health goals)'],
+        ['tab'=>'Goal','name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>['not_started'=>'Not started','in_progress'=>'In progress','completed'=>'Completed','paused'=>'Paused']],
+        ['tab'=>'Goal','name'=>'priority','label'=>'Priority','type'=>'select','required'=>true,'options'=>['low'=>'Low','medium'=>'Medium','high'=>'High']],
+        ['tab'=>'Reminder & Notes','name'=>'reminder_at','label'=>'Reminder Date & Time','type'=>'datetime-local'],
+        ['tab'=>'Reminder & Notes','name'=>'notes','label'=>'Notes','type'=>'textarea'],
     ];
 
     protected array $rules = [

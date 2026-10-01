@@ -71,9 +71,9 @@
                        class="pm-input">
             </div>
             <div>
-                <label for="routing_or_swift" class="block text-sm font-medium text-slate-700 mb-1">Routing / SWIFT Code (optional)</label>
+                <label for="routing_or_swift" class="block text-sm font-medium text-slate-700 mb-1">Routing / SWIFT Code</label>
                 <input type="text" id="routing_or_swift" name="routing_or_swift" value="{{ old('routing_or_swift', $gateway->configValue('routing_or_swift')) }}"
-                       class="pm-input">
+                       placeholder="Optional" class="pm-input">
             </div>
         </fieldset>
 
@@ -210,8 +210,8 @@
                     </p>
                 </div>
                 <div>
-                    <label for="return_url" class="block text-sm font-medium text-slate-700 mb-1">Return URL (optional)</label>
-                    <input type="text" id="return_url" name="return_url" value="{{ old('return_url', $gateway->return_url) }}" class="pm-input">
+                    <label for="return_url" class="block text-sm font-medium text-slate-700 mb-1">Return URL</label>
+                    <input type="text" id="return_url" name="return_url" value="{{ old('return_url', $gateway->return_url) }}" placeholder="Optional" class="pm-input">
                 </div>
             </div>
 

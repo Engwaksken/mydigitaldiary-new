@@ -15,23 +15,23 @@ class NetworkContactController extends CrudController
     protected string $dateField = 'next_follow_up_date';
 
     protected array $fields = [
-        ['name'=>'name','label'=>'Person','type'=>'text','required'=>true],
-        ['name'=>'relationship_type','label'=>'Connection Type','type'=>'select','required'=>true,'options'=>[
+        ['tab'=>'Contact','name'=>'name','label'=>'Person','type'=>'text','required'=>true],
+        ['tab'=>'Contact','name'=>'relationship_type','label'=>'Connection Type','type'=>'select','required'=>true,'options'=>[
             'business'=>'Business','career'=>'Career','investor'=>'Investor','mentor'=>'Mentor',
             'friend'=>'Friend','community'=>'Community','association'=>'Professional Association',
             'client'=>'Client','partner'=>'Partner','other'=>'Other',
         ]],
-        ['name'=>'network_groups','label'=>'Networks / Groups','type'=>'text','placeholder'=>'Business, Investors, Community'],
-        ['name'=>'company','label'=>'Company / Organisation','type'=>'text'],
-        ['name'=>'email','label'=>'Email','type'=>'text'],
-        ['name'=>'phone','label'=>'Phone','type'=>'text'],
-        ['name'=>'met_through','label'=>'Where / How You Met','type'=>'text'],
-        ['name'=>'last_contact_date','label'=>'Last Contact','type'=>'date'],
-        ['name'=>'next_follow_up_date','label'=>'Next Follow-up','type'=>'date'],
-        ['name'=>'opportunities','label'=>'Opportunities Connected to This Person / Network','type'=>'textarea'],
-        ['name'=>'action_points','label'=>'Action Points','type'=>'textarea'],
-        ['name'=>'goal','label'=>'Networking Goal','type'=>'textarea'],
-        ['name'=>'notes','label'=>'Notes','type'=>'textarea'],
+        ['tab'=>'Contact','name'=>'network_groups','label'=>'Networks / Groups','type'=>'text','placeholder'=>'Business, Investors, Community'],
+        ['tab'=>'Contact','name'=>'company','label'=>'Company / Organisation','type'=>'text'],
+        ['tab'=>'Contact','name'=>'email','label'=>'Email','type'=>'text'],
+        ['tab'=>'Contact','name'=>'phone','label'=>'Phone','type'=>'text'],
+        ['tab'=>'Follow-up','name'=>'met_through','label'=>'Where / How You Met','type'=>'text'],
+        ['tab'=>'Follow-up','name'=>'last_contact_date','label'=>'Last Contact','type'=>'date'],
+        ['tab'=>'Follow-up','name'=>'next_follow_up_date','label'=>'Next Follow-up','type'=>'date'],
+        ['tab'=>'Notes','name'=>'opportunities','label'=>'Opportunities Connected to This Person / Network','type'=>'textarea'],
+        ['tab'=>'Notes','name'=>'action_points','label'=>'Action Points','type'=>'textarea'],
+        ['tab'=>'Notes','name'=>'goal','label'=>'Networking Goal','type'=>'textarea'],
+        ['tab'=>'Notes','name'=>'notes','label'=>'Notes','type'=>'textarea'],
     ];
 
     protected array $rules = [

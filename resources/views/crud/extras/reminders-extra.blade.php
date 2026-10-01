@@ -282,7 +282,7 @@
             wrapper.id = 'pm-reminder-items-wrapper';
             wrapper.style.display = 'none';
             wrapper.innerHTML =
-                '<label for="pm-reminder-item-ids" class="block text-sm font-medium text-slate-700 mb-1">Specific item(s) (optional)</label>' +
+                '<label for="pm-reminder-item-ids" class="block text-sm font-medium text-slate-700 mb-1">Specific item(s)</label>' +
                 '<select id="pm-reminder-item-ids" name="item_ids[]" multiple size="4" class="pm-input"></select>' +
                 '<p class="text-xs text-slate-400 mt-1">Hold Ctrl/Cmd to select more than one. Leave nothing selected to keep this reminder general to the whole module.</p>';
 

@@ -32,7 +32,7 @@ class ReminderController extends CrudController
             'annually' => 'Annually',
         ]],
         ['name' => 'interval_minutes', 'label' => 'N (only used if "Every N Minutes")', 'type' => 'number'],
-        ['name' => 'next_run_at', 'label' => 'Reminder Date & Time', 'type' => 'datetime-local', 'required' => true, 'hint' => 'Use the 12-hour clock with AM or PM.'],
+        ['name' => 'next_run_at', 'label' => 'Reminder Date & Time', 'type' => 'datetime-local', 'required' => true],
         ['name' => 'channel', 'label' => 'Send Via', 'type' => 'select', 'required' => true, 'options' => [
             'database' => 'In-App Only', 'mail' => 'In-App + Email',
         ]],

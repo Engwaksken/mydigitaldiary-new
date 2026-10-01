@@ -1,7 +1,7 @@
 <div>
-    <label class="text-sm font-medium text-slate-700">Linked Goal <span class="text-slate-400 font-normal">(optional)</span></label>
+    <label class="text-sm font-medium text-slate-700">Linked Goal</label>
     <select name="personal_goal_id" class="pm-input mt-2">
-        <option value="">No linked goal</option>
+        <option value="">Choose a goal (optional)</option>
         @foreach(($goalOptions ?? collect()) as $goalId => $goalTitle)
             <option value="{{ $goalId }}">{{ $goalTitle }}</option>
         @endforeach

@@ -7,7 +7,7 @@
         type         : input type (default: text)
         value        : default value
         required     : whether the field is required
-        help         : help text below the field
+        help         : short hint, shown as the placeholder when none is given
         placeholder  : placeholder text
         disabled     : disabled state
         readonly     : readonly state
@@ -37,9 +37,10 @@
 
 @php
     $fieldId = $attributes->get('id', $name);
-    $helpId = $help ? $fieldId . '-help' : null;
+    // Hints live inside the field (placeholder), never as text under it.
+    $placeholder = $placeholder ?: $help;
     $errorId = $error ? $fieldId . '-error' : null;
-    $describedBy = trim(implode(' ', array_filter([$helpId, $errorId]))) ?: null;
+    $describedBy = $errorId;
 @endphp
 
 <div class="pm-field">
@@ -66,9 +67,6 @@
         class="pm-input {{ $error ? 'border-red-400 focus:border-red-400 focus:ring-red-200' : '' }}"
     >
 
-    @if ($help)
-        <p id="{{ $helpId }}" class="mt-1.5 text-xs text-slate-500">{{ $help }}</p>
-    @endif
 
     @if ($error)
         <p id="{{ $errorId }}" class="mt-1.5 text-xs font-medium text-red-600" role="alert">{{ $error }}</p>

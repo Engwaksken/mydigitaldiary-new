@@ -16,28 +16,28 @@ class DebtController extends CrudController
     protected string $accent = 'amber';
 
     protected array $fields = [
-        ['name'=>'type','label'=>'Type','type'=>'select','required'=>true,'options'=>[
+        ['tab'=>'Details','name'=>'type','label'=>'Type','type'=>'select','required'=>true,'options'=>[
             'borrowed'=>'Borrowed (I owe them)','lent'=>'Lent (they owe me)',
         ]],
-        ['name'=>'person_name','label'=>'Borrower / Lender','type'=>'text','required'=>true],
-        ['name'=>'contact_email','label'=>'Email','type'=>'text'],
-        ['name'=>'contact_phone','label'=>'Phone / SMS number','type'=>'text'],
-        ['name'=>'amount','label'=>'Outstanding Amount','type'=>'number','required'=>true,'money'=>true],
-        ['name'=>'date','label'=>'Date','type'=>'date','required'=>true],
-        ['name'=>'due_date','label'=>'Due Date','type'=>'date'],
-        ['name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>[
+        ['tab'=>'Details','name'=>'person_name','label'=>'Borrower / Lender','type'=>'text','required'=>true],
+        ['tab'=>'Contact & Notes','name'=>'contact_email','label'=>'Email','type'=>'text'],
+        ['tab'=>'Contact & Notes','name'=>'contact_phone','label'=>'Phone / SMS number','type'=>'text'],
+        ['tab'=>'Details','name'=>'amount','label'=>'Outstanding Amount','type'=>'number','required'=>true,'money'=>true],
+        ['tab'=>'Details','name'=>'date','label'=>'Date','type'=>'date','required'=>true],
+        ['tab'=>'Details','name'=>'due_date','label'=>'Due Date','type'=>'date'],
+        ['tab'=>'Details','name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>[
             'outstanding'=>'Outstanding','overdue'=>'Overdue','paid'=>'Paid',
         ]],
-        ['name'=>'notes','label'=>'Notes','type'=>'textarea'],
-        ['name'=>'reminder_enabled','label'=>'Automatic reminders','type'=>'select','options'=>['1'=>'Enabled','0'=>'Disabled']],
-        ['name'=>'reminder_channel','label'=>'Reminder channel','type'=>'select','options'=>[
+        ['tab'=>'Contact & Notes','name'=>'notes','label'=>'Notes','type'=>'textarea'],
+        ['tab'=>'Reminders','name'=>'reminder_enabled','label'=>'Automatic reminders','type'=>'select','options'=>['1'=>'Enabled','0'=>'Disabled']],
+        ['tab'=>'Reminders','name'=>'reminder_channel','label'=>'Reminder channel','type'=>'select','options'=>[
             'email'=>'Email only','sms'=>'SMS only','both'=>'Email + SMS',
         ]],
-        ['name'=>'reminder_frequency','label'=>'Frequency','type'=>'select','options'=>[
+        ['tab'=>'Reminders','name'=>'reminder_frequency','label'=>'Frequency','type'=>'select','options'=>[
             'once'=>'Once','daily'=>'Daily','every_3_days'=>'Every 3 days','weekly'=>'Weekly',
             'fortnightly'=>'Every 2 weeks','monthly'=>'Monthly',
         ]],
-        ['name'=>'next_reminder_at','label'=>'Next reminder','type'=>'datetime-local'],
+        ['tab'=>'Reminders','name'=>'next_reminder_at','label'=>'Next reminder','type'=>'datetime-local'],
     ];
 
     protected array $rules = [

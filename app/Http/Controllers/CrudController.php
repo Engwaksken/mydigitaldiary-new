@@ -44,6 +44,22 @@ abstract class CrudController extends Controller
     /** Optional index columns; forms and detail modals still use all fields. */
     protected array $tableColumns = [];
 
+    /**
+     * Fields as shown to users: "(optional)" never appears in a label
+     * (forms show it in the placeholder instead), so it is stripped here
+     * for the form, table headers and the details view alike.
+     */
+    protected function viewFields(array $fields): array
+    {
+        return array_map(function (array $field) {
+            if (isset($field['label'])) {
+                $field['label'] = trim(preg_replace('/\s*\(optional\)|,\s*optional(?=\))/i', '', $field['label']));
+            }
+
+            return $field;
+        }, $fields);
+    }
+
     /** Laravel validation rules for store/update */
     protected array $rules = [];
 
@@ -150,8 +166,8 @@ abstract class CrudController extends Controller
 
         return view('crud.index', array_merge([
             'items' => $items,
-            'fields' => $this->fields,
-            'tableColumns' => $this->tableColumns ?: $this->fields,
+            'fields' => $this->viewFields($this->fields),
+            'tableColumns' => $this->viewFields($this->tableColumns ?: $this->fields),
             'title' => $this->title,
             'routeName' => $this->routeName,
             'stats' => $this->stats($request),
@@ -297,7 +313,7 @@ abstract class CrudController extends Controller
     {
         return view('crud.form', [
             'item' => new $this->model,
-            'fields' => $this->fields,
+            'fields' => $this->viewFields($this->fields),
             'title' => $this->title,
             'routeName' => $this->routeName,
             'icon' => $this->icon,
@@ -329,7 +345,7 @@ abstract class CrudController extends Controller
 
         return view('crud.form', [
             'item' => $item,
-            'fields' => $this->fields,
+            'fields' => $this->viewFields($this->fields),
             'title' => $this->title,
             'routeName' => $this->routeName,
             'icon' => $this->icon,

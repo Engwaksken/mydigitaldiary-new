@@ -302,13 +302,13 @@
                     <textarea class="pm-input" name="dietary_preferences" rows="2" placeholder="e.g. vegetarian, halal, foods you avoid">{{ old('dietary_preferences', $profile->dietary_preferences ?? '') }}</textarea>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Current illness or known health conditions (optional)</label>
-                    <textarea class="pm-input" name="health_conditions" rows="2" placeholder="Only enter this if you want AI to keep its general advice conservative around it.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Current illness or known health conditions</label>
+                    <textarea class="pm-input" name="health_conditions" rows="2" placeholder="Optional — only enter this if you want AI to keep its general advice conservative around it.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
                     <p class="text-xs text-slate-400 mt-1">AI will not diagnose or prescribe treatment from this information.</p>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Sleep challenges (optional)</label>
-                    <textarea class="pm-input" name="sleep_challenges" rows="2" placeholder="e.g. waking often, shift work, difficulty falling asleep">{{ old('sleep_challenges', $profile->sleep_challenges ?? '') }}</textarea>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Sleep challenges</label>
+                    <textarea class="pm-input" name="sleep_challenges" rows="2" placeholder="Optional — e.g. waking often, shift work, difficulty falling asleep">{{ old('sleep_challenges', $profile->sleep_challenges ?? '') }}</textarea>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Usual bedtime</label>

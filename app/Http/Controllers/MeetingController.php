@@ -22,40 +22,40 @@ class MeetingController extends CrudController
     protected string $dateField = 'start_at';
 
     protected array $fields = [
-        ['name' => 'title', 'label' => 'Title', 'type' => 'text', 'required' => true],
+        ['tab' => 'Details', 'name' => 'title', 'label' => 'Title', 'type' => 'text', 'required' => true],
 
-        ['name' => 'start_at', 'label' => 'Start Date & Time', 'type' => 'datetime-native', 'required' => true],
-        ['name' => 'end_at', 'label' => 'End Date & Time', 'type' => 'datetime-native', 'hint' => 'Optional. Leave blank if the end time is not fixed.'],
+        ['tab' => 'Details', 'name' => 'start_at', 'label' => 'Start Date & Time', 'type' => 'datetime-native', 'required' => true],
+        ['tab' => 'Details', 'name' => 'end_at', 'label' => 'End Date & Time', 'type' => 'datetime-native'],
 
-        ['name' => 'location', 'label' => 'Location / Video Link', 'type' => 'text', 'placeholder' => 'e.g. Conference Room B, or a Zoom/Meet link'],
-        ['name' => 'attendees', 'label' => 'Attendees', 'type' => 'text', 'placeholder' => 'name@example.com, colleague@example.com', 'hint' => 'Optional. Add comma-separated email addresses. No Google, Zoom, or other platform is required.'],
+        ['tab' => 'Details', 'name' => 'location', 'label' => 'Location / Video Link', 'type' => 'text', 'placeholder' => 'e.g. Conference Room B, or a Zoom/Meet link'],
+        ['tab' => 'Details', 'name' => 'attendees', 'label' => 'Attendees', 'type' => 'text', 'placeholder' => 'name@example.com, colleague@example.com'],
 
-        ['name' => 'status', 'label' => 'Status', 'type' => 'select', 'required' => true, 'options' => [
+        ['tab' => 'Details', 'name' => 'status', 'label' => 'Status', 'type' => 'select', 'required' => true, 'options' => [
             'scheduled' => 'Scheduled',
             'completed' => 'Completed',
             'cancelled' => 'Cancelled',
         ]],
 
-        ['name' => 'notes', 'label' => 'Notes / Agenda', 'type' => 'textarea'],
+        ['tab' => 'Agenda', 'name' => 'notes', 'label' => 'Notes / Agenda', 'type' => 'textarea'],
 
         /*
          * Rendered as a normal select so the generic CRUD form cannot shrink
          * or hide the control. meetings-extra.blade.php upgrades it visually
          * to a large reminder toggle.
          */
-        ['name' => 'set_reminder', 'label' => 'Reminder', 'type' => 'select', 'options' => [
+        ['tab' => 'Reminder & Repeat', 'name' => 'set_reminder', 'label' => 'Reminder', 'type' => 'select', 'options' => [
             '0' => 'No reminder',
             '1' => 'Set reminder',
-        ], 'hint' => 'Create a reminder linked to this meeting.'],
+        ]],
 
-        ['name' => 'recurrence_frequency', 'label' => 'Repeat', 'type' => 'select', 'options' => [
+        ['tab' => 'Reminder & Repeat', 'name' => 'recurrence_frequency', 'label' => 'Repeat', 'type' => 'select', 'options' => [
             '' => 'Does not repeat',
             'daily' => 'Daily',
             'weekly' => 'Weekly',
             'monthly' => 'Monthly',
         ]],
-        ['name' => 'recurrence_days_of_week', 'label' => 'Repeat on (weekly only)', 'type' => 'text', 'placeholder' => 'e.g. 1,3,5', 'hint' => '1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun.'],
-        ['name' => 'recurrence_ends_at', 'label' => 'Repeat until (optional)', 'type' => 'date'],
+        ['tab' => 'Reminder & Repeat', 'name' => 'recurrence_days_of_week', 'label' => 'Repeat on (weekly only)', 'type' => 'text', 'placeholder' => '1=Mon … 7=Sun, e.g. 1,3,5'],
+        ['tab' => 'Reminder & Repeat', 'name' => 'recurrence_ends_at', 'label' => 'Repeat until (optional)', 'type' => 'date'],
     ];
 
     protected array $tableColumns = [

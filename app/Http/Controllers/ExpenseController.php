@@ -20,7 +20,7 @@ class ExpenseController extends CrudController
 
     protected array $fields = [
         ['name' => 'category', 'label' => 'Category', 'type' => 'text', 'required' => true, 'placeholder' => 'e.g. Groceries, Rent, Transport'],
-        ['name' => 'amount', 'label' => 'Amount', 'type' => 'number', 'required' => false, 'placeholder' => '0.00', 'money' => true, 'hint' => 'Leave blank if you add itemized line items below instead — the total is computed from those.'],
+        ['name' => 'amount', 'label' => 'Amount', 'type' => 'number', 'required' => false, 'placeholder' => '0.00', 'money' => true, 'placeholder' => '0.00, or add line items'],
         ['name' => 'spent_at', 'label' => 'Date', 'type' => 'date', 'required' => true],
         ['name' => 'payment_method', 'label' => 'Payment Method', 'type' => 'text', 'placeholder' => 'e.g. Cash, Card, Mobile Money'],
         ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea'],

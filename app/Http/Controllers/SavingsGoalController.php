@@ -14,21 +14,21 @@ class SavingsGoalController extends CrudController
     protected string $accent = 'green';
 
     protected array $fields = [
-        ['name'=>'name','label'=>'Goal Name','type'=>'text','required'=>true],
-        ['name'=>'target_amount','label'=>'Target Amount','type'=>'number','required'=>true,'money'=>true],
-        ['name'=>'target_date','label'=>'Target Date','type'=>'date'],
-        ['name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>[
+        ['tab'=>'Goal','name'=>'name','label'=>'Goal Name','type'=>'text','required'=>true],
+        ['tab'=>'Goal','name'=>'target_amount','label'=>'Target Amount','type'=>'number','required'=>true,'money'=>true],
+        ['tab'=>'Goal','name'=>'target_date','label'=>'Target Date','type'=>'date'],
+        ['tab'=>'Goal','name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>[
             'in_progress'=>'In Progress','completed'=>'Completed','paused'=>'Paused',
         ]],
-        ['name'=>'notes','label'=>'Notes','type'=>'textarea'],
-        ['name'=>'reminder_enabled','label'=>'Contribution reminders','type'=>'select','options'=>['1'=>'Enabled','0'=>'Disabled']],
-        ['name'=>'reminder_channel','label'=>'Reminder channel','type'=>'select','options'=>[
+        ['tab'=>'Goal','name'=>'notes','label'=>'Notes','type'=>'textarea'],
+        ['tab'=>'Reminders','name'=>'reminder_enabled','label'=>'Contribution reminders','type'=>'select','options'=>['1'=>'Enabled','0'=>'Disabled']],
+        ['tab'=>'Reminders','name'=>'reminder_channel','label'=>'Reminder channel','type'=>'select','options'=>[
             'email'=>'Email','sms'=>'SMS','both'=>'Email + SMS',
         ]],
-        ['name'=>'reminder_frequency','label'=>'Reminder frequency','type'=>'select','options'=>[
+        ['tab'=>'Reminders','name'=>'reminder_frequency','label'=>'Reminder frequency','type'=>'select','options'=>[
             'daily'=>'Daily','weekly'=>'Weekly','fortnightly'=>'Every 2 weeks','monthly'=>'Monthly',
         ]],
-        ['name'=>'next_reminder_at','label'=>'Next reminder','type'=>'datetime-local'],
+        ['tab'=>'Reminders','name'=>'next_reminder_at','label'=>'Next reminder','type'=>'datetime-local'],
     ];
 
     protected array $rules = [

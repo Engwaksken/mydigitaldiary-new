@@ -73,7 +73,6 @@ class SleepLogController extends CrudController
                 '23:00' => '11:00 PM',
                 '23:30' => '11:30 PM',
             ],
-            'hint' => 'Select the time you went to bed.',
         ],
         [
             'name' => 'wake_time',
@@ -130,12 +129,11 @@ class SleepLogController extends CrudController
                 '23:00' => '11:00 PM',
                 '23:30' => '11:30 PM',
             ],
-            'hint' => 'Select the time you woke up.',
         ],
         ['name' => 'quality', 'label' => 'Quality', 'type' => 'select', 'required' => true, 'options' => [
             'poor' => 'Poor', 'fair' => 'Fair', 'good' => 'Good', 'excellent' => 'Excellent',
         ]],
-        ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'placeholder' => 'Optional: awakenings, caffeine, stress, illness or anything that affected your sleep.'],
+        ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'placeholder' => 'Awakenings, caffeine, stress, illness or anything that affected your sleep.'],
     ];
 
     protected array $rules = [

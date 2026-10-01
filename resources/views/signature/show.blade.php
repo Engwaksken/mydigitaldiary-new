@@ -116,8 +116,8 @@
 
                 <div class="mt-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
                     <div class="flex-1">
-                        <label for="signature-label" class="block text-xs font-semibold text-slate-600 mb-1">Signature name (optional)</label>
-                        <input type="text" id="signature-label" name="label" value="{{ old('label') }}" placeholder="e.g. Full signature, Initials" class="pm-input">
+                        <label for="signature-label" class="block text-xs font-semibold text-slate-600 mb-1">Signature name</label>
+                        <input type="text" id="signature-label" name="label" value="{{ old('label') }}" placeholder="e.g. Full signature, Initials (optional)" class="pm-input">
                     </div>
                     <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all whitespace-nowrap">
                         <i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i> Save Signature

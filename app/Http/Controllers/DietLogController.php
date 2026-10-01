@@ -34,13 +34,11 @@ class DietLogController extends CrudController
             'type' => 'textarea',
             'required' => true,
             'placeholder' => 'e.g. 1 cup matooke, 1 ladle beans, 1 avocado slice, water',
-            'hint' => 'Include portions where possible. AI will estimate calories automatically after you save.',
         ],
         [
             'name' => 'calories',
             'label' => 'Estimated Calories',
             'type' => 'readonly',
-            'hint' => 'Calculated automatically from the food items you enter. This is an estimate, not a laboratory measurement.',
         ],
         ['name' => 'logged_at', 'label' => 'Date', 'type' => 'date', 'required' => true],
         ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea'],

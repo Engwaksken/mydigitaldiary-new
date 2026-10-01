@@ -269,88 +269,92 @@
             @method('PUT')
 
             <div class="pm-modal-body grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Weight (kg) *</label>
-                    <input class="pm-input" type="number" step="0.1" min="20" max="350" name="weight_kg"
-                           value="{{ old('weight_kg', $profile->weight_kg ?? '') }}" required>
+                <div class="pm-form-tabs sm:col-span-2" role="tablist" aria-label="Form sections" data-pm-form-tabs>
+                    <button type="button" role="tab" id="sleep-profile-tab-0" aria-controls="sleep-profile-panel-0" aria-selected="true" tabindex="0" data-pm-form-tab="0" class="pm-form-tab is-active">Body</button>
+                    <button type="button" role="tab" id="sleep-profile-tab-1" aria-controls="sleep-profile-panel-1" aria-selected="false" tabindex="-1" data-pm-form-tab="1" class="pm-form-tab">Sleep</button>
+                    <button type="button" role="tab" id="sleep-profile-tab-2" aria-controls="sleep-profile-panel-2" aria-selected="false" tabindex="-1" data-pm-form-tab="2" class="pm-form-tab">Food &amp; Health</button>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Height (cm)</label>
-                    <input class="pm-input" type="number" step="0.1" min="100" max="250" name="height_cm"
-                           value="{{ old('height_cm', $profile->height_cm ?? '') }}">
+                <div class="pm-form-panel sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" role="tabpanel" id="sleep-profile-panel-0" aria-labelledby="sleep-profile-tab-0" data-pm-form-panel="0">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Weight (kg) *</label>
+                        <input class="pm-input" type="number" step="0.1" min="20" max="350" name="weight_kg"
+                               value="{{ old('weight_kg', $profile->weight_kg ?? '') }}" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Height (cm)</label>
+                        <input class="pm-input" type="number" step="0.1" min="100" max="250" name="height_cm"
+                               value="{{ old('height_cm', $profile->height_cm ?? '') }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Age range</label>
+                        <select class="pm-input" name="age_range">
+                            <option value="">Choose age range (optional)</option>
+                            @foreach (['18-24','25-34','35-44','45-54','55-64','65+'] as $range)
+                                <option value="{{ $range }}" @selected(old('age_range', $profile->age_range ?? '') === $range)>{{ $range }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Activity level</label>
+                        <select class="pm-input" name="activity_level">
+                            <option value="">Choose activity level (optional)</option>
+                            @foreach (['low'=>'Mostly seated','light'=>'Lightly active','moderate'=>'Moderately active','high'=>'Very active'] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('activity_level', $profile->activity_level ?? '') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Main wellbeing goal</label>
+                        <select class="pm-input" name="health_goal">
+                            @foreach ([
+                                'general_wellbeing'=>'General wellbeing',
+                                'maintain_weight'=>'Maintain weight',
+                                'gain_weight'=>'Gain weight gradually',
+                                'lose_weight'=>'Lose weight gradually',
+                                'better_sleep'=>'Sleep better',
+                                'more_energy'=>'Improve daily energy'
+                            ] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('health_goal', $profile->health_goal ?? 'general_wellbeing') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Age range</label>
-                    <select class="pm-input" name="age_range">
-                        <option value="">Prefer not to say</option>
-                        @foreach (['18-24','25-34','35-44','45-54','55-64','65+'] as $range)
-                            <option value="{{ $range }}" @selected(old('age_range', $profile->age_range ?? '') === $range)>{{ $range }}</option>
-                        @endforeach
-                    </select>
+                <div class="pm-form-panel sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" role="tabpanel" id="sleep-profile-panel-1" aria-labelledby="sleep-profile-tab-1" data-pm-form-panel="1" hidden>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Sleep challenges</label>
+                        <textarea class="pm-input" name="sleep_challenges" rows="2"
+                                  placeholder="Optional — e.g. waking often, shift work, difficulty falling asleep">{{ old('sleep_challenges', $profile->sleep_challenges ?? '') }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Usual bedtime</label>
+                        <input class="pm-input" type="time" name="usual_bed_time"
+                               value="{{ old('usual_bed_time', isset($profile->usual_bed_time) ? substr((string) $profile->usual_bed_time, 0, 5) : '') }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Usual wake time</label>
+                        <input class="pm-input" type="time" name="usual_wake_time"
+                               value="{{ old('usual_wake_time', isset($profile->usual_wake_time) ? substr((string) $profile->usual_wake_time, 0, 5) : '') }}">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Activity level</label>
-                    <select class="pm-input" name="activity_level">
-                        <option value="">Select</option>
-                        @foreach (['low'=>'Mostly seated','light'=>'Lightly active','moderate'=>'Moderately active','high'=>'Very active'] as $value => $label)
-                            <option value="{{ $value }}" @selected(old('activity_level', $profile->activity_level ?? '') === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Main wellbeing goal</label>
-                    <select class="pm-input" name="health_goal">
-                        @foreach ([
-                            'general_wellbeing'=>'General wellbeing',
-                            'maintain_weight'=>'Maintain weight',
-                            'gain_weight'=>'Gain weight gradually',
-                            'lose_weight'=>'Lose weight gradually',
-                            'better_sleep'=>'Sleep better',
-                            'more_energy'=>'Improve daily energy'
-                        ] as $value => $label)
-                            <option value="{{ $value }}" @selected(old('health_goal', $profile->health_goal ?? 'general_wellbeing') === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Current illness or known health conditions (optional)</label>
-                    <textarea class="pm-input" name="health_conditions" rows="2"
-                              placeholder="Add this only if you want it considered in your general suggestions.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
-                </div>
-
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Sleep challenges (optional)</label>
-                    <textarea class="pm-input" name="sleep_challenges" rows="2"
-                              placeholder="e.g. waking often, shift work, difficulty falling asleep">{{ old('sleep_challenges', $profile->sleep_challenges ?? '') }}</textarea>
-                </div>
-
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Food allergies or intolerances</label>
-                    <textarea class="pm-input" name="food_allergies" rows="2"
-                              placeholder="e.g. peanuts, milk, eggs">{{ old('food_allergies', $profile->food_allergies ?? '') }}</textarea>
-                </div>
-
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Dietary preferences</label>
-                    <textarea class="pm-input" name="dietary_preferences" rows="2"
-                              placeholder="e.g. vegetarian, halal, foods you avoid">{{ old('dietary_preferences', $profile->dietary_preferences ?? '') }}</textarea>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Usual bedtime</label>
-                    <input class="pm-input" type="time" name="usual_bed_time"
-                           value="{{ old('usual_bed_time', isset($profile->usual_bed_time) ? substr((string) $profile->usual_bed_time, 0, 5) : '') }}">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Usual wake time</label>
-                    <input class="pm-input" type="time" name="usual_wake_time"
-                           value="{{ old('usual_wake_time', isset($profile->usual_wake_time) ? substr((string) $profile->usual_wake_time, 0, 5) : '') }}">
+                <div class="pm-form-panel sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4" role="tabpanel" id="sleep-profile-panel-2" aria-labelledby="sleep-profile-tab-2" data-pm-form-panel="2" hidden>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Current illness or known health conditions</label>
+                        <textarea class="pm-input" name="health_conditions" rows="2"
+                                  placeholder="Optional — add this only if you want it considered in your general suggestions.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Food allergies or intolerances</label>
+                        <textarea class="pm-input" name="food_allergies" rows="2"
+                                  placeholder="e.g. peanuts, milk, eggs">{{ old('food_allergies', $profile->food_allergies ?? '') }}</textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Dietary preferences</label>
+                        <textarea class="pm-input" name="dietary_preferences" rows="2"
+                                  placeholder="e.g. vegetarian, halal, foods you avoid">{{ old('dietary_preferences', $profile->dietary_preferences ?? '') }}</textarea>
+                    </div>
                 </div>
             </div>
 
@@ -364,6 +368,8 @@
         </form>
     </div>
 </dialog>
+
+@include('partials.form-tabs')
 
 <script>
 (function () {

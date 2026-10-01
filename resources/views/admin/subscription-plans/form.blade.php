@@ -174,8 +174,8 @@
         </div>
 
         <div>
-            <label for="badge" class="block text-sm font-medium text-slate-700 mb-1">Badge Text (optional)</label>
-            <input type="text" id="badge" name="badge" value="{{ old('badge', $plan->badge) }}" placeholder="e.g. Most Popular" class="pm-input">
+            <label for="badge" class="block text-sm font-medium text-slate-700 mb-1">Badge Text</label>
+            <input type="text" id="badge" name="badge" value="{{ old('badge', $plan->badge) }}" placeholder="e.g. Most Popular (optional)" class="pm-input">
         </div>
 
         <div class="flex items-center gap-6 border-t pt-4">

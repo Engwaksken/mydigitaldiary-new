@@ -270,9 +270,6 @@
         <div class="px-5 py-4 border-b flex items-center justify-between">
             <div>
                 <h2 id="spiritual-form-title" class="text-lg font-black">Add Spiritual Growth</h2>
-                <p class="text-xs text-slate-500 mt-1">
-                    Use only the fields that are meaningful to your own practice or tradition.
-                </p>
             </div>
 
             <button
@@ -303,7 +300,13 @@
             @csrf
             <input id="spiritual-method" type="hidden" name="_method" value="POST">
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="pm-form-tabs" role="tablist" aria-label="Practice sections" data-pm-form-tabs>
+                <button type="button" role="tab" id="spiritual-tab-0" aria-controls="spiritual-panel-0" aria-selected="true" tabindex="0" data-pm-form-tab="0" class="pm-form-tab is-active">Practice</button>
+                <button type="button" role="tab" id="spiritual-tab-1" aria-controls="spiritual-panel-1" aria-selected="false" tabindex="-1" data-pm-form-tab="1" class="pm-form-tab">Reflection</button>
+                <button type="button" role="tab" id="spiritual-tab-2" aria-controls="spiritual-panel-2" aria-selected="false" tabindex="-1" data-pm-form-tab="2" class="pm-form-tab">Place, Repeat &amp; Notes</button>
+            </div>
+
+            <div class="pm-form-panel grid grid-cols-1 md:grid-cols-2 gap-4" role="tabpanel" id="spiritual-panel-0" aria-labelledby="spiritual-tab-0" data-pm-form-panel="0">
                 @if($has('faith_path'))
                     <div>
                         <label class="block text-sm font-bold mb-1">Faith / Spiritual Path</label>
@@ -318,7 +321,7 @@
                 @if($has('custom_faith_path'))
                     <div id="custom-faith-wrapper" class="hidden">
                         <label class="block text-sm font-bold mb-1">Custom Faith / Path</label>
-                        <input id="spiritual-custom-faith" name="custom_faith_path" class="w-full rounded-lg border-slate-300">
+                        <input id="spiritual-custom-faith" name="custom_faith_path" placeholder="Your faith or path" class="w-full rounded-lg border-slate-300">
                     </div>
                 @endif
 
@@ -336,14 +339,14 @@
                 @if($has('practice_title') || $has('title'))
                     <div>
                         <label class="block text-sm font-bold mb-1">Practice Title</label>
-                        <input id="spiritual-practice-title" name="{{ $has('practice_title') ? 'practice_title' : 'title' }}" class="w-full rounded-lg border-slate-300">
+                        <input id="spiritual-practice-title" name="{{ $has('practice_title') ? 'practice_title' : 'title' }}" placeholder="e.g. Morning prayer" class="w-full rounded-lg border-slate-300">
                     </div>
                 @endif
 
                 @if($has('theme_topic'))
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold mb-1">Theme / Topic</label>
-                        <input id="spiritual-theme-topic" name="theme_topic" class="w-full rounded-lg border-slate-300">
+                        <input id="spiritual-theme-topic" name="theme_topic" placeholder="e.g. Patience, gratitude (optional)" class="w-full rounded-lg border-slate-300">
                     </div>
                 @endif
 
@@ -357,49 +360,55 @@
                 @if($has('duration_minutes'))
                     <div>
                         <label class="block text-sm font-bold mb-1">Duration (minutes)</label>
-                        <input id="spiritual-duration" name="duration_minutes" type="number" min="0" class="w-full rounded-lg border-slate-300">
+                        <input id="spiritual-duration" name="duration_minutes" type="number" min="0" placeholder="e.g. 20 (optional)" class="w-full rounded-lg border-slate-300">
                     </div>
                 @endif
 
+            </div>
+
+            <div class="pm-form-panel grid grid-cols-1 md:grid-cols-2 gap-4" role="tabpanel" id="spiritual-panel-1" aria-labelledby="spiritual-tab-1" data-pm-form-panel="1" hidden>
                 @if($has('inspirational_text') || $has('scriptures'))
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold mb-1">Sacred / Inspirational Text</label>
-                        <textarea id="spiritual-inspirational" name="{{ $has('inspirational_text') ? 'inspirational_text' : 'scriptures' }}" rows="2" class="w-full rounded-lg border-slate-300"></textarea>
+                        <textarea id="spiritual-inspirational" name="{{ $has('inspirational_text') ? 'inspirational_text' : 'scriptures' }}" rows="2" placeholder="A verse, quote or passage (optional)" class="w-full rounded-lg border-slate-300"></textarea>
                     </div>
                 @endif
 
                 @if($has('source_tradition'))
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold mb-1">Source / Tradition</label>
-                        <input id="spiritual-source-tradition" name="source_tradition" class="w-full rounded-lg border-slate-300">
+                        <input id="spiritual-source-tradition" name="source_tradition" placeholder="e.g. Psalm 23 (optional)" class="w-full rounded-lg border-slate-300">
                     </div>
                 @endif
 
                 @if($has('reflection'))
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold mb-1">Reflection</label>
-                        <textarea id="spiritual-reflection" name="reflection" rows="4" class="w-full rounded-lg border-slate-300"></textarea>
+                        <textarea id="spiritual-reflection" name="reflection" rows="4" placeholder="What stood out to you? (optional)" class="w-full rounded-lg border-slate-300"></textarea>
                     </div>
                 @endif
 
                 @if($has('gratitude'))
                     <div>
                         <label class="block text-sm font-bold mb-1">Gratitude</label>
-                        <textarea id="spiritual-gratitude" name="gratitude" rows="3" class="w-full rounded-lg border-slate-300"></textarea>
+                        <textarea id="spiritual-gratitude" name="gratitude" rows="3" placeholder="I am grateful for… (optional)" class="w-full rounded-lg border-slate-300"></textarea>
                     </div>
                 @endif
 
                 @if($has('intention'))
                     <div>
                         <label class="block text-sm font-bold mb-1">Intention</label>
-                        <textarea id="spiritual-intention" name="intention" rows="3" class="w-full rounded-lg border-slate-300"></textarea>
+                        <textarea id="spiritual-intention" name="intention" rows="3" placeholder="Today I intend to… (optional)" class="w-full rounded-lg border-slate-300"></textarea>
                     </div>
                 @endif
 
+            </div>
+
+            <div class="pm-form-panel grid grid-cols-1 md:grid-cols-2 gap-4" role="tabpanel" id="spiritual-panel-2" aria-labelledby="spiritual-tab-2" data-pm-form-panel="2" hidden>
                 @if($has('community_place'))
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold mb-1">Community / Place</label>
-                        <input id="spiritual-community-place" name="community_place" class="w-full rounded-lg border-slate-300">
+                        <input id="spiritual-community-place" name="community_place" placeholder="e.g. Home, church, mosque (optional)" class="w-full rounded-lg border-slate-300">
                     </div>
                 @endif
 
@@ -425,7 +434,7 @@
                 @if($has('notes'))
                     <div class="md:col-span-2">
                         <label class="block text-sm font-bold mb-1">Notes</label>
-                        <textarea id="spiritual-notes" name="notes" rows="3" class="w-full rounded-lg border-slate-300"></textarea>
+                        <textarea id="spiritual-notes" name="notes" rows="3" placeholder="Notes (optional)" class="w-full rounded-lg border-slate-300"></textarea>
                     </div>
                 @endif
             </div>
@@ -449,6 +458,8 @@
         </form>
     </div>
 </dialog>
+
+@include('partials.form-tabs')
 
 <script>
 (function () {

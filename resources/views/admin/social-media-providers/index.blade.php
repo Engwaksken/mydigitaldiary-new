@@ -107,15 +107,15 @@
             </div>
 
             <div>
-                <label class="text-xs font-bold">API secret (optional)</label>
+                <label class="text-xs font-bold">API secret</label>
                 <input type="password"
                        name="api_secret"
                        autocomplete="new-password"
-                       class="pm-input mt-1 w-full">
+                       class="pm-input mt-1 w-full" placeholder="Optional">
             </div>
 
             <div class="md:col-span-2">
-                <label class="text-xs font-bold">Advanced settings JSON (optional)</label>
+                <label class="text-xs font-bold">Advanced settings JSON</label>
                 <textarea name="settings_json"
                           rows="4"
                           class="pm-input mt-1 w-full"

@@ -31,7 +31,7 @@
       @if($supportPerson)
         <div><label class="mb-1 block text-sm font-medium text-slate-700">Rate {{ $supportPerson->name }} <span class="text-rose-500">*</span></label><select name="rating" required class="pm-input"><option value="">Select rating</option><option value="5">5 - Excellent</option><option value="4">4 - Very good</option><option value="3">3 - Good</option><option value="2">2 - Fair</option><option value="1">1 - Poor</option></select></div>
       @endif
-      <div><label class="mb-1 block text-sm font-medium text-slate-700">Comment (optional)</label><textarea name="comment" rows="2" maxlength="1000" class="pm-input" placeholder="Share feedback about the support you received..."></textarea></div>
+      <div><label class="mb-1 block text-sm font-medium text-slate-700">Comment</label><textarea name="comment" rows="2" maxlength="1000" class="pm-input" placeholder="Optional — share feedback about the support you received..."></textarea></div>
       <button class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white">Submit & end chat</button>
     </form>
   </div>

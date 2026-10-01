@@ -962,17 +962,17 @@
             </label>
 
             <label class="block text-sm font-medium">Description
-                <textarea name="description" rows="3" class="pm-input mt-1 w-full" placeholder="Optional details">{{ old('description') }}</textarea>
+                <textarea name="description" rows="3" class="pm-input mt-1 w-full" placeholder="Details (optional)">{{ old('description') }}</textarea>
             </label>
 
-            <label class="block text-sm font-medium">Linked Goal <span class="text-slate-400 font-normal">(optional)</span>
+            <label class="block text-sm font-medium">Linked Goal
                 <select name="personal_goal_id" class="pm-input mt-1 w-full">
-                    <option value="">No linked goal</option>
+                    <option value="">Choose a goal (optional)</option>
                     @foreach(($goalOptions ?? collect()) as $goalId => $goalTitle)<option value="{{ $goalId }}">{{ $goalTitle }}</option>@endforeach
                 </select>
             </label>
 
-            <div class="grid md:grid-cols-2 gap-3 mb-3"><div><label class="block text-sm font-medium text-slate-700 mb-1">Task Achievement</label><textarea name="achievements" rows="2" class="pm-input"></textarea></div><div><label class="block text-sm font-medium text-slate-700 mb-1">Task Challenge</label><textarea name="challenges" rows="2" class="pm-input"></textarea></div></div>
+            <div class="grid md:grid-cols-2 gap-3 mb-3"><div><label class="block text-sm font-medium text-slate-700 mb-1">Task Achievement</label><textarea name="achievements" rows="2" class="pm-input" placeholder="What went well? (optional)"></textarea></div><div><label class="block text-sm font-medium text-slate-700 mb-1">Task Challenge</label><textarea name="challenges" rows="2" class="pm-input" placeholder="Any blockers? (optional)"></textarea></div></div>
             </div>
 
             <div class="dp-form-panel space-y-4" role="tabpanel" id="addTask-panel-schedule" aria-labelledby="addTask-tab-schedule" data-form-panel="schedule" hidden>
@@ -999,7 +999,6 @@
                     </div>
                     <div>
                         <h4 class="font-semibold text-slate-800">Repeat task</h4>
-                        <p class="text-xs text-slate-500">Create the task once and let My Digital Diary show it only on the scheduled days.</p>
                     </div>
                 </div>
 
@@ -1048,7 +1047,7 @@
                         </label>
 
                         <label class="block text-sm font-medium">
-                            Ends <span class="text-slate-400 font-normal">(optional)</span>
+                            Ends
                             <input
                                 id="addRepeatEnds"
                                 type="date"
@@ -1061,10 +1060,6 @@
 
                     <input type="hidden" name="repeat_interval" value="1">
 
-                    <div class="rounded-lg border border-violet-200 bg-white p-3 text-xs text-violet-800">
-                        <i class="fa-solid fa-circle-info mr-1"></i>
-                        Completing one recurring occurrence only completes that date. Future scheduled occurrences stay pending.
-                    </div>
                 </div>
             </div>
 
@@ -1077,7 +1072,6 @@
                         <i class="fa-solid fa-bell text-violet-600 mt-1"></i>
                         <div>
                             <h4 class="font-semibold text-slate-800">Task reminder</h4>
-                            <p class="text-xs text-slate-500">Set it now and it will also appear under Reminders. Needs a start time or a custom date &amp; time.</p>
                         </div>
                     </div>
                     <label class="inline-flex items-center gap-2 text-sm font-semibold">
@@ -1159,12 +1153,11 @@
 
             <label class="block text-sm font-medium">Task Date
                 <input id="editTaskDate" type="date" name="plan_date" class="pm-input mt-1 w-full" required>
-                <span class="block text-xs text-slate-500 mt-1">Change the date to move this pending task to another day.</span>
             </label>
 
-            <label class="block text-sm font-medium">Linked Goal <span class="text-slate-400 font-normal">(optional)</span>
+            <label class="block text-sm font-medium">Linked Goal
                 <select id="editTaskGoal" name="personal_goal_id" class="pm-input mt-1 w-full">
-                    <option value="">No linked goal</option>
+                    <option value="">Choose a goal (optional)</option>
                     @foreach(($goalOptions ?? collect()) as $goalId => $goalTitle)<option value="{{ $goalId }}">{{ $goalTitle }}</option>@endforeach
                 </select>
             </label>
@@ -1236,7 +1229,7 @@
                     </div>
 
                     <label class="block text-sm font-medium">
-                        Ends <span class="text-slate-400 font-normal">(optional)</span>
+                        Ends
                         <input id="editRepeatEnds" type="date" name="repeat_ends_on" class="pm-input mt-1 w-full">
                     </label>
 
@@ -1250,7 +1243,6 @@
                             <input type="radio" name="edit_scope" value="occurrence">
                             <span>
                                 <strong class="block text-sm text-slate-800">Only this occurrence</strong>
-                                <span class="block text-xs text-slate-500 mt-1">Keep the rest of the recurring series unchanged.</span>
                             </span>
                         </label>
 
@@ -1258,7 +1250,6 @@
                             <input type="radio" name="edit_scope" value="series" checked>
                             <span>
                                 <strong class="block text-sm text-slate-800">Entire series</strong>
-                                <span class="block text-xs text-slate-500 mt-1">Update the recurrence rule and all future scheduled appearances.</span>
                             </span>
                         </label>
                     </div>
@@ -1274,7 +1265,6 @@
                         <i class="fa-solid fa-bell text-violet-600 mt-1"></i>
                         <div>
                             <h4 class="font-semibold text-slate-800">Task reminder</h4>
-                            <p class="text-xs text-slate-500">Set it now and it will also appear under Reminders. Needs a start time or a custom date &amp; time.</p>
                         </div>
                     </div>
                     <label class="inline-flex items-center gap-2 text-sm font-semibold">
@@ -1337,9 +1327,6 @@
             <label class="block text-sm font-medium">Move to date
                 <input id="moveTaskDate" type="date" name="target_date" min="{{ today()->toDateString() }}" class="pm-input mt-1 w-full" required>
             </label>
-            <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-                The existing task will be rescheduled, not duplicated. Its times, priority and linked goal stay unchanged.
-            </div>
             <div class="flex flex-wrap justify-end gap-2">
                 <button id="moveTaskTomorrowButton" type="button" class="px-4 py-2.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 font-medium">Move to Tomorrow</button>
                 <button type="button" onclick="closeDpModal('moveTaskModal')" class="px-4 py-2.5 rounded-lg border bg-white">Cancel</button>
@@ -1366,9 +1353,6 @@
             <label class="block text-sm font-medium">Move selected pending tasks to
                 <input id="bulkMoveDate" type="date" name="target_date" min="{{ today()->toDateString() }}" class="pm-input mt-1 w-full" required>
             </label>
-            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
-                Completed tasks are left on their original date to preserve your history.
-            </div>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closeDpModal('bulkMoveTaskModal')" class="px-4 py-2.5 rounded-lg border bg-white">Cancel</button>
                 <button id="bulkMoveSubmit" type="submit" class="px-4 py-2.5 rounded-lg dp-btn-primary font-medium"><i class="fa-solid fa-forward mr-1"></i>Move Tasks</button>
@@ -1392,7 +1376,7 @@
         <div class="flex items-center justify-between px-5 py-4 border-b">
             <div>
                 <h3 id="planWeekTitle" class="font-bold text-lg">Plan the Week</h3>
-                <p class="text-xs text-slate-500">{{ $weekStart->format('D d M') }} – {{ $weekEnd->format('D d M Y') }} · add tasks and tick the days they happen</p>
+                <p class="text-xs text-slate-500">{{ $weekStart->format('D d M') }} – {{ $weekEnd->format('D d M Y') }}</p>
             </div>
             <button type="button" class="p-2 text-slate-500" onclick="closeDpModal('planWeekModal')" aria-label="Close"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
@@ -1475,11 +1459,11 @@
             <summary class="cursor-pointer text-slate-600">More options</summary>
             <div class="mt-3 grid sm:grid-cols-2 gap-3">
                 <label class="block text-sm font-medium">Description
-                    <textarea name="tasks[__i__][description]" rows="2" class="pm-input mt-1 w-full" placeholder="Optional details"></textarea>
+                    <textarea name="tasks[__i__][description]" rows="2" class="pm-input mt-1 w-full" placeholder="Details (optional)"></textarea>
                 </label>
                 <label class="block text-sm font-medium">Linked Goal
                     <select name="tasks[__i__][personal_goal_id]" class="pm-input mt-1 w-full">
-                        <option value="">No linked goal</option>
+                        <option value="">Choose a goal (optional)</option>
                         @foreach(($goalOptions ?? collect()) as $goalId => $goalTitle)<option value="{{ $goalId }}">{{ $goalTitle }}</option>@endforeach
                     </select>
                 </label>
