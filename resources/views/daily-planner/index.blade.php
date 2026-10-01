@@ -121,6 +121,71 @@
         color: var(--brand-1);
         box-shadow: 0 1px 4px rgba(15, 23, 42, .08);
     }
+    /* Week view */
+    .dp-week-grid {
+        display: grid;
+        gap: .75rem;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+    }
+    @media (min-width: 1280px) {
+        .dp-week-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    }
+    .dp-week-day {
+        border: 1px solid #e2e8f0;
+        border-radius: .85rem;
+        padding: .75rem;
+        background: #f8fafc;
+        min-height: 9rem;
+    }
+    .dp-week-day.is-today {
+        border-color: var(--brand-1);
+        background: #fff;
+        box-shadow: 0 0 0 1px var(--brand-1);
+    }
+    .dp-week-task {
+        display: flex;
+        gap: .5rem;
+        align-items: flex-start;
+        padding: .45rem .5rem;
+        border-radius: .6rem;
+        background: #fff;
+        border: 1px solid #eef2f7;
+    }
+    .dp-week-task-title {
+        font-size: .85rem;
+        font-weight: 600;
+        color: #1e293b;
+        overflow-wrap: anywhere;
+    }
+    .dp-week-task.is-done .dp-week-task-title {
+        color: #94a3b8;
+        text-decoration: line-through;
+    }
+    .dp-week-check {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: var(--brand-1);
+        font-size: 1rem;
+        line-height: 1.25rem;
+        cursor: pointer;
+    }
+    .dp-week-row {
+        border: 1px solid #e2e8f0;
+        border-radius: .85rem;
+        padding: 1rem;
+        background: #f8fafc;
+    }
+    .dp-chip {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 999px;
+        padding: .2rem .6rem;
+        color: #475569;
+        cursor: pointer;
+    }
+    .dp-chip:hover { border-color: var(--brand-1); color: var(--brand-1); }
+
     /* Tabs inside long modal forms (Add / Edit Task) */
     .dp-form-tabs {
         position: sticky;
@@ -327,7 +392,11 @@
                         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border dp-primary-border dp-primary-text bg-white font-medium">
                     <i class="fa-solid fa-pen-to-square"></i> Save Day Plan
                 </button>
-                <button type="button" onclick="openDpModal('addTaskModal')"
+                <button type="button" onclick="openPlanWeekModal()"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border dp-primary-border dp-primary-text bg-white font-medium">
+                    <i class="fa-solid fa-calendar-week"></i> Plan Week
+                </button>
+                <button type="button" onclick="openAddTaskForDate(@js($date->toDateString()), @js($date->format('l, d M Y')), '')"
                         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg dp-btn-primary font-medium shadow-sm">
                     <i class="fa-solid fa-plus"></i> Add Task
                 </button>
@@ -373,6 +442,17 @@
                 <i class="fa-solid fa-list-check"></i>
                 Tasks
                 <span class="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full dp-primary-bg-soft dp-primary-text text-xs">{{ $total }}</span>
+            </button>
+            <button
+                type="button"
+                class="dp-tab-button {{ $activeTab === 'week' ? 'is-active' : '' }}"
+                data-dp-tab="week"
+                role="tab"
+                aria-selected="{{ $activeTab === 'week' ? 'true' : 'false' }}"
+            >
+                <i class="fa-solid fa-calendar-week"></i>
+                This Week
+                <span class="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full dp-primary-bg-soft dp-primary-text text-xs">{{ $weekDays->sum(fn ($day) => $day['stats']['total']) }}</span>
             </button>
             <button
                 type="button"
@@ -594,7 +674,102 @@
 
         </section>
 
-        <section id="dp-tab-history" class="dp-tab-panel {{ $activeTab === 'history' ? 'is-active' : '' }}" role="tabpanel">
+        <section id="dp-tab-week" class="dp-tab-panel {{ $activeTab === 'week' ? 'is-active' : '' }}" role="tabpanel">
+            <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div>
+                        <h3 class="font-bold text-slate-900">
+                            Week of {{ $weekStart->format('d M') }} – {{ $weekEnd->format('d M Y') }}
+                        </h3>
+                        <p class="text-sm text-slate-500">Every task due this week, including daily and repeating ones.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a href="{{ route('daily-planner.index', ['date' => $weekStart->copy()->subWeek()->toDateString(), 'tab' => 'week']) }}"
+                           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white text-sm hover:bg-slate-50">
+                            <i class="fa-solid fa-chevron-left"></i> Previous week
+                        </a>
+                        @unless($weekStart->isSameDay(today()->startOfWeek(\Carbon\Carbon::MONDAY)))
+                            <a href="{{ route('daily-planner.index', ['tab' => 'week']) }}"
+                               class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white text-sm hover:bg-slate-50">
+                                This week
+                            </a>
+                        @endunless
+                        <a href="{{ route('daily-planner.index', ['date' => $weekStart->copy()->addWeek()->toDateString(), 'tab' => 'week']) }}"
+                           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white text-sm hover:bg-slate-50">
+                            Next week <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                        <button type="button" onclick="openPlanWeekModal()"
+                                class="inline-flex items-center gap-2 px-3 py-2 rounded-lg dp-btn-primary text-sm font-medium">
+                            <i class="fa-solid fa-calendar-plus"></i> Plan Week
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dp-week-grid p-4">
+                    @foreach($weekDays as $day)
+                        @php $dayDate = $day['date']; @endphp
+                        <div class="dp-week-day {{ $dayDate->isToday() ? 'is-today' : '' }}">
+                            <div class="flex items-start justify-between gap-2">
+                                <a href="{{ route('daily-planner.index', ['date' => $dayDate->toDateString()]) }}" class="block">
+                                    <span class="block text-xs font-semibold uppercase tracking-wide {{ $dayDate->isToday() ? 'dp-primary-text' : 'text-slate-500' }}">
+                                        {{ $dayDate->format('D') }}{{ $dayDate->isToday() ? ' · Today' : '' }}
+                                    </span>
+                                    <span class="block text-lg font-bold text-slate-900">{{ $dayDate->format('d M') }}</span>
+                                </a>
+                                <button type="button"
+                                        onclick="openAddTaskForDate(@js($dayDate->toDateString()), @js($dayDate->format('l, d M Y')), 'week')"
+                                        class="grid h-8 w-8 place-items-center rounded-lg border bg-white text-slate-600 hover:text-[var(--brand-1)]"
+                                        aria-label="Add a task on {{ $dayDate->format('l, d M') }}">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+
+                            @if($day['stats']['total'] > 0)
+                                <div class="mt-2 text-xs text-slate-500">
+                                    {{ $day['stats']['completed'] }}/{{ $day['stats']['total'] }} done
+                                    <div class="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                        <div class="h-full dp-progress-bar" style="width: {{ $day['stats']['progress'] }}%"></div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <ul class="mt-3 space-y-2">
+                                @forelse($day['items'] as $weekItem)
+                                    <li class="dp-week-task {{ $weekItem->is_completed ? 'is-done' : '' }}">
+                                        <form method="POST" action="{{ route('daily-planner.items.toggle', $weekItem) }}" class="m-0">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="occurrence_date" value="{{ $dayDate->toDateString() }}">
+                                            <input type="hidden" name="return_tab" value="week">
+                                            <button type="submit" class="dp-week-check"
+                                                    aria-label="{{ $weekItem->is_completed ? 'Mark as not done' : 'Mark as done' }}: {{ $weekItem->title }}">
+                                                <i class="fa-{{ $weekItem->is_completed ? 'solid fa-circle-check' : 'regular fa-circle' }}"></i>
+                                            </button>
+                                        </form>
+                                        <div class="min-w-0">
+                                            <div class="dp-week-task-title">{{ $weekItem->title }}</div>
+                                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                                                @if($weekItem->start_time)
+                                                    <span><i class="fa-regular fa-clock mr-0.5"></i>{{ $formatTime($weekItem->start_time) }}</span>
+                                                @endif
+                                                @if($weekItem->isRecurring())
+                                                    <span class="text-violet-700"><i class="fa-solid fa-repeat mr-0.5"></i>{{ $weekItem->repeat_label }}</span>
+                                                @endif
+                                                <span class="capitalize">{{ $weekItem->priority }}</span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                @empty
+                                    <li class="text-xs text-slate-400">No tasks</li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        <section id="dp-tab-history\" class="dp-tab-panel {{ $activeTab === 'history' ? 'is-active' : '' }}" role="tabpanel">
             <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                 <div class="px-5 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div>
@@ -760,13 +935,14 @@
         <div class="flex items-center justify-between px-5 py-4 border-b">
             <div>
                 <h3 id="addTaskTitle" class="font-bold text-lg">Add Task</h3>
-                <p class="text-xs text-slate-500">{{ $date->format('l, d M Y') }}</p>
+                <p id="addTaskDateLabel" class="text-xs text-slate-500">{{ $date->format('l, d M Y') }}</p>
             </div>
             <button type="button" class="p-2 text-slate-500" onclick="closeDpModal('addTaskModal')"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
         <form method="POST" action="{{ route('daily-planner.items.store') }}" class="p-5 space-y-4">
             @csrf
-            <input type="hidden" name="plan_date" value="{{ $date->toDateString() }}">
+            <input id="addTaskPlanDate" type="hidden" name="plan_date" value="{{ $date->toDateString() }}">
+            <input id="addTaskReturnTab" type="hidden" name="return_tab" value="">
 
             <div class="dp-form-tabs" role="tablist" aria-label="Task form sections">
                 <button type="button" role="tab" id="addTask-tab-details" aria-controls="addTask-panel-details" aria-selected="true" tabindex="0" data-form-tab="details" class="dp-form-tab is-active">
@@ -1210,6 +1386,108 @@
     @endforeach
 </form>
 
+{{-- Plan Week Modal --}}
+<div id="planWeekModal" class="dp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="planWeekTitle">
+    <div class="dp-modal-panel max-w-3xl">
+        <div class="flex items-center justify-between px-5 py-4 border-b">
+            <div>
+                <h3 id="planWeekTitle" class="font-bold text-lg">Plan the Week</h3>
+                <p class="text-xs text-slate-500">{{ $weekStart->format('D d M') }} – {{ $weekEnd->format('D d M Y') }} · add tasks and tick the days they happen</p>
+            </div>
+            <button type="button" class="p-2 text-slate-500" onclick="closeDpModal('planWeekModal')" aria-label="Close"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <form id="planWeekForm" method="POST" action="{{ route('daily-planner.week.store') }}" class="p-5 space-y-4" novalidate>
+            @csrf
+            <input type="hidden" name="week_start" value="{{ $weekStart->toDateString() }}">
+
+            <div id="weekTaskRows" class="space-y-3"></div>
+
+            <button type="button" onclick="addWeekTaskRow()" class="w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:border-[var(--brand-1)] hover:text-[var(--brand-1)]">
+                <i class="fa-solid fa-plus mr-1"></i> Add another task
+            </button>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeDpModal('planWeekModal')" class="px-4 py-2.5 rounded-lg border bg-white">Cancel</button>
+                <button type="submit" class="px-4 py-2.5 rounded-lg dp-btn-primary font-medium"><i class="fa-solid fa-calendar-check mr-1"></i>Save Week Plan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<template id="weekTaskTemplate">
+    <div class="dp-week-row" data-week-row>
+        <div class="flex items-center justify-between gap-2 mb-3">
+            <span class="text-sm font-semibold text-slate-700" data-week-row-label>Task</span>
+            <button type="button" class="text-slate-400 hover:text-rose-600 text-sm" data-week-row-remove aria-label="Remove this task">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        </div>
+
+        <div class="grid sm:grid-cols-4 gap-3">
+            <label class="block text-sm font-medium sm:col-span-2">Task <span class="text-rose-600">*</span>
+                <input name="tasks[__i__][title]" class="pm-input mt-1 w-full" placeholder="e.g. Morning run" data-week-title>
+            </label>
+            <label class="block text-sm font-medium">Start
+                <input type="time" name="tasks[__i__][start_time]" class="pm-input mt-1 w-full">
+            </label>
+            <label class="block text-sm font-medium">End
+                <input type="time" name="tasks[__i__][end_time]" class="pm-input mt-1 w-full">
+            </label>
+        </div>
+
+        <div class="mt-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span class="text-sm font-medium">Days <span class="text-rose-600">*</span></span>
+                <div class="flex flex-wrap gap-1 text-xs">
+                    <button type="button" class="dp-chip" data-week-preset="all">All week</button>
+                    <button type="button" class="dp-chip" data-week-preset="weekdays">Mon–Fri</button>
+                    <button type="button" class="dp-chip" data-week-preset="weekend">Weekend</button>
+                    <button type="button" class="dp-chip" data-week-preset="none">Clear</button>
+                </div>
+            </div>
+            <div class="dp-week-days">
+                    <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="monday"><span>Mon</span></label>
+                    <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="tuesday"><span>Tue</span></label>
+                    <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="wednesday"><span>Wed</span></label>
+                    <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="thursday"><span>Thu</span></label>
+                    <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="friday"><span>Fri</span></label>
+                    <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="saturday"><span>Sat</span></label>
+                    <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="sunday"><span>Sun</span></label>
+            </div>
+            <p class="hidden mt-1 text-xs text-rose-600" data-week-days-error>Tick at least one day.</p>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="tasks[__i__][repeat_weekly]" value="1">
+                Repeat every week
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm">Priority
+                <select name="tasks[__i__][priority]" class="pm-input py-1.5">
+                    <option value="high">High</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </label>
+        </div>
+
+        <details class="mt-3 text-sm">
+            <summary class="cursor-pointer text-slate-600">More options</summary>
+            <div class="mt-3 grid sm:grid-cols-2 gap-3">
+                <label class="block text-sm font-medium">Description
+                    <textarea name="tasks[__i__][description]" rows="2" class="pm-input mt-1 w-full" placeholder="Optional details"></textarea>
+                </label>
+                <label class="block text-sm font-medium">Linked Goal
+                    <select name="tasks[__i__][personal_goal_id]" class="pm-input mt-1 w-full">
+                        <option value="">No linked goal</option>
+                        @foreach(($goalOptions ?? collect()) as $goalId => $goalTitle)<option value="{{ $goalId }}">{{ $goalTitle }}</option>@endforeach
+                    </select>
+                </label>
+            </div>
+        </details>
+    </div>
+</template>
+
 {{-- Save Day Plan Modal --}}
 <div id="dayPlanModal" class="dp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="dayPlanTitle">
     <div class="dp-modal-panel">
@@ -1324,6 +1602,138 @@
         if (!modal) return;
         modal.classList.remove('is-open');
     };
+
+    /*
+     * Add Task can be opened for any day (header button = the viewed
+     * day; the week view's "+" = that day). returnTab 'week' sends the
+     * user back to the week view after saving.
+     */
+    window.openAddTaskForDate = function(date, label, returnTab) {
+        const planDate = document.getElementById('addTaskPlanDate');
+        const dateLabel = document.getElementById('addTaskDateLabel');
+        const returnInput = document.getElementById('addTaskReturnTab');
+        const starts = document.getElementById('addRepeatStarts');
+        const ends = document.getElementById('addRepeatEnds');
+
+        if (planDate) planDate.value = date;
+        if (dateLabel) dateLabel.textContent = label;
+        if (returnInput) returnInput.value = returnTab || '';
+        if (starts) starts.value = date;
+        if (ends) ends.min = date;
+
+        openDpModal('addTaskModal');
+    };
+
+    // ----- Plan the Week -----
+    let weekRowIndex = 0;
+    const WEEK_PRESETS = {
+        all: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        weekdays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        weekend: ['saturday', 'sunday'],
+        none: [],
+    };
+
+    function renumberWeekRows() {
+        const rows = [...document.querySelectorAll('#weekTaskRows [data-week-row]')];
+        rows.forEach((row, index) => {
+            row.querySelector('[data-week-row-label]').textContent = 'Task ' + (index + 1);
+            row.querySelector('[data-week-row-remove]').hidden = rows.length === 1;
+        });
+    }
+
+    window.addWeekTaskRow = function(values) {
+        const template = document.getElementById('weekTaskTemplate');
+        const holder = document.getElementById('weekTaskRows');
+        if (!template || !holder) return null;
+
+        const index = weekRowIndex++;
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = template.innerHTML.replaceAll('__i__', index);
+        const row = wrapper.firstElementChild;
+
+        if (values) {
+            Object.entries(values).forEach(([key, value]) => {
+                if (key === 'days') {
+                    row.querySelectorAll('input[name$="[days][]"]').forEach(box => {
+                        box.checked = Array.isArray(value) && value.includes(box.value);
+                    });
+                    return;
+                }
+                const field = row.querySelector(`[name="tasks[${index}][${key}]"]`);
+                if (!field) return;
+                if (field.type === 'checkbox') field.checked = !!value && value !== '0';
+                else field.value = value ?? '';
+            });
+        }
+
+        holder.appendChild(row);
+        renumberWeekRows();
+        return row;
+    };
+
+    window.openPlanWeekModal = function() {
+        if (!document.querySelector('#weekTaskRows [data-week-row]')) addWeekTaskRow();
+        openDpModal('planWeekModal');
+        window.setTimeout(() => document.querySelector('#weekTaskRows [data-week-title]')?.focus(), 50);
+    };
+
+    document.getElementById('weekTaskRows')?.addEventListener('click', function (event) {
+        const row = event.target.closest('[data-week-row]');
+        if (!row) return;
+
+        const preset = event.target.closest('[data-week-preset]');
+        if (preset) {
+            const days = WEEK_PRESETS[preset.dataset.weekPreset] || [];
+            row.querySelectorAll('input[name$="[days][]"]').forEach(box => {
+                box.checked = days.includes(box.value);
+            });
+            row.querySelector('[data-week-days-error]').classList.add('hidden');
+            return;
+        }
+
+        if (event.target.closest('[data-week-row-remove]')) {
+            row.remove();
+            renumberWeekRows();
+        }
+    });
+
+    document.getElementById('weekTaskRows')?.addEventListener('change', function (event) {
+        const row = event.target.closest('[data-week-row]');
+        if (row && event.target.matches('input[name$="[days][]"]')) {
+            row.querySelector('[data-week-days-error]').classList.add('hidden');
+        }
+    });
+
+    // Every row needs a name and at least one day before submitting.
+    document.getElementById('planWeekForm')?.addEventListener('submit', function (event) {
+        let firstProblem = null;
+
+        this.querySelectorAll('[data-week-row]').forEach(row => {
+            const title = row.querySelector('[data-week-title]');
+            const hasDay = !!row.querySelector('input[name$="[days][]"]:checked');
+            const dayError = row.querySelector('[data-week-days-error]');
+
+            title.classList.toggle('border-rose-500', title.value.trim() === '');
+            dayError.classList.toggle('hidden', hasDay);
+
+            if (!firstProblem && title.value.trim() === '') firstProblem = title;
+            if (!firstProblem && !hasDay) firstProblem = row.querySelector('input[name$="[days][]"]');
+        });
+
+        if (firstProblem) {
+            event.preventDefault();
+            firstProblem.focus();
+        }
+    });
+
+    // Restore the rows (and reopen) when the server rejected a week plan.
+    (function () {
+        const oldTasks = @json(old('tasks', []));
+        const entries = Array.isArray(oldTasks) ? oldTasks : Object.values(oldTasks || {});
+        if (entries.length === 0) return;
+        entries.forEach(values => addWeekTaskRow(values));
+        openDpModal('planWeekModal');
+    })();
 
     window.toggleRepeatFields = function(prefix) {
         const type = document.getElementById(prefix + 'RepeatType');

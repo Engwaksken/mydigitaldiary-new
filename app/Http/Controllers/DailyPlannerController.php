@@ -12,6 +12,7 @@ use App\Services\DailyPlannerWellbeingSyncService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -54,11 +55,13 @@ class DailyPlannerController extends Controller
 
         $activeTab = in_array(
             $request->query('tab'),
-            ['tasks', 'history'],
+            ['tasks', 'week', 'history'],
             true
         )
             ? $request->query('tab')
             : 'tasks';
+
+        $weekDays = $this->weekDays($request->user()->id, $date);
 
         $historySearch = trim(
             (string) $request->query('history_q', '')
@@ -186,6 +189,9 @@ class DailyPlannerController extends Controller
             'progress' => $stats['progress'],
             'goalOptions' => $goalOptions,
             'activeTab' => $activeTab,
+            'weekDays' => $weekDays,
+            'weekStart' => $weekDays->first()['date'],
+            'weekEnd' => $weekDays->last()['date'],
             'pastPlans' => $pastPlans,
             'historySearch' => $historySearch,
             'historyPeriod' => $historyPeriod,
@@ -193,6 +199,125 @@ class DailyPlannerController extends Controller
             'historyTo' => $historyTo,
             'historyPerPage' => $historyPerPage,
         ]);
+    }
+
+    /**
+     * Monday-to-Sunday view of the week containing $date, with each
+     * day's resolved tasks (one-off and recurring occurrences).
+     */
+    private function weekDays(int $userId, Carbon $date): \Illuminate\Support\Collection
+    {
+        $monday = $date->copy()->startOfWeek(Carbon::MONDAY);
+
+        return collect(range(0, 6))->map(function (int $offset) use ($userId, $monday) {
+            $day = $monday->copy()->addDays($offset);
+            $items = $this->recurrence->itemsForDate($userId, $day);
+
+            return [
+                'date' => $day,
+                'items' => $items,
+                'stats' => $this->recurrence->statistics($items),
+            ];
+        });
+    }
+
+    /**
+     * Plan a whole week at once: each submitted task is added on every
+     * day ticked for it. "Repeat every week" stores ONE recurring task
+     * (daily when all seven days are ticked, otherwise specific days)
+     * starting this week; otherwise a one-off task is created per day.
+     */
+    public function storeWeek(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'week_start' => ['required', 'date'],
+            'tasks' => ['required', 'array', 'min:1', 'max:30'],
+            'tasks.*.title' => ['required', 'string', 'max:255'],
+            'tasks.*.description' => ['nullable', 'string'],
+            'tasks.*.priority' => ['required', Rule::in(['low', 'medium', 'high'])],
+            'tasks.*.start_time' => ['nullable', 'date_format:H:i'],
+            'tasks.*.end_time' => ['nullable', 'date_format:H:i', 'after:tasks.*.start_time'],
+            'tasks.*.personal_goal_id' => ['nullable', 'integer', 'exists:personal_goals,id'],
+            'tasks.*.days' => ['required', 'array', 'min:1'],
+            'tasks.*.days.*' => [Rule::in(DailyPlannerRecurrenceService::WEEK_DAYS)],
+            'tasks.*.repeat_weekly' => ['nullable', 'boolean'],
+        ], [
+            'tasks.*.title.required' => 'Every week task needs a name.',
+            'tasks.*.days.required' => 'Tick at least one day for every week task.',
+            'tasks.*.end_time.after' => 'A week task\'s end time must be after its start time.',
+        ]);
+
+        $userId = $request->user()->id;
+        $monday = Carbon::parse($data['week_start'])->startOfWeek(Carbon::MONDAY);
+        $created = 0;
+
+        $planFor = function (Carbon $day) use ($userId): DailyPlan {
+            return DailyPlan::firstOrCreate(
+                ['user_id' => $userId, 'plan_date' => $day->toDateString()],
+                ['title' => 'My Daily Plan']
+            );
+        };
+
+        DB::transaction(function () use ($data, $monday, $planFor, &$created) {
+            foreach ($data['tasks'] as $task) {
+                // Keep Monday-first order regardless of how boxes were ticked.
+                $days = array_values(array_intersect(
+                    DailyPlannerRecurrenceService::WEEK_DAYS,
+                    $task['days']
+                ));
+
+                $base = [
+                    'title' => $task['title'],
+                    'description' => $task['description'] ?? null,
+                    'priority' => $task['priority'],
+                    'start_time' => $task['start_time'] ?? null,
+                    'end_time' => $task['end_time'] ?? null,
+                    'personal_goal_id' => $task['personal_goal_id'] ?? null,
+                ];
+
+                $dateFor = fn (string $day) => $monday->copy()->addDays(
+                    array_search($day, DailyPlannerRecurrenceService::WEEK_DAYS, true)
+                );
+
+                if (! empty($task['repeat_weekly'])) {
+                    $plan = $planFor($dateFor($days[0]));
+                    $everyDay = count($days) === 7;
+
+                    $plan->items()->create($base + $this->recurrence->normalizeRecurrence([
+                        'repeat_type' => $everyDay ? 'daily' : 'specific_days',
+                        'repeat_days' => $everyDay ? [] : $days,
+                        'repeat_interval' => 1,
+                        'repeat_starts_on' => $monday->toDateString(),
+                    ], $monday->toDateString()) + [
+                        'sort_order' => ($plan->items()->max('sort_order') ?? 0) + 1,
+                    ]);
+
+                    $created++;
+
+                    continue;
+                }
+
+                foreach ($days as $day) {
+                    $plan = $planFor($dateFor($day));
+
+                    $plan->items()->create($base + [
+                        'repeat_type' => 'once',
+                        'sort_order' => ($plan->items()->max('sort_order') ?? 0) + 1,
+                    ]);
+
+                    $created++;
+                }
+            }
+        });
+
+        return redirect()
+            ->route('daily-planner.index', [
+                'date' => $monday->toDateString(),
+                'tab' => 'week',
+            ])
+            ->with('success', $created === 1
+                ? '1 task added to your week.'
+                : "{$created} tasks added to your week.");
     }
 
     public function updatePlan(Request $request): RedirectResponse
@@ -879,9 +1004,16 @@ class DailyPlannerController extends Controller
         string $date,
         ?string $success = null
     ): RedirectResponse {
+        $params = ['date' => $date];
+
+        // Actions started from the week view return to it.
+        if (request()->input('return_tab') === 'week') {
+            $params['tab'] = 'week';
+        }
+
         $response = redirect()->route(
             'daily-planner.index',
-            ['date' => $date]
+            $params
         );
 
         return $success
