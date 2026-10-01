@@ -31,6 +31,12 @@ class DailyPlanItem extends Model
         'repeat_ends_on',
         'recurrence_group_id',
         'series_parent_id',
+
+        'reminder_enabled',
+        'reminder_offset_minutes',
+        'reminder_custom_at',
+        'reminder_channels',
+        'reminder_id',
     ];
 
     protected $casts = [
@@ -39,6 +45,10 @@ class DailyPlanItem extends Model
         'repeat_days' => 'array',
         'repeat_starts_on' => 'date',
         'repeat_ends_on' => 'date',
+        'reminder_enabled' => 'boolean',
+        'reminder_offset_minutes' => 'integer',
+        'reminder_custom_at' => 'datetime',
+        'reminder_channels' => 'array',
     ];
 
     public function personalGoal()

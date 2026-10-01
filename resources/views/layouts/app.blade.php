@@ -540,8 +540,48 @@
         dialog.style.setProperty('z-index', '2147483000', 'important');
     }
 
+    const LEGACY_OVERLAY_PROPS = [
+        'position', 'top', 'right', 'bottom', 'left', 'width', 'height',
+        'display', 'align-items', 'justify-content', 'padding', 'overflow', 'z-index'
+    ];
+    const LEGACY_PANEL_PROPS = ['position', 'top', 'right', 'bottom', 'left', 'margin', 'transform'];
+
+    /*
+     * Undo the inline !important positioning once an overlay closes.
+     * Overlays that close only by dropping their show/open/is-open class
+     * (e.g. Daily Planner's .dp-modal-backdrop) would otherwise stay
+     * visible, because the inline display:flex !important beats the
+     * stylesheet's display:none.
+     */
+    function releaseLegacyOverlay(overlay) {
+        if (overlay.dataset.pmOverlayForced !== '1') {
+            return;
+        }
+
+        // Only drop the !important values set by forceLegacyOverlayPosition;
+        // a page script's own inline style (e.g. display:none) is kept.
+        const release = (el, props) => props.forEach((prop) => {
+            if (el.style.getPropertyPriority(prop) === 'important') {
+                el.style.removeProperty(prop);
+            }
+        });
+
+        delete overlay.dataset.pmOverlayForced;
+        release(overlay, LEGACY_OVERLAY_PROPS);
+
+        const panel = overlay.querySelector(
+            ':scope > .modal, :scope > .modal-dialog, :scope > .app-dialog, ' +
+            ':scope > .ajax-dialog, :scope > .church-modal-dialog, :scope > .birds-modal-dialog, ' +
+            ':scope > .dp-modal-panel, :scope > .sc-modal-panel'
+        );
+
+        if (panel) {
+            release(panel, LEGACY_PANEL_PROPS);
+        }
+    }
+
     function forceLegacyOverlayPosition(overlay) {
-        if (!overlay || !isDesktop()) {
+        if (!overlay) {
             return;
         }
 
@@ -550,9 +590,12 @@
             overlay.classList.contains('open') ||
             overlay.classList.contains('is-open');
 
-        if (!isVisible) {
+        if (!isVisible || !isDesktop()) {
+            releaseLegacyOverlay(overlay);
             return;
         }
+
+        overlay.dataset.pmOverlayForced = '1';
 
         overlay.style.setProperty('position', 'fixed', 'important');
         overlay.style.setProperty('top', '0', 'important');

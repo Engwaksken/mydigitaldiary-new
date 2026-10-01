@@ -588,11 +588,6 @@ class DailyPlannerController extends Controller
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer'],
-            'reminder_enabled' => ['nullable', 'boolean'],
-            'reminder_offset_minutes' => ['nullable', 'integer', Rule::in(DailyPlannerTaskReminderService::OFFSETS)],
-            'reminder_custom_at' => ['nullable', 'date'],
-            'reminder_channels' => ['nullable', 'array'],
-            'reminder_channels.*' => [Rule::in(['in_app', 'push', 'email'])],
             'occurrence_date' => ['nullable', 'date'],
         ]);
 
@@ -635,7 +630,18 @@ class DailyPlannerController extends Controller
         Request $request,
         bool $creating
     ): array {
-        return $request->validate([
+        /*
+         * The reminder <select> offers "custom" alongside the minute
+         * offsets; a custom reminder is stored as reminder_custom_at with
+         * no offset, and a preset offset clears any old custom time.
+         */
+        $customReminder = $request->input('reminder_offset_minutes') === 'custom';
+
+        if ($customReminder) {
+            $request->merge(['reminder_offset_minutes' => null]);
+        }
+
+        $data = $request->validate([
             'plan_date' => [
                 $creating ? 'required' : 'nullable',
                 'date',
@@ -699,7 +705,25 @@ class DailyPlannerController extends Controller
                 'nullable',
                 Rule::in(['occurrence', 'series']),
             ],
+            'reminder_enabled' => ['nullable', 'boolean'],
+            'reminder_offset_minutes' => ['nullable', 'integer', Rule::in(DailyPlannerTaskReminderService::OFFSETS)],
+            'reminder_custom_at' => [
+                Rule::requiredIf(fn () => $customReminder && $request->boolean('reminder_enabled')),
+                'nullable',
+                'date',
+            ],
+            'reminder_channels' => ['nullable', 'array'],
+            'reminder_channels.*' => [Rule::in(['in_app', 'push', 'email'])],
         ]);
+
+        // An unticked checkbox is not submitted, so read it explicitly.
+        $data['reminder_enabled'] = $request->boolean('reminder_enabled');
+
+        if (! $customReminder) {
+            $data['reminder_custom_at'] = null;
+        }
+
+        return $data;
     }
 
     private function owned(

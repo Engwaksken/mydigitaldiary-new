@@ -121,6 +121,41 @@
         color: var(--brand-1);
         box-shadow: 0 1px 4px rgba(15, 23, 42, .08);
     }
+    /* Tabs inside long modal forms (Add / Edit Task) */
+    .dp-form-tabs {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        gap: .25rem;
+        margin: -1.25rem -1.25rem 0;
+        padding: .5rem 1.25rem 0;
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        overflow-x: auto;
+    }
+    .dp-form-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .6rem .85rem;
+        margin-bottom: -1px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: #64748b;
+        font-size: .875rem;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    .dp-form-tab:hover { color: var(--brand-1); }
+    .dp-form-tab.is-active {
+        color: var(--brand-1);
+        border-bottom-color: var(--brand-1);
+    }
+    .dp-form-panel { min-height: 16rem; }
+    .dp-form-panel[hidden] { display: none !important; }
     .dp-tab-panel { display: none; }
     .dp-tab-panel.is-active { display: block; }
     .dp-filter-card {
@@ -733,6 +768,19 @@
             @csrf
             <input type="hidden" name="plan_date" value="{{ $date->toDateString() }}">
 
+            <div class="dp-form-tabs" role="tablist" aria-label="Task form sections">
+                <button type="button" role="tab" id="addTask-tab-details" aria-controls="addTask-panel-details" aria-selected="true" tabindex="0" data-form-tab="details" class="dp-form-tab is-active">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i><span>Details</span>
+                </button>
+                <button type="button" role="tab" id="addTask-tab-schedule" aria-controls="addTask-panel-schedule" aria-selected="false" tabindex="-1" data-form-tab="schedule" class="dp-form-tab">
+                    <i class="fa-solid fa-clock" aria-hidden="true"></i><span>Schedule & Repeat</span>
+                </button>
+                <button type="button" role="tab" id="addTask-tab-reminder" aria-controls="addTask-panel-reminder" aria-selected="false" tabindex="-1" data-form-tab="reminder" class="dp-form-tab">
+                    <i class="fa-solid fa-bell" aria-hidden="true"></i><span>Reminder</span>
+                </button>
+            </div>
+
+            <div class="dp-form-panel space-y-4" role="tabpanel" id="addTask-panel-details" aria-labelledby="addTask-tab-details" data-form-panel="details">
             <label class="block text-sm font-medium">Task <span class="text-rose-600">*</span>
                 <input required name="title" value="{{ old('title') }}" class="pm-input mt-1 w-full" placeholder="What should I do?">
             </label>
@@ -749,7 +797,10 @@
             </label>
 
             <div class="grid md:grid-cols-2 gap-3 mb-3"><div><label class="block text-sm font-medium text-slate-700 mb-1">Task Achievement</label><textarea name="achievements" rows="2" class="pm-input"></textarea></div><div><label class="block text-sm font-medium text-slate-700 mb-1">Task Challenge</label><textarea name="challenges" rows="2" class="pm-input"></textarea></div></div>
-<div class="grid sm:grid-cols-3 gap-3">
+            </div>
+
+            <div class="dp-form-panel space-y-4" role="tabpanel" id="addTask-panel-schedule" aria-labelledby="addTask-tab-schedule" data-form-panel="schedule" hidden>
+            <div class="grid sm:grid-cols-3 gap-3">
                 <label class="block text-sm font-medium">Priority
                     <select name="priority" class="pm-input mt-1 w-full">
                         <option value="high">High</option>
@@ -841,6 +892,54 @@
                 </div>
             </div>
 
+            </div>
+
+            <div class="dp-form-panel space-y-4" role="tabpanel" id="addTask-panel-reminder" aria-labelledby="addTask-tab-reminder" data-form-panel="reminder" hidden>
+            <div class="dp-repeat-panel">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex gap-3">
+                        <i class="fa-solid fa-bell text-violet-600 mt-1"></i>
+                        <div>
+                            <h4 class="font-semibold text-slate-800">Task reminder</h4>
+                            <p class="text-xs text-slate-500">Set it now and it will also appear under Reminders. Needs a start time or a custom date &amp; time.</p>
+                        </div>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold">
+                        <input type="checkbox" name="reminder_enabled" value="1" onchange="toggleTaskReminderFields('add', this.checked)">
+                        Remind me
+                    </label>
+                </div>
+                <div id="addTaskReminderFields" class="hidden mt-4 grid md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold">Remind me</label>
+                        <select name="reminder_offset_minutes" class="pm-input mt-1 w-full" onchange="toggleCustomTaskReminder('add', this.value)">
+                            <option value="0">At task time</option>
+                            <option value="5">5 minutes before</option>
+                            <option value="15" selected>15 minutes before</option>
+                            <option value="30">30 minutes before</option>
+                            <option value="60">1 hour before</option>
+                            <option value="120">2 hours before</option>
+                            <option value="1440">1 day before</option>
+                            <option value="custom">Custom date &amp; time</option>
+                        </select>
+                    </div>
+                    <div id="addTaskReminderCustom" class="hidden">
+                        <label class="text-xs font-bold">Custom reminder date &amp; time</label>
+                        <input type="datetime-local" name="reminder_custom_at" class="pm-input mt-1 w-full">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Notification channels</label>
+                        <div class="mt-2 flex flex-wrap gap-3 text-sm">
+                            <label><input type="checkbox" name="reminder_channels[]" value="in_app" checked> In-app</label>
+                            <label><input type="checkbox" name="reminder_channels[]" value="push" checked> Push</label>
+                            <label><input type="checkbox" name="reminder_channels[]" value="email"> Email</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            </div>
+
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeDpModal('addTaskModal')" class="px-4 py-2.5 rounded-lg border bg-white">Cancel</button>
                 <button type="submit" class="px-4 py-2.5 rounded-lg dp-btn-primary font-medium"><i class="fa-solid fa-plus mr-1"></i>Add Task</button>
@@ -859,6 +958,20 @@
         <form id="editTaskForm" method="POST" action="" class="p-5 space-y-4">
             @csrf
             @method('PUT')
+
+            <div class="dp-form-tabs" role="tablist" aria-label="Task form sections">
+                <button type="button" role="tab" id="editTask-tab-details" aria-controls="editTask-panel-details" aria-selected="true" tabindex="0" data-form-tab="details" class="dp-form-tab is-active">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i><span>Details</span>
+                </button>
+                <button type="button" role="tab" id="editTask-tab-schedule" aria-controls="editTask-panel-schedule" aria-selected="false" tabindex="-1" data-form-tab="schedule" class="dp-form-tab">
+                    <i class="fa-solid fa-clock" aria-hidden="true"></i><span>Schedule & Repeat</span>
+                </button>
+                <button type="button" role="tab" id="editTask-tab-reminder" aria-controls="editTask-panel-reminder" aria-selected="false" tabindex="-1" data-form-tab="reminder" class="dp-form-tab">
+                    <i class="fa-solid fa-bell" aria-hidden="true"></i><span>Reminder</span>
+                </button>
+            </div>
+
+            <div class="dp-form-panel space-y-4" role="tabpanel" id="editTask-panel-details" aria-labelledby="editTask-tab-details" data-form-panel="details">
 
             <label class="block text-sm font-medium">Task <span class="text-rose-600">*</span>
                 <input id="editTaskName" required name="title" class="pm-input mt-1 w-full">
@@ -880,6 +993,9 @@
                 </select>
             </label>
 
+            </div>
+
+            <div class="dp-form-panel space-y-4" role="tabpanel" id="editTask-panel-schedule" aria-labelledby="editTask-tab-schedule" data-form-panel="schedule" hidden>
             <div class="grid sm:grid-cols-3 gap-3">
                 <label class="block text-sm font-medium">Priority
                     <select id="editTaskPriority" name="priority" class="pm-input mt-1 w-full">
@@ -951,50 +1067,6 @@
                     <input type="hidden" name="repeat_interval" value="1">
                 </div>
 
-            <div class="dp-repeat-panel mt-4">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="flex gap-3">
-                        <i class="fa-solid fa-bell text-violet-600 mt-1"></i>
-                        <div>
-                            <h4 class="font-semibold text-slate-800">Task reminder</h4>
-                            <p class="text-xs text-slate-500">Set it now and it will also appear under Reminders.</p>
-                        </div>
-                    </div>
-                    <label class="inline-flex items-center gap-2 text-sm font-semibold">
-                        <input type="checkbox" name="reminder_enabled" value="1" onchange="toggleTaskReminderFields('add', this.checked)">
-                        Remind me
-                    </label>
-                </div>
-                <div id="addTaskReminderFields" class="hidden mt-4 grid md:grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-xs font-bold">Remind me</label>
-                        <select name="reminder_offset_minutes" class="pm-input mt-1 w-full" onchange="toggleCustomTaskReminder('add', this.value)">
-                            <option value="0">At task time</option>
-                            <option value="5">5 minutes before</option>
-                            <option value="15" selected>15 minutes before</option>
-                            <option value="30">30 minutes before</option>
-                            <option value="60">1 hour before</option>
-                            <option value="120">2 hours before</option>
-                            <option value="1440">1 day before</option>
-                            <option value="custom">Custom date & time</option>
-                        </select>
-                    </div>
-                    <div id="addTaskReminderCustom" class="hidden">
-                        <label class="text-xs font-bold">Custom reminder date & time</label>
-                        <input type="datetime-local" name="reminder_custom_at" class="pm-input mt-1 w-full">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="text-xs font-bold">Notification channels</label>
-                        <div class="mt-2 flex flex-wrap gap-3 text-sm">
-                            <label><input type="checkbox" name="reminder_channels[]" value="in_app" checked> In-app</label>
-                            <label><input type="checkbox" name="reminder_channels[]" value="push" checked> Push</label>
-                            <label><input type="checkbox" name="reminder_channels[]" value="email"> Email</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
                 <div id="editScopeBox" class="hidden mt-4">
                     <div class="text-sm font-semibold text-slate-700 mb-2">Apply changes to</div>
                     <div class="dp-scope-box">
@@ -1015,6 +1087,54 @@
                         </label>
                     </div>
                 </div>
+            </div>
+
+            </div>
+
+            <div class="dp-form-panel space-y-4" role="tabpanel" id="editTask-panel-reminder" aria-labelledby="editTask-tab-reminder" data-form-panel="reminder" hidden>
+            <div class="dp-repeat-panel">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex gap-3">
+                        <i class="fa-solid fa-bell text-violet-600 mt-1"></i>
+                        <div>
+                            <h4 class="font-semibold text-slate-800">Task reminder</h4>
+                            <p class="text-xs text-slate-500">Set it now and it will also appear under Reminders. Needs a start time or a custom date &amp; time.</p>
+                        </div>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold">
+                        <input id="editReminderEnabled" type="checkbox" name="reminder_enabled" value="1" onchange="toggleTaskReminderFields('edit', this.checked)">
+                        Remind me
+                    </label>
+                </div>
+                <div id="editTaskReminderFields" class="hidden mt-4 grid md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold">Remind me</label>
+                        <select id="editReminderOffset" name="reminder_offset_minutes" class="pm-input mt-1 w-full" onchange="toggleCustomTaskReminder('edit', this.value)">
+                            <option value="0">At task time</option>
+                            <option value="5">5 minutes before</option>
+                            <option value="15">15 minutes before</option>
+                            <option value="30">30 minutes before</option>
+                            <option value="60">1 hour before</option>
+                            <option value="120">2 hours before</option>
+                            <option value="1440">1 day before</option>
+                            <option value="custom">Custom date &amp; time</option>
+                        </select>
+                    </div>
+                    <div id="editTaskReminderCustom" class="hidden">
+                        <label class="text-xs font-bold">Custom reminder date &amp; time</label>
+                        <input id="editReminderCustom" type="datetime-local" name="reminder_custom_at" class="pm-input mt-1 w-full">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold">Notification channels</label>
+                        <div class="mt-2 flex flex-wrap gap-3 text-sm">
+                            <label><input class="edit-reminder-channel" type="checkbox" name="reminder_channels[]" value="in_app" checked> In-app</label>
+                            <label><input class="edit-reminder-channel" type="checkbox" name="reminder_channels[]" value="push" checked> Push</label>
+                            <label><input class="edit-reminder-channel" type="checkbox" name="reminder_channels[]" value="email"> Email</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
@@ -1111,11 +1231,16 @@
 
             <label class="block text-sm font-medium">Day Notes
                 <textarea name="notes" rows="5" class="pm-input mt-1 w-full" placeholder="Focus, reminders, reflections or anything important for this day...">{{ old('notes', $plan->notes) }}</textarea>
-                        <div class="grid md:grid-cols-2 gap-4 mt-4">
-                            <div><label class="block text-sm font-medium text-slate-700 mb-1">Achievements</label><textarea name="achievements" rows="3" class="pm-input" placeholder="What did you achieve today?">{{ old('achievements', $plan->achievements) }}</textarea></div>
-                            <div><label class="block text-sm font-medium text-slate-700 mb-1">Challenges</label><textarea name="challenges" rows="3" class="pm-input" placeholder="What challenges did you face?">{{ old('challenges', $plan->challenges) }}</textarea></div>
-                        </div>
             </label>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <label class="block text-sm font-medium">Achievements
+                    <textarea name="achievements" rows="3" class="pm-input mt-1 w-full" placeholder="What did you achieve today?">{{ old('achievements', $plan->achievements) }}</textarea>
+                </label>
+                <label class="block text-sm font-medium">Challenges
+                    <textarea name="challenges" rows="3" class="pm-input mt-1 w-full" placeholder="What challenges did you face?">{{ old('challenges', $plan->challenges) }}</textarea>
+                </label>
+            </div>
 
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeDpModal('dayPlanModal')" class="px-4 py-2.5 rounded-lg border bg-white">Cancel</button>
@@ -1136,9 +1261,61 @@
         if (custom) custom.classList.toggle('hidden', value !== 'custom');
     };
 
+    /*
+     * Long modal forms are split into tabs (data-form-tab /
+     * data-form-panel) so they need no tall scrolling. Tabs are scoped to
+     * their own <form>, so Add and Edit don't affect each other.
+     */
+    window.selectDpFormTab = function(form, key, focus) {
+        if (!form) return;
+        form.querySelectorAll('[data-form-tab]').forEach(tab => {
+            const active = tab.dataset.formTab === key;
+            tab.classList.toggle('is-active', active);
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+            tab.tabIndex = active ? 0 : -1;
+            if (active && focus) tab.focus();
+        });
+        form.querySelectorAll('[data-form-panel]').forEach(panel => {
+            panel.hidden = panel.dataset.formPanel !== key;
+        });
+    };
+
+    document.addEventListener('click', function (event) {
+        const tab = event.target.closest('[data-form-tab]');
+        if (tab) selectDpFormTab(tab.closest('form'), tab.dataset.formTab, false);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        const tab = event.target.closest ? event.target.closest('[data-form-tab]') : null;
+        if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        const tabs = [...tab.closest('[role="tablist"]').querySelectorAll('[data-form-tab]')];
+        let index = tabs.indexOf(tab);
+        if (event.key === 'ArrowRight') index = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') index = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === 'Home') index = 0;
+        if (event.key === 'End') index = tabs.length - 1;
+        event.preventDefault();
+        selectDpFormTab(tab.closest('form'), tabs[index].dataset.formTab, true);
+    });
+
+    /*
+     * A required field on a hidden tab can't show the browser's
+     * validation bubble, so jump to that field's tab first.
+     */
+    document.addEventListener('invalid', function (event) {
+        const panel = event.target.closest ? event.target.closest('[data-form-panel]') : null;
+        if (!panel || !panel.hidden) return;
+        selectDpFormTab(panel.closest('form'), panel.dataset.formPanel, false);
+        window.setTimeout(() => event.target.reportValidity && event.target.reportValidity(), 0);
+    }, true);
+
     window.openDpModal = function(id) {
         const modal = document.getElementById(id);
         if (!modal) return;
+        modal.querySelectorAll('form').forEach(form => {
+            const first = form.querySelector('[data-form-tab]');
+            if (first) selectDpFormTab(form, first.dataset.formTab, false);
+        });
         modal.classList.add('is-open');
     };
 
