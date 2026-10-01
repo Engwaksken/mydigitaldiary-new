@@ -32,109 +32,110 @@
               class="mt-4 grid gap-4 md:grid-cols-2">
             @csrf
 
-            <div>
-                <label class="text-xs font-bold">Platform</label>
-                <select name="platform" class="pm-input mt-1 w-full" required>
-                    <option value="whatsapp_status">WhatsApp Status</option>
-                    <option value="whatsapp_channel">WhatsApp Channel</option>
-                    <option value="facebook">Facebook</option>
-                    <option value="instagram">Instagram</option>
-                    <option value="x">X (Twitter)</option>
-                    <option value="tiktok">TikTok</option>
-                    <option value="linkedin">LinkedIn</option>
-                </select>
+            <div class="pm-form-tabs md:col-span-2" role="tablist" aria-label="Provider sections" data-pm-form-tabs>
+                <button type="button" role="tab" id="social-provider-tab-0" aria-controls="social-provider-panel-0" aria-selected="true" tabindex="0" data-pm-form-tab="0" class="pm-form-tab is-active">Provider</button>
+                <button type="button" role="tab" id="social-provider-tab-1" aria-controls="social-provider-panel-1" aria-selected="false" tabindex="-1" data-pm-form-tab="1" class="pm-form-tab">Connection</button>
             </div>
 
-            <div>
-                <label class="text-xs font-bold">Provider name</label>
-                <input name="provider_name"
-                       placeholder="e.g. WhatsScale"
-                       required
-                       class="pm-input mt-1 w-full">
+            <div class="pm-form-panel md:col-span-2 grid gap-4 md:grid-cols-2" role="tabpanel" id="social-provider-panel-0" aria-labelledby="social-provider-tab-0" data-pm-form-panel="0">
+                <div>
+                    <label class="text-xs font-bold">Platform</label>
+                    <select name="platform" class="pm-input mt-1 w-full" required>
+                        <option value="whatsapp_status">WhatsApp Status</option>
+                        <option value="whatsapp_channel">WhatsApp Channel</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="x">X (Twitter)</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="linkedin">LinkedIn</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold">Provider name</label>
+                    <input name="provider_name"
+                           placeholder="e.g. WhatsScale"
+                           required
+                           class="pm-input mt-1 w-full">
+                </div>
+                <div>
+                    <label class="text-xs font-bold">Driver</label>
+                    <select name="driver" class="pm-input mt-1 w-full" required>
+                        <option value="whatsscale">WhatsScale</option>
+                        <option value="waha">WAHA</option>
+                        <option value="meta">Meta</option>
+                        <option value="x">X</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="generic">Generic API</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold">Connection mode</label>
+                    <select name="connection_mode" class="pm-input mt-1 w-full" required>
+                        <option value="shared_api_key">Admin API key + user account/session</option>
+                        <option value="user_oauth">User OAuth authorisation required</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2 flex flex-wrap items-center gap-5">
+                    <label class="flex items-center gap-2 text-xs font-bold">
+                        <input type="hidden" name="is_enabled" value="0">
+                        <input type="checkbox" name="is_enabled" value="1" checked>
+                        Enabled
+                    </label>
+
+                    <label class="flex items-center gap-2 text-xs font-bold">
+                        <input type="hidden" name="is_default" value="0">
+                        <input type="checkbox" name="is_default" value="1">
+                        Default for this platform
+                    </label>
+                </div>
             </div>
 
-            <div>
-                <label class="text-xs font-bold">Driver</label>
-                <select name="driver" class="pm-input mt-1 w-full" required>
-                    <option value="whatsscale">WhatsScale</option>
-                    <option value="waha">WAHA</option>
-                    <option value="meta">Meta</option>
-                    <option value="x">X</option>
-                    <option value="tiktok">TikTok</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="generic">Generic API</option>
-                </select>
+            <div class="pm-form-panel md:col-span-2 grid gap-4 md:grid-cols-2" role="tabpanel" id="social-provider-panel-1" aria-labelledby="social-provider-tab-1" data-pm-form-panel="1" hidden>
+                <div class="md:col-span-2">
+                    <label class="text-xs font-bold">Provider API Base URL</label>
+                    <input type="url"
+                           name="base_url"
+                           placeholder="https://proxy.whatsscale.com"
+                           class="pm-input mt-1 w-full">
+                </div>
+                <div>
+                    <label class="text-xs font-bold">Authentication</label>
+                    <select name="auth_type" class="pm-input mt-1 w-full">
+                        <option value="header">API key header</option>
+                        <option value="bearer">Bearer token</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold">API key header</label>
+                    <input name="auth_header"
+                           value="X-Api-Key"
+                           class="pm-input mt-1 w-full">
+                </div>
+                <div>
+                    <label class="text-xs font-bold">API key / token</label>
+                    <input type="password"
+                           name="api_key"
+                           autocomplete="new-password"
+                           class="pm-input mt-1 w-full">
+                </div>
+                <div>
+                    <label class="text-xs font-bold">API secret</label>
+                    <input type="password"
+                           name="api_secret"
+                           autocomplete="new-password"
+                           class="pm-input mt-1 w-full" placeholder="Optional">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-xs font-bold">Advanced settings JSON</label>
+                    <textarea name="settings_json"
+                              rows="4"
+                              class="pm-input mt-1 w-full"
+                              placeholder='{"test_endpoint":"/api/auth/test"}'></textarea>
+                </div>
             </div>
 
-            <div>
-                <label class="text-xs font-bold">Connection mode</label>
-                <select name="connection_mode" class="pm-input mt-1 w-full" required>
-                    <option value="shared_api_key">Admin API key + user account/session</option>
-                    <option value="user_oauth">User OAuth authorisation required</option>
-                </select>
-            </div>
-
-            <div class="md:col-span-2">
-                <label class="text-xs font-bold">Provider API Base URL</label>
-                <input type="url"
-                       name="base_url"
-                       placeholder="https://proxy.whatsscale.com"
-                       class="pm-input mt-1 w-full">
-            </div>
-
-            <div>
-                <label class="text-xs font-bold">Authentication</label>
-                <select name="auth_type" class="pm-input mt-1 w-full">
-                    <option value="header">API key header</option>
-                    <option value="bearer">Bearer token</option>
-                    <option value="none">None</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="text-xs font-bold">API key header</label>
-                <input name="auth_header"
-                       value="X-Api-Key"
-                       class="pm-input mt-1 w-full">
-            </div>
-
-            <div>
-                <label class="text-xs font-bold">API key / token</label>
-                <input type="password"
-                       name="api_key"
-                       autocomplete="new-password"
-                       class="pm-input mt-1 w-full">
-            </div>
-
-            <div>
-                <label class="text-xs font-bold">API secret</label>
-                <input type="password"
-                       name="api_secret"
-                       autocomplete="new-password"
-                       class="pm-input mt-1 w-full" placeholder="Optional">
-            </div>
-
-            <div class="md:col-span-2">
-                <label class="text-xs font-bold">Advanced settings JSON</label>
-                <textarea name="settings_json"
-                          rows="4"
-                          class="pm-input mt-1 w-full"
-                          placeholder='{"test_endpoint":"/api/auth/test"}'></textarea>
-            </div>
-
-            <div class="md:col-span-2 flex flex-wrap items-center gap-5">
-                <label class="flex items-center gap-2 text-xs font-bold">
-                    <input type="hidden" name="is_enabled" value="0">
-                    <input type="checkbox" name="is_enabled" value="1" checked>
-                    Enabled
-                </label>
-
-                <label class="flex items-center gap-2 text-xs font-bold">
-                    <input type="hidden" name="is_default" value="0">
-                    <input type="checkbox" name="is_default" value="1">
-                    Default for this platform
-                </label>
-            </div>
 
             <div class="md:col-span-2">
                 <button class="btn-primary rounded-xl px-4 py-2.5 text-sm font-bold text-white">
@@ -243,4 +244,5 @@
         Admin credentials configure the application/provider, but cannot legally or technically replace the user's platform authorisation.
     </div>
 </div>
+@include('partials.form-tabs')
 @endsection

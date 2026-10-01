@@ -37,9 +37,6 @@
                    placeholder="e.g. Zenith Bank, M-Pesa, Visa/Mastercard"
                    required aria-required="true"
                    class="pm-input">
-            <p class="text-xs text-slate-400 mt-1">
-                This gateway's own name, shown to users choosing a payment method — not your site's name.
-            </p>
             @error('name')
                 <p role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p>
             @enderror
@@ -109,20 +106,12 @@
                        placeholder="{{ $gateway->configValue('stripe_secret_key') ? '•••••••• (saved — leave blank to keep it)' : 'sk_live_...' }}"
                        autocomplete="off"
                        class="pm-input">
-                <p class="text-xs text-slate-400 mt-1">
-                    Stored encrypted. Leave blank when editing to keep the current key.
-                </p>
             </div>
         </fieldset>
 
         {{-- Aggregator fields (IoTec, etc.) --}}
         <fieldset id="fields-aggregator" class="space-y-4 border-t pt-4">
             <legend class="text-sm font-semibold text-slate-700 mb-1">Aggregator API (automated collection)</legend>
-            <p class="text-xs text-slate-400 mb-2">
-                Fill this in to collect payments automatically and instantly through a provider's API
-                (e.g. IoTec) instead of the manual "customer submits a reference, admin verifies"
-                flow above. Leave every field below blank to keep this gateway purely manual.
-            </p>
 
             @if ($gateway->exists && $gateway->collectsAutomatically())
                 <div class="flex items-center gap-3 mb-2">
@@ -198,16 +187,12 @@
                 </div>
                 <div>
                     <label for="callback_url" class="block text-sm font-medium text-slate-700 mb-1">Callback URL</label>
-                    <input type="text" id="callback_url" name="callback_url"
+                    <input type="text" id="callback_url" name="callback_url" title="Register this URL with the provider"
                            value="{{ old('callback_url', $gateway->callback_url ?: url('/webhooks/' . ($gateway->gateway_code ?: 'iotec'))) }}" class="pm-input">
-                    <p class="text-xs text-slate-400 mt-1">Where the provider sends payment status notifications — register this on their side.</p>
                 </div>
                 <div>
-                    <label for="webhook_url" class="block text-sm font-medium text-slate-700 mb-1">Webhook URL (if separate from Callback)</label>
-                    <input type="text" id="webhook_url" name="webhook_url" value="{{ old('webhook_url', $gateway->webhook_url) }}" class="pm-input">
-                    <p class="text-xs text-slate-400 mt-1">
-                        Some providers use one URL for both; leave blank to just use the Callback URL above for everything.
-                    </p>
+                    <label for="webhook_url" class="block text-sm font-medium text-slate-700 mb-1">Webhook URL</label>
+                    <input type="text" id="webhook_url" name="webhook_url" value="{{ old('webhook_url', $gateway->webhook_url) }}" placeholder="Blank = use the Callback URL" class="pm-input">
                 </div>
                 <div>
                     <label for="return_url" class="block text-sm font-medium text-slate-700 mb-1">Return URL</label>
@@ -231,7 +216,6 @@
                 <label for="wallet_guid" class="block text-sm font-medium text-slate-700 mb-1">Merchant / Account ID</label>
                 <input type="password" id="wallet_guid" name="wallet_guid" autocomplete="off"
                        placeholder="{{ $gateway->wallet_guid ? '•••••••• (saved — leave blank to keep it)' : '' }}" class="pm-input">
-                <p class="text-xs text-slate-400 mt-1">API key, secret, and merchant/account ID are stored encrypted and never shown again in full.</p>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
@@ -259,9 +243,6 @@
                     <input type="text" id="supported_payment_methods" name="supported_payment_methods"
                            value="{{ old('supported_payment_methods', is_array($gateway->supported_payment_methods) ? implode(', ', $gateway->supported_payment_methods) : $gateway->supported_payment_methods) }}"
                            placeholder="mobile_money, card, visa, mastercard" class="pm-input text-sm">
-                    <p class="text-xs text-slate-400 mt-1">
-                        For ioTec use <strong>mobile_money, card, visa, mastercard</strong> when both Mobile Money and Visa/MasterCard are enabled.
-                    </p>
                 </div>
                 <div>
                     <label for="supported_currencies" class="block text-sm font-medium text-slate-700 mb-1">Supported Currencies</label>
@@ -274,10 +255,10 @@
 
         <div>
             <label for="instructions" class="block text-sm font-medium text-slate-700 mb-1">
-                Instructions shown to users (optional, bank/mobile money)
+                Instructions shown to users
             </label>
             <textarea id="instructions" name="instructions" rows="3"
-                      placeholder="e.g. Include your account email as the transfer reference."
+                      placeholder="e.g. Use your account email as the transfer reference (optional)"
                       class="pm-input">{{ old('instructions', $gateway->instructions) }}</textarea>
         </div>
 

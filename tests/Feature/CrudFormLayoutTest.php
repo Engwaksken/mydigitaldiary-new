@@ -74,6 +74,29 @@ class CrudFormLayoutTest extends TestCase
         }
     }
 
+    public function test_admin_long_forms_render_tabs_without_hint_lines(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        foreach ([
+            'admin.subscription-plans.create' => ['Plan', 'Pricing', 'Appearance', 'Features'],
+            'admin.payment-gateways.index' => ['General', 'Payment Details', 'API Connection', 'Credentials &amp; Channels'],
+            'admin.social-media-providers.index' => ['Provider', 'Connection'],
+        ] as $route => $tabs) {
+            $this->actingAs($admin)
+                ->get(route($route))
+                ->assertOk()
+                ->assertSee('data-pm-form-tabs', false)
+                ->assertSeeInOrder($tabs, false);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.subscription-plans.create'))
+            ->assertDontSee('erodes margin fast')
+            ->assertSee('placeholder="Blank = no extra members"', false)
+            ->assertSee('(none ticked = all features)');
+    }
+
     public function test_select_starts_with_a_choose_placeholder(): void
     {
         $this->actingAs($this->subscriber())
