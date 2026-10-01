@@ -46,19 +46,18 @@ class BudgetExpenseService
             }
 
             if ($this->normaliseType($fresh->application_type) === 'debt_payment') {
+                // A debt payment never owns an automatic Expense. Remove a
+                // stale one (e.g. the type changed) but leave user-entered
+                // partial Expenses linked to this Budget untouched.
+                $this->deleteAutoExpense($fresh);
                 $this->applyDebtPayment($fresh);
-
-                DB::table('expenses')
-                    ->where('user_id', $fresh->user_id)
-                    ->where('budget_id', $fresh->id)
-                    ->delete();
             } else {
-                $this->createOrUpdateExpense($fresh, $date);
+                $applied = $this->createOrUpdateExpense($fresh, $date);
 
                 $fresh->forceFill([
                     'application_type' => 'expense',
                     'debt_id' => null,
-                    'applied_amount' => (float) $fresh->amount,
+                    'applied_amount' => $applied,
                 ]);
             }
 
@@ -173,13 +172,61 @@ class BudgetExpenseService
     {
         if ($this->normaliseType($budget->application_type) === 'debt_payment') {
             $this->reverseDebtPayment($budget);
-            return;
         }
 
-        DB::table('expenses')
+        // Only the single automatic Expense this Budget owns is removed.
+        // Partial Expenses the user entered against the Budget stay.
+        $this->deleteAutoExpense($budget);
+    }
+
+    /**
+     * The id of the automatic Expense created by the "mark as paid"
+     * checkbox, or null. Prefers the explicit auto_expense_id; falls back
+     * to the legacy marker (payment_method 'Budget' + automatic note) for
+     * rows created before auto_expense_id existed.
+     */
+    private function autoExpenseId(Budget $budget): ?int
+    {
+        if ($this->tracksAutoExpense() && $budget->auto_expense_id) {
+            $id = DB::table('expenses')
+                ->where('id', $budget->auto_expense_id)
+                ->where('user_id', $budget->user_id)
+                ->where('budget_id', $budget->id)
+                ->value('id');
+
+            return $id ? (int) $id : null;
+        }
+
+        $id = DB::table('expenses')
             ->where('user_id', $budget->user_id)
             ->where('budget_id', $budget->id)
-            ->delete();
+            ->where('payment_method', 'Budget')
+            ->where('notes', 'like', 'Created automatically from the %')
+            ->orderBy('id')
+            ->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function deleteAutoExpense(Budget $budget): void
+    {
+        $id = $this->autoExpenseId($budget);
+
+        if ($id) {
+            DB::table('expense_items')->where('expense_id', $id)->delete();
+            DB::table('expenses')->where('id', $id)->delete();
+        }
+
+        if ($this->tracksAutoExpense() && $budget->auto_expense_id) {
+            $budget->forceFill(['auto_expense_id' => null])->save();
+        }
+    }
+
+    private function tracksAutoExpense(): bool
+    {
+        static $tracks = null;
+
+        return $tracks ??= Schema::hasColumn('budgets', 'auto_expense_id');
     }
 
     private function reverseDebtPayment(Budget $budget): void
@@ -205,18 +252,37 @@ class BudgetExpenseService
         ])->save();
     }
 
-    private function createOrUpdateExpense(Budget $budget, string $date): void
+    /**
+     * Creates/updates the single automatic Expense for a Budget marked as
+     * paid. It tops the Budget up to its full amount: partial Expenses the
+     * user already linked are subtracted so the Budget is not double
+     * counted. Returns the amount the automatic Expense applied (0 when
+     * partial Expenses already cover the full Budget, in which case no
+     * automatic Expense is kept).
+     */
+    private function createOrUpdateExpense(Budget $budget, string $date): float
     {
-        $existing = DB::table('expenses')
+        $existingId = $this->autoExpenseId($budget);
+
+        $partialSpent = (float) DB::table('expenses')
             ->where('user_id', $budget->user_id)
             ->where('budget_id', $budget->id)
-            ->first();
+            ->when($existingId, fn ($query) => $query->where('id', '!=', $existingId))
+            ->sum('amount');
+
+        $topUp = round(max(0, (float) $budget->amount - $partialSpent), 2);
+
+        if ($topUp <= 0) {
+            $this->deleteAutoExpense($budget);
+
+            return 0.0;
+        }
 
         $payload = [
             'user_id' => $budget->user_id,
             'budget_id' => $budget->id,
             'category' => (string) $budget->category,
-            'amount' => (float) $budget->amount,
+            'amount' => $topUp,
             'spent_at' => $date,
             'payment_method' => 'Budget',
             'notes' => $this->expenseNote($budget),
@@ -227,17 +293,20 @@ class BudgetExpenseService
             $payload['is_archived'] = false;
         }
 
-        if ($existing) {
+        if ($existingId) {
             DB::table('expenses')
-                ->where('id', $existing->id)
+                ->where('id', $existingId)
                 ->update($payload);
-
-            return;
+        } else {
+            $payload['created_at'] = now();
+            $existingId = (int) DB::table('expenses')->insertGetId($payload);
         }
 
-        $payload['created_at'] = now();
+        if ($this->tracksAutoExpense()) {
+            $budget->forceFill(['auto_expense_id' => $existingId])->save();
+        }
 
-        DB::table('expenses')->insert($payload);
+        return $topUp;
     }
 
     private function expenseNote(Budget $budget): string

@@ -23,6 +23,7 @@ class BudgetController extends Controller
         );
 
         $items = Budget::query()
+            ->withSpending()
             ->where('user_id', $request->user()->id)
             ->where('is_archived', false)
             ->when(
@@ -33,7 +34,8 @@ class BudgetController extends Controller
                 )
             )
             ->orderByDesc('id')
-            ->paginate(50);
+            ->paginate(50)
+            ->through(fn (Budget $budget) => $budget->appendSpending());
 
         return response()->json($items);
     }
@@ -76,7 +78,7 @@ class BudgetController extends Controller
 
         $this->invalidate($request);
 
-        return response()->json($budget, 201);
+        return response()->json($budget->appendSpending(), 201);
     }
 
     public function show(
@@ -84,7 +86,7 @@ class BudgetController extends Controller
         int $id
     ): JsonResponse {
         return response()->json(
-            $this->owned($request, $id)
+            $this->owned($request, $id)->appendSpending()
         );
     }
 
@@ -118,7 +120,7 @@ class BudgetController extends Controller
 
         $this->invalidate($request);
 
-        return response()->json($budget);
+        return response()->json($budget->appendSpending());
     }
 
     public function destroy(
@@ -165,7 +167,7 @@ class BudgetController extends Controller
                         ? 'Debt reduced and Income balance updated.'
                         : 'Added to Expenses and Income balance updated.'
                 ),
-            'data' => $budget,
+            'data' => $budget->appendSpending(),
         ]);
     }
 

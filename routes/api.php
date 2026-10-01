@@ -250,6 +250,11 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::post('meetings/sync-calendar', [MeetingController::class, 'syncCalendar'])->name('meetings.sync-calendar');
     Route::post('budgets/extract', [BudgetController::class, 'extractImport'])->name('budgets.extract');
     Route::post('budgets/import/confirm', [BudgetController::class, 'confirmImport'])->name('budgets.import.confirm');
+    Route::get('budgets/debts', [BudgetController::class, 'debts'])->name('budgets.debts');
+    Route::post('budgets/duplicate-month', [BudgetController::class, 'duplicateMonth'])->name('budgets.duplicate-month');
+    Route::post('budgets/{id}/expense-status', [BudgetController::class, 'setExpenseStatus'])
+        ->whereNumber('id')
+        ->name('budgets.expense-status');
     Route::post('dashboard/today-insight/refresh', [DashboardController::class, 'refreshTodayInsight'])->name('dashboard.today-insight.refresh');
 
     // These literal routes must precede the wellbeing apiResource below,

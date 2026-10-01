@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Services\ReceiptExtractionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Services\OfflineConflictGuard;
 
 /**
@@ -52,7 +53,7 @@ class ExpenseController extends ApiCrudController
             return $this->extractReceipt($request);
         }
 
-        $data = $request->validate($this->rules);
+        $data = $request->validate($this->rulesFor($request));
         $data['user_id'] = $request->user()->id;
         $items = $data['items'] ?? [];
         unset($data['items']);
@@ -77,7 +78,7 @@ class ExpenseController extends ApiCrudController
         $expense = Expense::where('user_id', $request->user()->id)->findOrFail($id);
         if ($conflict = OfflineConflictGuard::check($request, $expense)) return $conflict;
 
-        $data = $request->validate($this->rules);
+        $data = $request->validate($this->rulesFor($request));
         $items = $data['items'] ?? [];
         unset($data['items']);
 
@@ -98,6 +99,25 @@ class ExpenseController extends ApiCrudController
         }
 
         return response()->json($expense->fresh()->load('items'));
+    }
+
+    /**
+     * budget_id links an Expense to one of the user's own Budgets as
+     * partial spending. Omit the key to leave an existing link unchanged;
+     * send null to unlink. Another user's Budget id fails with 422.
+     */
+    private function rulesFor(Request $request): array
+    {
+        return [
+            ...$this->rules,
+            'budget_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('budgets', 'id')->where(
+                    fn ($query) => $query->where('user_id', $request->user()->id)
+                ),
+            ],
+        ];
     }
 
     private function extractReceipt(Request $request): JsonResponse
