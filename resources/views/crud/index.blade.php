@@ -568,6 +568,17 @@
                                             <i class="fa-solid fa-arrow-right-to-bracket text-[10px]" aria-hidden="true"></i>
                                             Join meeting
                                         </a>
+                                    @elseif ($meetingSafeExternalUrl)
+                                        {{-- A link the diary can't join through (e.g. a calendar-synced
+                                             Zoom/Meet URL) shows as "View", opening the meeting details;
+                                             the UI never links straight to an external meeting URL. --}}
+                                        <button type="button"
+                                                onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, {{ (($item->user_id ?? null) == auth()->id()) ? "true" : "false" }})'
+                                                class="inline-flex items-center gap-1 text-[var(--brand-1)] hover:underline font-medium"
+                                                title="View meeting link">
+                                            <i class="fa-solid fa-eye text-[10px]" aria-hidden="true"></i>
+                                            View
+                                        </button>
                                     @else
                                         <span title="{{ $meetingLinkValue }}">{{ \Illuminate\Support\Str::limit($meetingLinkValue, 34) }}</span>
                                     @endif
@@ -717,6 +728,14 @@
                                 <i class="fa-solid fa-eye text-xs" aria-hidden="true"></i>
                                 <span class="sr-only">View {{ $rowLabel }}</span>
                             </button>
+                            @if ($routeName === 'meetings' && ($item->user_id ?? null) == auth()->id())
+                                <a href="{{ route('meetings.notes', $item->id) }}#record-meeting"
+                                   class="inline-flex items-center gap-1 text-rose-500 hover:text-rose-700 mr-3 transition-colors"
+                                   title="Record meeting">
+                                    <i class="fa-solid fa-microphone text-xs" aria-hidden="true"></i>
+                                    <span class="sr-only">Record {{ $rowLabel }}</span>
+                                </a>
+                            @endif
                             @if (($item->user_id ?? null) == auth()->id())
                                 @if (auth()->user()->hasActiveAccess())
                                     <button type="button"
@@ -1159,10 +1178,57 @@
                 dt.textContent = field.label;
                 var dd = document.createElement('dd');
                 dd.className = 'pm-view-field-value' + (isEmpty ? ' is-empty' : '');
-                dd.textContent = displayText;
                 wrap.appendChild(dt);
                 wrap.appendChild(dd);
+
+                var linkHost = null;
+                if (!isEmpty && /^https?:\/\/\S+$/i.test(displayText.trim())) {
+                    try { linkHost = new URL(displayText.trim()).host; } catch (e) { linkHost = null; }
+                }
+
+                if (linkHost) {
+                    // A link shows as its host plus Copy, never the full URL, and is
+                    // never clickable: joins go through the diary's protected route.
+                    var linkText = document.createElement('span');
+                    linkText.className = 'pm-view-field-link';
+                    linkText.innerHTML = '<i class="fa-solid fa-link" aria-hidden="true"></i> ';
+                    linkText.appendChild(document.createTextNode(linkHost + ' link'));
+                    dd.appendChild(linkText);
+
+                    var copy = document.createElement('button');
+                    copy.type = 'button';
+                    copy.className = 'pm-view-field-toggle';
+                    copy.textContent = 'Copy link';
+                    copy.addEventListener('click', function () {
+                        var url = displayText.trim();
+                        var done = function () { copy.textContent = 'Copied'; };
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(url).then(done, function () {});
+                        }
+                    });
+                    wrap.appendChild(copy);
+                } else {
+                    dd.textContent = displayText;
+                }
+
                 container.appendChild(wrap);
+
+                // Long content is clipped to a few lines with a "View" toggle
+                // (removed again after opening if the text fits anyway).
+                if (!isEmpty && isLongValue && !dd.firstElementChild) {
+                    dd.classList.add('is-clamped');
+                    var toggle = document.createElement('button');
+                    toggle.type = 'button';
+                    toggle.className = 'pm-view-field-toggle';
+                    toggle.textContent = 'View';
+                    toggle.setAttribute('aria-expanded', 'false');
+                    toggle.addEventListener('click', function () {
+                        var expanded = dd.classList.toggle('is-clamped') === false;
+                        toggle.textContent = expanded ? 'Show less' : 'View';
+                        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    });
+                    wrap.appendChild(toggle);
+                }
             });
 
             @if ($routeName === 'meetings')
@@ -1184,6 +1250,15 @@
             @endif
 
             dialog.showModal();
+
+            // Now that it's visible, drop "View" toggles on text that fits.
+            container.querySelectorAll('.pm-view-field-toggle').forEach(function (toggle) {
+                var value = toggle.parentNode.querySelector('.pm-view-field-value');
+                if (value && value.scrollHeight <= value.clientHeight + 2) {
+                    value.classList.remove('is-clamped');
+                    toggle.remove();
+                }
+            });
         }
 
         function openCrudEditModal(actionUrl, values) {

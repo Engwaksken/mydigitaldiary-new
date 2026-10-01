@@ -769,7 +769,7 @@
             </div>
         </section>
 
-        <section id="dp-tab-history\" class="dp-tab-panel {{ $activeTab === 'history' ? 'is-active' : '' }}" role="tabpanel">
+        <section id="dp-tab-history" class="dp-tab-panel {{ $activeTab === 'history' ? 'is-active' : '' }}" role="tabpanel">
             <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                 <div class="px-5 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div>

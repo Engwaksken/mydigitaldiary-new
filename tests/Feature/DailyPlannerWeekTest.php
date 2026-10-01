@@ -121,6 +121,24 @@ class DailyPlannerWeekTest extends TestCase
             ->assertSee('id="planWeekModal"', false);
     }
 
+    public function test_past_tasks_tab_panel_renders_past_plans(): void
+    {
+        $user = $this->subscriber();
+        $lastWeek = $this->monday()->subWeek();
+
+        $this->actingAs($user)->post(route('daily-planner.week.store'), [
+            'week_start' => $lastWeek->toDateString(),
+            'tasks' => [['title' => 'Old errand', 'priority' => 'low', 'days' => ['tuesday']]],
+        ]);
+
+        // The panel id must match what the tab script toggles (dp-tab-history).
+        $this->actingAs($user)
+            ->get(route('daily-planner.index', ['tab' => 'history']))
+            ->assertOk()
+            ->assertSee('id="dp-tab-history" class="dp-tab-panel is-active"', false)
+            ->assertSee($lastWeek->copy()->addDay()->format('d M Y'));
+    }
+
     public function test_toggling_from_the_week_view_returns_to_it(): void
     {
         $user = $this->subscriber();

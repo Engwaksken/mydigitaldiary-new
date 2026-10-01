@@ -184,29 +184,32 @@ body {
 
 a { text-decoration: none !important; }
 
-/* Shared CRUD view modal: readable label/value cards across all modules. */
+/* Shared CRUD view modal: compact label/value cards across all modules. */
 .pm-modal-read-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-    align-items: stretch;
+    gap: 10px;
+    align-items: start;
+}
+
+@media (min-width: 768px) {
+    .pm-modal-read-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 .pm-view-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
     min-width: 0;
     width: 100%;
-    min-height: 96px;
     border: 1px solid rgba(15, 118, 110, .14);
-    border-left: 4px solid var(--brand-1, #00897b);
-    border-radius: 20px;
-    background:
-        linear-gradient(135deg, rgba(0, 137, 123, .06) 0%, rgba(255, 255, 255, 0) 42%),
-        linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    box-shadow: 0 14px 34px rgba(15, 23, 42, .07);
-    padding: 15px 17px;
+    border-left: 3px solid var(--brand-1, #00897b);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .05);
+    padding: 9px 12px;
 }
 
 .pm-view-field--wide {
@@ -215,11 +218,11 @@ a { text-decoration: none !important; }
 
 .pm-view-field-label {
     display: block;
-    margin: 0 0 7px;
+    margin: 0;
     color: #64748b;
-    font-size: .72rem;
+    font-size: .66rem;
     font-weight: 800;
-    letter-spacing: .085em;
+    letter-spacing: .08em;
     line-height: 1.25;
     text-transform: uppercase;
 }
@@ -227,11 +230,19 @@ a { text-decoration: none !important; }
 .pm-view-field-value {
     margin: 0;
     color: #0f172a;
-    font-size: .98rem;
+    font-size: .875rem;
     font-weight: 600;
-    line-height: 1.55;
+    line-height: 1.45;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+}
+
+/* Long text shows three lines until "View" expands it. */
+.pm-view-field-value.is-clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .pm-view-field-value.is-empty {
@@ -240,16 +251,37 @@ a { text-decoration: none !important; }
     font-style: italic;
 }
 
+.pm-view-field-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--brand-1, #00897b);
+    font-weight: 700;
+}
+
+
+
+.pm-view-field-toggle {
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--brand-1, #00897b);
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 @media (max-width: 640px) {
     .pm-modal-read-grid {
         grid-template-columns: 1fr;
-        gap: 10px;
+        gap: 8px;
     }
 
     .pm-view-field {
-        border-radius: 15px;
-        padding: 12px 13px;
-        min-height: auto;
+        border-radius: 10px;
+        padding: 8px 10px;
     }
 }
 
