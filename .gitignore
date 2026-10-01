@@ -27,3 +27,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /.env.testing
+
+# Local patch-script backups and one-off fix scripts
+.biometric_fix_backup_*/
+apply_biometric_fix.ps1
