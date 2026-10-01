@@ -443,12 +443,12 @@ class SubscriptionController extends Controller
         $user = $request->user();
         $plan = ! empty($data['plan_id']) ? $this->findEnabledPlan($data['plan_id']) : null;
 
-        $user->update([
+        $user->forceFill([
             'subscription_status' => 'active',
             'subscribed_at' => now(),
             'subscription_plan_id' => $plan?->id,
             'subscription_expires_at' => $plan ? $this->expiryFor($plan, $user) : null,
-        ]);
+        ])->save();
 
         app(\App\Services\SubscriptionAdminNotificationService::class)->notify($user);
 
@@ -623,7 +623,13 @@ class SubscriptionController extends Controller
      */
     public function payWithCard(Request $request): RedirectResponse
     {
-        $data = $request->validate(['plan_id' => ['required', 'exists:subscription_plans,id']]);
+        $data = $request->validate([
+            'plan_id' => ['required', 'exists:subscription_plans,id'],
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        $beneficiary = app(\App\Services\SubscriptionBeneficiaryService::class)
+            ->resolveForPayment($request->user(), $data['beneficiary_email'] ?? null);
         $plan = $this->findEnabledPlan($data['plan_id']);
 
         $gateway = PaymentGateway::where('type', 'card')->where('is_enabled', true)->first();
@@ -681,6 +687,7 @@ class SubscriptionController extends Controller
         // completed once Stripe confirms payment.
         $payment = Payment::create([
             'user_id' => $request->user()->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'payment_gateway_id' => $gateway->id,
             'subscription_plan_id' => $plan->id,
             'method' => 'card',
@@ -710,7 +717,11 @@ class SubscriptionController extends Controller
             'plan_id' => ['required', 'exists:subscription_plans,id'],
             'phone_number' => ['required', 'string', 'max:20'],
             'network' => ['required', 'in:mtn,airtel'],
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
         ]);
+
+        $beneficiary = app(\App\Services\SubscriptionBeneficiaryService::class)
+            ->resolveForPayment($request->user(), $data['beneficiary_email'] ?? null);
 
         $plan = $this->findEnabledPlan($data['plan_id']);
 
@@ -728,6 +739,7 @@ class SubscriptionController extends Controller
 
         $payment = Payment::create([
             'user_id' => $request->user()->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'payment_gateway_id' => $gateway->id,
             'subscription_plan_id' => $plan->id,
             'method' => 'mobile_money',
@@ -938,13 +950,17 @@ class SubscriptionController extends Controller
             $payment->invoice?->update(['status' => 'paid']);
 
             $user = $payment->user;
+            // The subscription goes to the beneficiary when the payer paid
+            // for someone else; notifications and the receipt stay with
+            // the payer ($user).
+            $subscriber = $payment->subscriptionRecipient();
             $plan = $payment->plan;
 
-            $user->update([
+            $subscriber->forceFill([
                 'subscription_status' => 'active',
-                'subscribed_at' => $user->subscribed_at ?? now(),
+                'subscribed_at' => $subscriber->subscribed_at ?? now(),
                 'subscription_plan_id' => $plan?->id,
-                'subscription_expires_at' => $plan ? $this->expiryFor($plan, $user) : null,
+                'subscription_expires_at' => $plan ? $this->expiryFor($plan, $subscriber) : null,
                 // Cleared so the NEXT expiry cycle's reminders start
                 // fresh against the new expiry date, rather than
                 // carrying over a milestone number from before this
@@ -952,12 +968,12 @@ class SubscriptionController extends Controller
                 // flight for the old expiry date from being mistaken
                 // for still relevant.
                 'last_expiry_reminder_days' => null,
-            ]);
+            ])->save();
 
-            app(\App\Services\SubscriptionAdminNotificationService::class)->notify($user);
+            app(\App\Services\SubscriptionAdminNotificationService::class)->notify($subscriber);
 
             if ($plan) {
-                $this->ensureOrganizationForPlan($user, $plan);
+                $this->ensureOrganizationForPlan($subscriber, $plan);
             }
 
             BillingEventLog::record('payment_status_changed', $user->id, ['payment_id' => $payment->id, 'details' => 'completed via card']);
@@ -996,7 +1012,11 @@ class SubscriptionController extends Controller
             'payment_gateway_id' => ['required', 'exists:payment_gateways,id'],
             'plan_id' => ['required', 'exists:subscription_plans,id'],
             'reference' => ['required', 'string', 'max:255'],
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
         ]);
+
+        $beneficiary = app(\App\Services\SubscriptionBeneficiaryService::class)
+            ->resolveForPayment($request->user(), $data['beneficiary_email'] ?? null);
 
         $gateway = PaymentGateway::where('id', $data['payment_gateway_id'])
             ->where('is_enabled', true)
@@ -1009,6 +1029,7 @@ class SubscriptionController extends Controller
 
         $payment = Payment::create([
             'user_id' => $request->user()->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'payment_gateway_id' => $gateway->id,
             'subscription_plan_id' => $plan->id,
             'method' => $gateway->type,

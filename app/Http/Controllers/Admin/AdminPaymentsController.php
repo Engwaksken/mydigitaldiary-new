@@ -101,6 +101,10 @@ class AdminPaymentsController extends Controller
         $payment->invoice?->update(['status' => 'paid']);
 
         $user = $payment->user;
+        // The subscription goes to the beneficiary when the payer paid
+        // for someone else; notifications and the receipt stay with
+        // the payer ($user).
+        $subscriber = $payment->subscriptionRecipient();
         $plan = $payment->plan;
 
         // Same "extend from current expiry if still future, else from now"
@@ -110,30 +114,30 @@ class AdminPaymentsController extends Controller
         // this is a small, self-contained calculation.
         $expiresAt = null;
         if ($plan && ! $plan->isLifetime()) {
-            $base = ($user->subscription_expires_at && $user->subscription_expires_at->isFuture())
-                ? $user->subscription_expires_at
+            $base = ($subscriber->subscription_expires_at && $subscriber->subscription_expires_at->isFuture())
+                ? $subscriber->subscription_expires_at
                 : now();
             $expiresAt = $base->copy()->addMonths($plan->duration_months);
         }
 
-        $user->update([
+        $subscriber->forceFill([
             'subscription_status' => 'active',
-            'subscribed_at' => $user->subscribed_at ?? now(),
+            'subscribed_at' => $subscriber->subscribed_at ?? now(),
             'subscription_plan_id' => $plan?->id,
             'subscription_expires_at' => $expiresAt,
             'last_expiry_reminder_days' => null,
-        ]);
+        ])->save();
 
-        app(\App\Services\SubscriptionAdminNotificationService::class)->notify($user);
+        app(\App\Services\SubscriptionAdminNotificationService::class)->notify($subscriber);
 
         if ($plan && ! $plan->isIndividual()) {
-            $organization = \App\Models\Organization::where('owner_user_id', $user->id)->first();
+            $organization = \App\Models\Organization::where('owner_user_id', $subscriber->id)->first();
             if ($organization) {
                 $organization->update(['subscription_plan_id' => $plan->id]);
             } else {
                 \App\Models\Organization::create([
-                    'name' => $user->name . "'s Organization",
-                    'owner_user_id' => $user->id,
+                    'name' => $subscriber->name . "'s Organization",
+                    'owner_user_id' => $subscriber->id,
                     'subscription_plan_id' => $plan->id,
                 ]);
             }
@@ -152,7 +156,7 @@ class AdminPaymentsController extends Controller
             ]);
         }
 
-        return back()->with('success', "Payment approved — {$user->name}'s subscription is now active.");
+        return back()->with('success', "Payment approved — {$subscriber->name}'s subscription is now active.");
     }
 
     public function reject(Request $request, Payment $payment): RedirectResponse

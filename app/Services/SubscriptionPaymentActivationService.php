@@ -26,10 +26,17 @@ class SubscriptionPaymentActivationService
         }
 
         return DB::transaction(function () use ($transaction) {
+            /*
+             * The subscription goes to the beneficiary when the payer paid
+             * on someone else's behalf; the payment, invoice and receipt
+             * always stay with the payer (transaction->user_id).
+             */
+            $recipientId = $this->recipientId($transaction);
+
             /** @var User $user */
             $user = User::query()
                 ->lockForUpdate()
-                ->findOrFail($transaction->user_id);
+                ->findOrFail($recipientId);
 
             $expiresAt = $this->resolveExpiry(
                 $user,
@@ -53,9 +60,14 @@ class SubscriptionPaymentActivationService
 
             $user->forceFill($updates)->save();
 
+            $payer = (int) $user->id === (int) $transaction->user_id
+                ? $user
+                : User::query()->findOrFail($transaction->user_id);
+
             $payment = $this->syncPaymentRecord(
                 $transaction,
-                $user,
+                $payer,
+                $recipientId,
                 $expiresAt
             );
 
@@ -94,9 +106,27 @@ class SubscriptionPaymentActivationService
         });
     }
 
+    /**
+     * The beneficiary when the transaction was paid for another user who
+     * still exists, otherwise the payer.
+     */
+    private function recipientId(IoTecSubscriptionTransaction $transaction): int
+    {
+        if (
+            Schema::hasColumn('iotec_subscription_transactions', 'beneficiary_user_id')
+            && $transaction->beneficiary_user_id
+            && User::query()->whereKey($transaction->beneficiary_user_id)->exists()
+        ) {
+            return (int) $transaction->beneficiary_user_id;
+        }
+
+        return (int) $transaction->user_id;
+    }
+
     private function syncPaymentRecord(
         IoTecSubscriptionTransaction $transaction,
         User $user,
+        int $recipientId,
         ?Carbon $expiresAt
     ): ?Payment {
         if (! Schema::hasTable('payments')) {
@@ -138,6 +168,12 @@ class SubscriptionPaymentActivationService
 
         if (Schema::hasColumn('payments', 'gateway_transaction_id')) {
             $paymentData['gateway_transaction_id'] = $reference;
+        }
+
+        if (Schema::hasColumn('payments', 'beneficiary_user_id')) {
+            $paymentData['beneficiary_user_id'] = $recipientId !== (int) $user->id
+                ? $recipientId
+                : null;
         }
 
         $payment->forceFill($paymentData)->save();

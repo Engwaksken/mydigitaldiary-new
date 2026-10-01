@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Payment extends Model
 {
     protected $fillable = [
-        'user_id', 'payment_gateway_id', 'subscription_plan_id', 'method', 'amount', 'currency', 'status', 'reference', 'gateway_transaction_id', 'notes', 'receipt_number',
+        'user_id', 'beneficiary_user_id', 'payment_gateway_id', 'subscription_plan_id', 'method', 'amount', 'currency', 'status', 'reference', 'gateway_transaction_id', 'notes', 'receipt_number',
     ];
 
     protected $casts = [
@@ -17,6 +17,33 @@ class Payment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The user whose subscription this payment activates when the payer
+     * (user_id) paid on their behalf. Null means the payer themselves.
+     */
+    public function beneficiary()
+    {
+        return $this->belongsTo(User::class, 'beneficiary_user_id');
+    }
+
+    /**
+     * Who receives the subscription when this payment completes: the
+     * beneficiary if one was set, otherwise the payer. Invoices,
+     * receipts and payment notifications always stay with the payer.
+     */
+    public function subscriptionRecipient(): ?User
+    {
+        if ($this->beneficiary_user_id) {
+            $beneficiary = $this->beneficiary;
+
+            if ($beneficiary) {
+                return $beneficiary;
+            }
+        }
+
+        return $this->user;
     }
 
     public function gateway()

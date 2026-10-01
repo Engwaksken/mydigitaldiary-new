@@ -11,6 +11,7 @@ class IoTecSubscriptionTransaction extends Model
 
     protected $fillable = [
         'user_id',
+        'beneficiary_user_id',
         'subscription_plan_id',
         'external_id',
         'iotec_request_id',
@@ -39,6 +40,15 @@ class IoTecSubscriptionTransaction extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The user whose subscription this payment activates when the payer
+     * (user_id) paid on their behalf. Null means the payer themselves.
+     */
+    public function beneficiary(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'beneficiary_user_id');
     }
 
     public function payment(): BelongsTo

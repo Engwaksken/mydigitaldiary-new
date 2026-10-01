@@ -59,6 +59,10 @@
             <x-alert type="error" :message="$errors->first('payment')" :dismissible="false" :autoDismiss="false" />
         @endif
 
+        @if ($errors->has('beneficiary_email'))
+            <x-alert type="error" :message="$errors->first('beneficiary_email')" :dismissible="false" :autoDismiss="false" />
+        @endif
+
         <div role="tablist" aria-label="Subscription sections" class="flex items-center gap-1 border-b border-slate-200 mb-2">
             <button type="button" role="tab" id="pm-sub-tab-subscription" aria-controls="pm-sub-panel-subscription" aria-selected="true" tabindex="0" data-tab="subscription"
                     onclick="pmSelectSubTab('subscription')" onkeydown="pmSubTabKeydown(event, 'subscription')"
@@ -322,6 +326,38 @@
                     </div>
                 </div>
 
+                {{-- Optional: pay for another existing user. The payer keeps the
+                     invoice and receipt; the subscription is activated on them. --}}
+                <div class="mb-5 rounded-xl border border-slate-200 p-4 text-sm">
+                    <label class="flex items-center gap-2 font-medium text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="pm-beneficiary-toggle" onchange="pmToggleBeneficiary(this.checked)">
+                        <span>I'm paying for someone else</span>
+                    </label>
+
+                    <div id="pm-beneficiary-fields" class="mt-3 space-y-2" hidden>
+                        <label for="pm-beneficiary-email" class="block text-slate-600">
+                            Their My Digital Diary account email
+                        </label>
+                        <div class="flex gap-2">
+                            <input
+                                type="email"
+                                id="pm-beneficiary-email"
+                                value="{{ old('beneficiary_email') }}"
+                                placeholder="name@example.com"
+                                class="pm-input flex-1"
+                                autocomplete="off"
+                                oninput="pmBeneficiaryChanged()"
+                            >
+                            <button type="button" onclick="pmCheckBeneficiary()" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">
+                                Check
+                            </button>
+                        </div>
+                        <p id="pm-beneficiary-result" class="text-xs text-slate-500" aria-live="polite">
+                            Their subscription is activated once payment completes. You keep the invoice and receipt.
+                        </p>
+                    </div>
+                </div>
+
                 @if ($plans->isEmpty() || $gateways->isEmpty())
                     {{-- No payment gateways configured demo fallback, unchanged from before. --}}
                     <form method="POST" action="{{ route('subscription.subscribe') }}">
@@ -543,6 +579,7 @@
                                         >
                                             @csrf
                                             <input type="hidden" name="subscription_plan_id" class="pm-plan-id-input" value="">
+                                            <input type="hidden" name="beneficiary_email" class="pm-beneficiary-input" value="{{ old('beneficiary_email') }}">
                                             <input type="hidden" name="payment_channel" value="mobile_money">
 
                                             <div class="pm-gateway-field">
@@ -616,6 +653,7 @@
                                                 class="pm-plan-id-input"
                                                 value=""
                                             >
+                                            <input type="hidden" name="beneficiary_email" class="pm-beneficiary-input" value="{{ old('beneficiary_email') }}">
 
                                             <input
                                                 type="hidden"
@@ -728,6 +766,7 @@
                                         <form method="POST" action="{{ route('subscription.pay.card') }}">
                                             @csrf
                                             <input type="hidden" name="plan_id" class="pm-plan-id-input" value="">
+                                            <input type="hidden" name="beneficiary_email" class="pm-beneficiary-input" value="{{ old('beneficiary_email') }}">
 
                                             <button
                                                 type="submit"
@@ -752,6 +791,7 @@
                                         >
                                             @csrf
                                             <input type="hidden" name="plan_id" class="pm-plan-id-input" value="">
+                                            <input type="hidden" name="beneficiary_email" class="pm-beneficiary-input" value="{{ old('beneficiary_email') }}">
 
                                             <div class="min-w-[10rem]">
                                                 <label for="network-{{ $gateway->id }}" class="block text-sm font-medium text-slate-700 mb-1">
@@ -840,6 +880,7 @@
                                             @csrf
                                             <input type="hidden" name="payment_gateway_id" value="{{ $gateway->id }}">
                                             <input type="hidden" name="plan_id" class="pm-plan-id-input" value="">
+                                            <input type="hidden" name="beneficiary_email" class="pm-beneficiary-input" value="{{ old('beneficiary_email') }}">
 
                                             <div class="min-w-[12rem] flex-1">
                                                 <label for="reference-{{ $gateway->id }}" class="block text-sm font-medium text-slate-700 mb-1">
@@ -1784,6 +1825,72 @@
             var modal = document.getElementById('pm-checkout-modal');
             if (modal) { modal.showModal(); }
         }
+
+        // "Pay for someone else": the checkout-modal email is copied into
+        // every payment form's hidden beneficiary_email field. An empty
+        // value (checkbox off) pays for the signed-in user as before.
+        function pmSyncBeneficiary() {
+            var toggle = document.getElementById('pm-beneficiary-toggle');
+            var emailEl = document.getElementById('pm-beneficiary-email');
+            var value = toggle && toggle.checked && emailEl ? emailEl.value.trim() : '';
+            document.querySelectorAll('.pm-beneficiary-input').forEach(function (input) {
+                input.value = value;
+            });
+        }
+
+        function pmToggleBeneficiary(checked) {
+            var fields = document.getElementById('pm-beneficiary-fields');
+            if (fields) { fields.hidden = !checked; }
+            pmSyncBeneficiary();
+        }
+
+        function pmBeneficiaryChanged() {
+            var result = document.getElementById('pm-beneficiary-result');
+            if (result) {
+                result.className = 'text-xs text-slate-500';
+                result.textContent = 'Their subscription is activated once payment completes. You keep the invoice and receipt.';
+            }
+            pmSyncBeneficiary();
+        }
+
+        async function pmCheckBeneficiary() {
+            var emailEl = document.getElementById('pm-beneficiary-email');
+            var result = document.getElementById('pm-beneficiary-result');
+            var email = emailEl ? emailEl.value.trim() : '';
+            if (!result || email === '') { return; }
+
+            result.className = 'text-xs text-slate-500';
+            result.textContent = 'Checking…';
+
+            try {
+                var response = await fetch(@json(route('subscription.beneficiary')) + '?email=' + encodeURIComponent(email), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                var data = await response.json().catch(function () { return {}; });
+
+                if (response.ok && data.data) {
+                    result.className = 'text-xs text-emerald-700';
+                    result.textContent = 'Paying for ' + data.data.name + '.';
+                } else {
+                    result.className = 'text-xs text-red-600';
+                    result.textContent = (data.errors && data.errors.email && data.errors.email[0])
+                        || data.message
+                        || 'Could not check that email.';
+                }
+            } catch (e) {
+                result.className = 'text-xs text-red-600';
+                result.textContent = 'Could not check that email. Please try again.';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var emailEl = document.getElementById('pm-beneficiary-email');
+            if (emailEl && emailEl.value.trim() !== '') {
+                var toggle = document.getElementById('pm-beneficiary-toggle');
+                if (toggle) { toggle.checked = true; }
+                pmToggleBeneficiary(true);
+            }
+        });
 
         function pmSelectPaymentMethod(gatewayId, methodLabel) {
             document.querySelectorAll('.pm-gateway-section').forEach(function (section) {

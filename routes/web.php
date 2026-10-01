@@ -161,6 +161,11 @@ Route::middleware(['auth'])->group(function () {
         ->name('support.attachment.download');
     Route::get('/subscription', [SubscriptionController::class, 'show'])->middleware(\App\Http\Middleware\OrganizationMemberBillingContext::class)
         ->name('subscription.show');
+    // Checkout modal "pay for someone else" lookup — same JSON as the
+    // mobile API endpoint. Throttled to limit account enumeration.
+    Route::get('/subscription/beneficiary', [\App\Http\Controllers\Api\SubscriptionController::class, 'beneficiary'])
+        ->middleware('throttle:10,1')
+        ->name('subscription.beneficiary');
     Route::post('/subscription/subscribe', [SubscriptionController::class, 'subscribe'])->middleware(\App\Http\Middleware\OrganizationMemberBillingContext::class)
         ->name('subscription.subscribe');
     Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel'])->middleware(\App\Http\Middleware\OrganizationMemberBillingContext::class)

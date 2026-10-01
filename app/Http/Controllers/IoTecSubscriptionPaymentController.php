@@ -6,6 +6,7 @@ use App\Models\IoTecSubscriptionTransaction;
 use App\Models\SiteSetting;
 use App\Models\SubscriptionPlan;
 use App\Services\IoTecPayService;
+use App\Services\SubscriptionBeneficiaryService;
 use App\Services\SubscriptionPaymentActivationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +20,8 @@ class IoTecSubscriptionPaymentController extends Controller
 {
     public function __construct(
         private readonly IoTecPayService $iotec,
-        private readonly SubscriptionPaymentActivationService $activation
+        private readonly SubscriptionPaymentActivationService $activation,
+        private readonly SubscriptionBeneficiaryService $beneficiaries
     ) {}
 
     public function initiate(Request $request): JsonResponse|RedirectResponse
@@ -38,7 +40,13 @@ class IoTecSubscriptionPaymentController extends Controller
             'payer_name' => ['nullable', 'string', 'max:150'],
             'payer_email' => ['nullable', 'email', 'max:255'],
             'payer_phone' => ['nullable', 'string', 'max:30'],
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
         ]);
+
+        $beneficiary = $this->beneficiaries->resolveForPayment(
+            $request->user(),
+            $data['beneficiary_email'] ?? null
+        );
 
         if (! Schema::hasTable('subscription_plans')) {
             return $this->error(
@@ -168,6 +176,7 @@ class IoTecSubscriptionPaymentController extends Controller
 
         $transaction = IoTecSubscriptionTransaction::query()->create([
             'user_id' => $user->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'subscription_plan_id' => (int) $plan->id,
             'external_id' => $externalId,
             'payment_channel' => $channel,
@@ -292,6 +301,7 @@ class IoTecSubscriptionPaymentController extends Controller
                         'transaction_id' => $transaction->id,
                         'status' => $transaction->status,
                         'redirect_url' => $redirect,
+                        'beneficiary' => $this->beneficiaries->describe($beneficiary),
                     ]);
                 }
 
@@ -308,6 +318,7 @@ class IoTecSubscriptionPaymentController extends Controller
                 'payment_channel' => 'mobile_money',
                 'transaction_id' => $transaction->id,
                 'status' => $transaction->status,
+                'beneficiary' => $this->beneficiaries->describe($beneficiary),
                 'message' => 'Payment request sent. Approve the prompt on your phone.',
             ]);
         } catch (Throwable $e) {
@@ -428,6 +439,9 @@ class IoTecSubscriptionPaymentController extends Controller
             'activated' => $transaction->activated_at !== null,
             'subscription_status' => strtolower(
                 (string) $request->user()->fresh()->subscription_status
+            ),
+            'beneficiary' => $this->beneficiaries->describe(
+                $transaction->beneficiary
             ),
         ]);
     }

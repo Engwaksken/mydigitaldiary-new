@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\IoTecSubscriptionTransaction;
 use App\Services\IoTecPayService;
+use App\Services\SubscriptionBeneficiaryService;
 use App\Services\SubscriptionPaymentActivationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,8 @@ class IoTecSubscriptionController extends Controller
 {
     public function __construct(
         private readonly IoTecPayService $iotec,
-        private readonly SubscriptionPaymentActivationService $activation
+        private readonly SubscriptionPaymentActivationService $activation,
+        private readonly SubscriptionBeneficiaryService $beneficiaries
     ) {}
 
     /**
@@ -75,7 +77,14 @@ class IoTecSubscriptionController extends Controller
                 'nullable',
                 Rule::in(['visa', 'mastercard']),
             ],
+            // Optional: pay for another existing user's subscription.
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
         ]);
+
+        $beneficiary = $this->beneficiaries->resolveForPayment(
+            $request->user(),
+            $data['beneficiary_email'] ?? null
+        );
 
         if (! Schema::hasTable('subscription_plans')) {
             return response()->json([
@@ -130,6 +139,7 @@ class IoTecSubscriptionController extends Controller
 
         $transaction = IoTecSubscriptionTransaction::query()->create([
             'user_id' => $user->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'subscription_plan_id' => (int) $plan->id,
             'external_id' => (string) Str::uuid(),
             'payment_channel' => $channel,
@@ -200,6 +210,7 @@ class IoTecSubscriptionController extends Controller
                 'redirect_url' => $channel === 'card'
                     ? ($gateway['cardRedirectUrl'] ?? null)
                     : null,
+                'beneficiary' => $this->beneficiaries->describe($beneficiary),
                 'message' => $channel === 'card'
                     ? 'Continue to the secure Visa / MasterCard checkout.'
                     : 'Payment request sent. Approve the prompt on your phone.',
@@ -296,6 +307,9 @@ class IoTecSubscriptionController extends Controller
                 'payment_channel' => $transaction->payment_channel,
                 'paid' => $transaction->paid_at !== null,
                 'activated' => $transaction->activated_at !== null,
+                'beneficiary' => $this->beneficiaries->describe(
+                    $transaction->beneficiary
+                ),
             ],
             'subscription' => [
                 'status' => strtolower(

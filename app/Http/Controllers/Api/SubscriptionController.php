@@ -53,6 +53,33 @@ class SubscriptionController extends Controller
         ]]);
     }
 
+    /**
+     * Look up an existing user by exact email before paying for their
+     * subscription. Returns only id + name (never the email or account
+     * details) so the payer can confirm they have the right person.
+     */
+    public function beneficiary(Request $request): JsonResponse
+    {
+        $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
+        $service = app(\App\Services\SubscriptionBeneficiaryService::class);
+
+        if ($service->isOwnEmail($request->user(), $data['email'])) {
+            return response()->json([
+                'message' => 'That is your own email. Leave it empty to pay for your own subscription.',
+            ], 422);
+        }
+
+        $beneficiary = $service->findActiveByEmail($data['email']);
+
+        if (! $beneficiary) {
+            return response()->json([
+                'message' => 'We could not find an active My Digital Diary account with that email.',
+            ], 404);
+        }
+
+        return response()->json(['data' => $service->describe($beneficiary)]);
+    }
+
     public function plans(): JsonResponse
     {
         $settings = SiteSetting::current();
@@ -162,7 +189,13 @@ class SubscriptionController extends Controller
 
     public function payWithCard(Request $request): JsonResponse
     {
-        $data = $request->validate(['plan_id' => ['required', 'exists:subscription_plans,id']]);
+        $data = $request->validate([
+            'plan_id' => ['required', 'exists:subscription_plans,id'],
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        $beneficiary = app(\App\Services\SubscriptionBeneficiaryService::class)
+            ->resolveForPayment($request->user(), $data['beneficiary_email'] ?? null);
         $plan = SubscriptionPlan::where('is_enabled', true)->findOrFail($data['plan_id']);
 
         $gateway = PaymentGateway::where('type', 'card')->where('is_enabled', true)->first();
@@ -205,6 +238,7 @@ class SubscriptionController extends Controller
 
         $payment = Payment::create([
             'user_id' => $request->user()->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'payment_gateway_id' => $gateway->id,
             'subscription_plan_id' => $plan->id,
             'method' => 'card',
@@ -226,7 +260,11 @@ class SubscriptionController extends Controller
             'plan_id' => ['required', 'exists:subscription_plans,id'],
             'phone_number' => ['required', 'string', 'max:20'],
             'network' => ['required', 'in:mtn,airtel'],
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
         ]);
+
+        $beneficiary = app(\App\Services\SubscriptionBeneficiaryService::class)
+            ->resolveForPayment($request->user(), $data['beneficiary_email'] ?? null);
 
         $plan = SubscriptionPlan::where('is_enabled', true)->findOrFail($data['plan_id']);
         $request->user()->update(['phone_number' => $data['phone_number']]);
@@ -242,6 +280,7 @@ class SubscriptionController extends Controller
 
         $payment = Payment::create([
             'user_id' => $request->user()->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'payment_gateway_id' => $gateway->id,
             'subscription_plan_id' => $plan->id,
             'method' => 'mobile_money',
@@ -385,7 +424,11 @@ class SubscriptionController extends Controller
             'payment_gateway_id' => ['required', 'exists:payment_gateways,id'],
             'plan_id' => ['required', 'exists:subscription_plans,id'],
             'reference' => ['required', 'string', 'max:255'],
+            'beneficiary_email' => ['nullable', 'email', 'max:255'],
         ]);
+
+        $beneficiary = app(\App\Services\SubscriptionBeneficiaryService::class)
+            ->resolveForPayment($request->user(), $data['beneficiary_email'] ?? null);
 
         $gateway = PaymentGateway::where('id', $data['payment_gateway_id'])
             ->where('is_enabled', true)
@@ -398,6 +441,7 @@ class SubscriptionController extends Controller
 
         $payment = Payment::create([
             'user_id' => $request->user()->id,
+            'beneficiary_user_id' => $beneficiary?->id,
             'payment_gateway_id' => $gateway->id,
             'subscription_plan_id' => $plan->id,
             'method' => $gateway->type,

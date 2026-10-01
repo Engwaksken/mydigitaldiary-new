@@ -338,6 +338,22 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::post('subscription/payments/{payment}/mobile-money', [\App\Http\Controllers\Api\SubscriptionController::class, 'retryPendingMobileMoney']);
     Route::post('subscription/payments/{payment}/bank', [\App\Http\Controllers\Api\SubscriptionController::class, 'submitPendingBankPayment']);
 
+    // Pay for another existing user: look them up by exact email first.
+    // Throttled to limit account enumeration.
+    Route::get('subscription/beneficiary', [\App\Http\Controllers\Api\SubscriptionController::class, 'beneficiary'])
+        ->middleware('throttle:10,1')
+        ->name('subscription.beneficiary');
+
+    // ioTec subscription payments (Mobile Money or Visa / MasterCard).
+    Route::get('subscription/iotec/options', [\App\Http\Controllers\Api\IoTecSubscriptionController::class, 'options'])
+        ->name('subscription.iotec.options');
+    Route::post('subscription/pay/iotec', [\App\Http\Controllers\Api\IoTecSubscriptionController::class, 'initiate'])
+        ->middleware(\App\Http\Middleware\OrganizationMemberBillingContext::class)
+        ->name('subscription.pay.iotec');
+    Route::get('subscription/pay/iotec/{transaction}/status', [\App\Http\Controllers\Api\IoTecSubscriptionController::class, 'status'])
+        ->whereNumber('transaction')
+        ->name('subscription.pay.iotec.status');
+
     // Meeting recordings
     Route::get('meetings/{meeting}/recordings', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'index']);
     Route::post('meetings/{meeting}/recordings', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'store']);
