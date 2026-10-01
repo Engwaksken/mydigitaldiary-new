@@ -31,4 +31,6 @@
         Don't have an account?
         <a href="{{ route('register') }}" class="auth-link font-medium">Sign up</a>
     </p>
+
+    @include('partials.auth-app-download')
 </x-guest-layout>

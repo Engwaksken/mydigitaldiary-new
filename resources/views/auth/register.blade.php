@@ -43,4 +43,6 @@
         Already have an account?
         <a href="{{ route('login') }}" class="auth-link font-medium">Log in</a>
     </p>
+
+    @include('partials.auth-app-download')
 </x-guest-layout>

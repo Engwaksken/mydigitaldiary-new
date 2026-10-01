@@ -39,6 +39,13 @@ return [
         'callback_secret' => env('IOTEC_CALLBACK_SECRET', ''),
     ],
 
+    // Store links for the native mobile app. Each "Get it on" button on the
+    // login, register and forgot-password pages only shows once its URL is set.
+    'mobile_app' => [
+        'android_url' => env('MOBILE_APP_ANDROID_URL'),
+        'ios_url' => env('MOBILE_APP_IOS_URL'),
+    ],
+
 
 'firebase' => [
         'project_id' => env('FIREBASE_PROJECT_ID'),

@@ -15,4 +15,6 @@
     <p class="text-sm text-center mt-6">
         <a href="{{ route('login') }}" class="auth-link-muted">Back to login</a>
     </p>
+
+    @include('partials.auth-app-download')
 </x-guest-layout>
