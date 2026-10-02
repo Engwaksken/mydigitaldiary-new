@@ -32,29 +32,32 @@
     $hasError = $errors->has($name);
     $isRequired = !empty($field['required']);
     $inputClasses = 'pm-input' . ($hasError ? ' border-rose-400' : '');
-    $hintId = $fieldId . '-hint';
     $describedBy = implode(' ', array_filter([
-        !empty($field['hint']) ? $hintId : null,
         $hasError ? $errorId : null,
     ]));
 
-    // Hints go inside the field: "(optional)" moves from the label to
-    // the placeholder, and a field's 'hint' is used as its placeholder
-    // when it has none of its own. Selects get a "Choose …" first option.
+    // Hints are deliberately not used as placeholders. Keep the configured
+    // placeholder text and retain the optional suffix for optional fields.
     $optionalPattern = '/\s*\(optional\)|,\s*optional(?=\))/i';
     $labelText = trim(preg_replace($optionalPattern, '', (string) $field['label']));
     $isOptional = ! $isRequired && ! in_array($field['type'], ['checkbox', 'readonly'], true);
-    $placeholder = $field['placeholder'] ?? ($field['hint'] ?? null);
-    if ($isOptional) {
-        $placeholder = $placeholder ? $placeholder . ' (optional)' : 'Optional';
+    $placeholder = $field['placeholder'] ?? null;
+    if ($placeholder && $isOptional && ! preg_match('/\(optional\)\s*$/i', $placeholder)) {
+        $placeholder .= ' (optional)';
     }
     $selectPlaceholder = $field['placeholder']
         ?? ('Choose ' . \Illuminate\Support\Str::lower($labelText) . ($isRequired ? '' : ' (optional)'));
+    if (($field['placeholder'] ?? null) && $isOptional && ! preg_match('/\(optional\)\s*$/i', $selectPlaceholder)) {
+        $selectPlaceholder .= ' (optional)';
+    }
 @endphp
 <div class="min-w-0 space-y-1">
     @if ($field['type'] !== 'checkbox')
         <label for="{{ $fieldId }}" class="block text-sm font-medium text-slate-700 mb-1">
             {{ $labelText }}
+            @if ($isOptional)
+                <span class="text-slate-500 font-normal">(optional)</span>
+            @endif
             @if ($isRequired)
                 <span class="text-rose-500" aria-hidden="true">*</span>
                 <span class="sr-only">(required)</span>
@@ -80,7 +83,7 @@
             >
             <label for="{{ $fieldId }}" class="text-sm text-slate-700">{{ $labelText }}</label>
         </div>
-    @elseif ($field['type'] === 'datetime-local')
+    @elseif (in_array($field['type'], ['datetime-local', 'datetime-native'], true))
         @php
             $datePart = '';
             $hourPart = '';
@@ -120,8 +123,9 @@
                            id="{{ $fieldId }}-date"
                            value="{{ $datePart }}"
                            class="pm-input"
-                           data-pm-datetime12-date
-                           @if ($isRequired) required aria-required="true" @endif>
+                            data-pm-datetime12-date
+                            @if ($isRequired) required aria-required="true" @endif
+                            @if ($hasError) aria-invalid="true" aria-describedby="{{ $errorId }}" @endif>
                 </div>
 
                 <div>
@@ -129,7 +133,8 @@
                     <select id="{{ $fieldId }}-hour"
                             class="pm-input text-center"
                             data-pm-datetime12-hour
-                            @if ($isRequired) required aria-required="true" @endif>
+                            @if ($isRequired) required aria-required="true" @endif
+                            @if ($hasError) aria-invalid="true" aria-describedby="{{ $errorId }}" @endif>
                         <option value="">Hour</option>
                         @for ($hour = 1; $hour <= 12; $hour++)
                             <option value="{{ $hour }}" @selected((string) $hourPart === (string) $hour)>{{ $hour }}</option>
@@ -142,9 +147,10 @@
                     <select id="{{ $fieldId }}-minute"
                             class="pm-input text-center"
                             data-pm-datetime12-minute
-                            @if ($isRequired) required aria-required="true" @endif>
+                            @if ($isRequired) required aria-required="true" @endif
+                            @if ($hasError) aria-invalid="true" aria-describedby="{{ $errorId }}" @endif>
                         <option value="">Min</option>
-                        @for ($minute = 0; $minute <= 55; $minute += 5)
+                        @for ($minute = 0; $minute <= 59; $minute++)
                             @php $minuteValue = str_pad((string) $minute, 2, '0', STR_PAD_LEFT); @endphp
                             <option value="{{ $minuteValue }}" @selected((string) $minutePart === $minuteValue)>{{ $minuteValue }}</option>
                         @endfor
@@ -155,17 +161,16 @@
                     <label class="block text-xs font-semibold text-slate-500 mb-1" for="{{ $fieldId }}-period">AM / PM</label>
                     <select id="{{ $fieldId }}-period"
                             class="pm-input text-center"
-                            data-pm-datetime12-period>
-                        <option value="AM" @selected($periodPart === 'AM')>AM</option>
+                             data-pm-datetime12-period
+                             @if ($isRequired) required aria-required="true" @endif
+                             @if ($hasError) aria-invalid="true" aria-describedby="{{ $errorId }}" @endif>
+                        @if (! $isRequired)<option value="">AM / PM</option>@endif
+                        <option value="AM" @selected($periodPart === 'AM' && (! $isRequired || filled($old)))>AM</option>
                         <option value="PM" @selected($periodPart === 'PM')>PM</option>
                     </select>
                 </div>
             </div>
 
-            <p class="mt-2 text-xs text-slate-500">
-                <i class="fa-regular fa-clock mr-1"></i>
-                12-hour time only — choose AM or PM.
-            </p>
         </div>
 
         <script>
@@ -219,16 +224,6 @@
             })();
         </script>
 
-    @elseif ($field['type'] === 'datetime-native')
-        <input
-            type="datetime-local"
-            id="{{ $fieldId }}"
-            name="{{ $name }}"
-            value="{{ $old }}"
-            @if ($isRequired) required aria-required="true" @endif
-            @if ($hasError) aria-invalid="true" @endif @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif
-            class="{{ $inputClasses }}"
-        >
     @elseif ($field['type'] === 'sleep-range')
         @php
             $normaliseTime = function ($value) {
@@ -300,7 +295,7 @@
                             required
                         >
                             <option value="">Min</option>
-                            @for ($minute = 0; $minute <= 55; $minute += 5)
+                            @for ($minute = 0; $minute <= 59; $minute++)
                                 @php $minuteValue = str_pad((string) $minute, 2, '0', STR_PAD_LEFT); @endphp
                                 <option value="{{ $minuteValue }}" @selected((string) $clock['time']['minute'] === $minuteValue)>
                                     {{ $minuteValue }}
@@ -431,7 +426,6 @@
             name="{{ $name }}"
             value="{{ $old }}"
             @if ($placeholder) placeholder="{{ $placeholder }}" @endif
-            @if (! empty($field['hint'])) title="{{ $field['hint'] }}" @endif
             @if ($field['type'] === 'number') step="0.01" @endif
             @if ($isRequired) required aria-required="true" @endif
             @if ($hasError) aria-invalid="true" @endif @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif
@@ -439,11 +433,7 @@
         >
     @endif
 
-    @if (!empty($field['hint']) && !in_array($field['type'], ['datetime-local', 'sleep-range'], true))
-        <p id="{{ $hintId }}" class="text-xs leading-5 text-slate-500">{{ $field['hint'] }}</p>
-    @endif
-
-    @error($name)
+            @error($name)
         <p id="{{ $errorId }}" role="alert" class="text-sm text-rose-600 mt-1 flex items-center gap-1">
             <i class="fa-solid fa-circle-exclamation text-xs" aria-hidden="true"></i>
             {{ $message }}

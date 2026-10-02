@@ -39,9 +39,6 @@
                         Schedule Multiple Meetings
                     </h2>
 
-                    <p class="mt-0.5 text-xs text-slate-500">
-                        Shared details apply to every time slot.
-                    </p>
                 </div>
             </div>
 
@@ -57,7 +54,7 @@
 
         <div class="meeting-multi-body">
             @if($errors->any())
-                <x-alert type="error" :dismissible="false" :auto-dismiss="false">
+                <x-alert id="meeting-form-errors" type="error" :dismissible="false" :auto-dismiss="false">
                     <ul class="list-disc space-y-1 pl-5">
                         @foreach($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -68,15 +65,19 @@
 
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="md:col-span-2">
-                    <label class="meeting-label">
+                    <label class="meeting-label" for="multi-title">
                         Title <span class="text-rose-500">*</span>
                     </label>
                     <input
                         name="title"
+                        id="multi-title"
                         value="{{ old('title') }}"
                         required
+                        aria-required="true"
+                        @error('title') aria-invalid="true" aria-describedby="multi-title-error" @enderror
                         class="pm-input mt-1 w-full"
                     >
+                    @error('title')<p id="multi-title-error" class="mt-1 text-sm text-rose-700">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
@@ -142,9 +143,6 @@
                     <h3 class="text-sm font-black">
                         Date & Time Slots
                     </h3>
-                    <p class="text-[11px] text-slate-500">
-                        Uses a single 12-hour clock. End is optional.
-                    </p>
                 </div>
 
                 <button
@@ -185,14 +183,17 @@
                                     type="date"
                                     name="slots[0][start_date]"
                                     required
+                                    @if($errors->has('slots.0.start_date')) aria-invalid="true" aria-describedby="meeting-slot-0-start-date-error" @endif
                                     class="pm-input"
                                 >
                             </div>
+                            @error('slots.0.start_date')<p id="meeting-slot-0-start-date-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
 
                             <div class="meeting-12h-row">
                                 <select
                                     name="slots[0][start_hour]"
                                     required
+                                    @if($errors->has('slots.0.start_hour')) aria-invalid="true" aria-describedby="meeting-slot-0-start-hour-error" @endif
                                     class="pm-input meeting-hour"
                                 >
                                     <option value="">Hour</option>
@@ -206,10 +207,11 @@
                                 <select
                                     name="slots[0][start_minute]"
                                     required
+                                    @if($errors->has('slots.0.start_minute')) aria-invalid="true" aria-describedby="meeting-slot-0-start-minute-error" @endif
                                     class="pm-input meeting-minute"
                                 >
                                     <option value="">Min</option>
-                                    @for($m = 0; $m < 60; $m += 5)
+                                    @for($m = 0; $m < 60; $m++)
                                         <option value="{{ str_pad((string) $m, 2, '0', STR_PAD_LEFT) }}">
                                             {{ str_pad((string) $m, 2, '0', STR_PAD_LEFT) }}
                                         </option>
@@ -219,12 +221,17 @@
                                 <select
                                     name="slots[0][start_meridiem]"
                                     required
+                                    @if($errors->has('slots.0.start_meridiem')) aria-invalid="true" aria-describedby="meeting-slot-0-start-meridiem-error" @endif
                                     class="pm-input meeting-meridiem"
                                 >
+                                    <option value="" selected disabled>AM / PM</option>
                                     <option value="AM">AM</option>
                                     <option value="PM">PM</option>
                                 </select>
                             </div>
+                            @error('slots.0.start_hour')<p id="meeting-slot-0-start-hour-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
+                            @error('slots.0.start_minute')<p id="meeting-slot-0-start-minute-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
+                            @error('slots.0.start_meridiem')<p id="meeting-slot-0-start-meridiem-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
                         </div>
 
                         <div>
@@ -234,13 +241,16 @@
                                 <input
                                     type="date"
                                     name="slots[0][end_date]"
+                                    @if($errors->has('slots.0.end_date')) aria-invalid="true" aria-describedby="meeting-slot-0-end-date-error" @endif
                                     class="pm-input"
                                 >
                             </div>
+                            @error('slots.0.end_date')<p id="meeting-slot-0-end-date-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
 
                             <div class="meeting-12h-row">
                                 <select
                                     name="slots[0][end_hour]"
+                                    @if($errors->has('slots.0.end_hour')) aria-invalid="true" aria-describedby="meeting-slot-0-end-hour-error" @endif
                                     class="pm-input meeting-hour"
                                 >
                                     <option value="">Hour</option>
@@ -253,10 +263,11 @@
 
                                 <select
                                     name="slots[0][end_minute]"
+                                    @if($errors->has('slots.0.end_minute')) aria-invalid="true" aria-describedby="meeting-slot-0-end-minute-error" @endif
                                     class="pm-input meeting-minute"
                                 >
                                     <option value="">Min</option>
-                                    @for($m = 0; $m < 60; $m += 5)
+                                    @for($m = 0; $m < 60; $m++)
                                         <option value="{{ str_pad((string) $m, 2, '0', STR_PAD_LEFT) }}">
                                             {{ str_pad((string) $m, 2, '0', STR_PAD_LEFT) }}
                                         </option>
@@ -265,12 +276,16 @@
 
                                 <select
                                     name="slots[0][end_meridiem]"
+                                    @if($errors->has('slots.0.end_meridiem')) aria-invalid="true" aria-describedby="meeting-slot-0-end-meridiem-error" @endif
                                     class="pm-input meeting-meridiem"
                                 >
                                     <option value="AM">AM</option>
                                     <option value="PM">PM</option>
                                 </select>
                             </div>
+                            @error('slots.0.end_hour')<p id="meeting-slot-0-end-hour-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
+                            @error('slots.0.end_minute')<p id="meeting-slot-0-end-minute-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
+                            @error('slots.0.end_meridiem')<p id="meeting-slot-0-end-meridiem-error" role="alert" class="text-sm text-rose-700">{{ $message }}</p>@enderror
                         </div>
                     </div>
                 </div>
@@ -356,6 +371,7 @@
                         required
                         class="pm-input meeting-meridiem"
                     >
+                        <option value="">AM / PM</option>
                         <option value="AM">AM</option>
                         <option value="PM">PM</option>
                     </select>
@@ -391,7 +407,7 @@
                         class="pm-input meeting-minute"
                     >
                         <option value="">Min</option>
-                        @for($m = 0; $m < 60; $m += 5)
+                        @for($m = 0; $m < 60; $m++)
                             <option value="{{ str_pad((string) $m, 2, '0', STR_PAD_LEFT) }}">
                                 {{ str_pad((string) $m, 2, '0', STR_PAD_LEFT) }}
                             </option>
@@ -402,6 +418,7 @@
                         name="slots[__INDEX__][end_meridiem]"
                         class="pm-input meeting-meridiem"
                     >
+                        <option value="">AM / PM</option>
                         <option value="AM">AM</option>
                         <option value="PM">PM</option>
                     </select>

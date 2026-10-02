@@ -6,7 +6,6 @@
             <option value="{{ $goalId }}">{{ $goalTitle }}</option>
         @endforeach
     </select>
-    <p class="text-xs text-slate-500 mt-1">Link this plan to the outcome it is helping you achieve.</p>
 </div>
 <div>
     <label class="text-sm font-medium text-slate-700">Plan / Goal</label>
@@ -45,7 +44,6 @@
     <div>
         <label class="text-sm font-medium text-slate-700">Reminder date & time</label>
         <input type="datetime-local" name="reminder_at" class="pm-input mt-2">
-        <p class="text-xs text-slate-500 mt-1">Optional. My Digital Diary will create a one-time reminder for this plan.</p>
     </div>
 </div>
 <div>

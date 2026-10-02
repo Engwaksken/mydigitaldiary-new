@@ -155,10 +155,8 @@
                 <div>
                     <label for="avatar" class="block text-sm font-medium text-slate-700 mb-1">Upload a new photo</label>
                     <input type="file" id="avatar" name="avatar" accept="image/*"
-                           aria-describedby="avatar-hint @error('avatar') avatar-error @enderror"
                            @error('avatar') aria-invalid="true" @enderror
                            class="block w-full text-sm">
-                    <p id="avatar-hint" class="text-xs text-slate-400 mt-1">JPG, PNG, or GIF. Max 2MB.</p>
                     @error('avatar')
                         <p id="avatar-error" role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p>
                     @enderror
@@ -300,11 +298,8 @@
                                maxlength="7"
                                pattern="^#[0-9A-Fa-f]{6}$"
                                class="w-28 pm-input font-mono text-sm"
-                               aria-describedby="theme-color-hex-hint">
+                                >
                     </div>
-                    <p id="theme-color-hex-hint" class="text-xs text-slate-400 mt-1">
-                        Type a hex code directly (e.g. <span class="font-mono">#00897B</span>), or use the picker.
-                    </p>
                 </div>
 
                 <div>
@@ -336,14 +331,11 @@
                                maxlength="7"
                                pattern="^#[0-9A-Fa-f]{6}$"
                                class="w-32 pm-input font-mono text-sm"
-                               aria-describedby="theme-color-secondary-hex-hint">
+                                >
                         <button type="button" onclick="pmClearThemeColorSecondary()" class="text-xs text-slate-500 hover:underline whitespace-nowrap">
                             Follow primary
                         </button>
                     </div>
-                    <p id="theme-color-secondary-hex-hint" class="text-xs text-slate-400 mt-1">
-                        Leave blank to auto-derive a lighter shade of your primary color instead.
-                    </p>
                 </div>
 
                 <div>
@@ -396,7 +388,7 @@
                 <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6">
                     <div class="flex items-start gap-3 mb-4">
                         <div class="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                        <div><h2 class="font-bold text-slate-900">What may AI Planner use?</h2><p class="text-sm text-slate-500 mt-1">You stay in control. Untick any part of your diary you do not want included in AI context.</p></div>
+                        <div><h2 class="font-bold text-slate-900">What may AI Planner use?</h2></div>
                     </div>
                     <div class="grid sm:grid-cols-2 gap-3">
                         @foreach($aiOptions as $key => [$label,$icon])
@@ -410,7 +402,6 @@
 
                 <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6">
                     <h2 class="font-bold text-slate-900">What should My Digital Diary help you with most?</h2>
-                    <p class="text-sm text-slate-500 mt-1 mb-4">These choices help us prioritise shortcuts, onboarding and guidance. You can change them any time.</p>
                     <div class="flex flex-wrap gap-2">
                         @foreach($focusOptions as $key => $label)
                             <label class="cursor-pointer">
@@ -434,14 +425,13 @@
                 @endphp
                 <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6">
                     <h2 class="font-bold text-slate-900">Smart notification preferences</h2>
-                    <p class="text-sm text-slate-500 mt-1 mb-4">Choose the helpful nudges you want. Essential security and account messages are not controlled here.</p>
                     <div class="grid sm:grid-cols-2 gap-3">
                         @foreach($notifyOptions as $key => [$label,$help,$icon])
                             <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:border-[var(--brand-1)] cursor-pointer">
                                 <input type="hidden" name="engagement_notification_preferences[{{ $key }}]" value="0">
                                 <input type="checkbox" name="engagement_notification_preferences[{{ $key }}]" value="1" class="mt-1 rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-1)]" @checked((bool)($notifyPrefs[$key] ?? true))>
                                 <i class="fa-solid {{ $icon }} text-slate-400 w-5 text-center mt-1"></i>
-                                <span><span class="block text-sm font-semibold text-slate-700">{{ $label }}</span><span class="block text-xs text-slate-500 mt-0.5">{{ $help }}</span></span>
+                                <span class="block text-sm font-semibold text-slate-700">{{ $label }}</span>
                             </label>
                         @endforeach
                     </div>

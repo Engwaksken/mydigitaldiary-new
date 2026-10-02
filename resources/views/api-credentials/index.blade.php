@@ -140,12 +140,9 @@
                 <label for="api_key" class="block text-sm font-medium text-slate-700 mb-1">API Key</label>
                 <input type="password" id="api_key" name="api_key" placeholder="sk-..."
                        required aria-required="true" autocomplete="off"
-                       aria-describedby="api_key-hint @error('api_key') api_key-error @enderror"
+                       @error('api_key') aria-describedby="api_key-error" @enderror
                        @error('api_key') aria-invalid="true" @enderror
                        class="pm-input">
-                <p id="api_key-hint" class="text-xs text-slate-400 mt-1">
-                    Stored encrypted with your app's APP_KEY. It won't be shown again in full.
-                </p>
                 @error('api_key')
                     <p id="api_key-error" role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p>
                 @enderror

@@ -91,7 +91,6 @@
                         <div class="flex items-center justify-between gap-2 mb-2">
                             <div>
                                 <p class="text-sm font-semibold text-slate-700">Finger / Pen</p>
-                                <p class="text-[11px] text-slate-500">Use a finger on touch screens or a stylus/mouse.</p>
                             </div>
                             <button type="button" onclick="pmClearSignaturePad()" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">Clear</button>
                         </div>
@@ -99,7 +98,6 @@
                             <canvas id="pm-signature-pad" class="block w-full" style="height:220px; touch-action:none; cursor:crosshair;" aria-label="Draw your signature"></canvas>
                         </div>
                         <input type="hidden" name="drawn_signature" id="pm-drawn-signature">
-                        <p id="pm-signature-pad-hint" class="mt-2 text-[11px] text-slate-400">Sign inside the box. Pressure/stylus input is supported by the browser where available.</p>
                     </div>
 
                     <div class="rounded-xl border border-slate-200 p-3 bg-white">

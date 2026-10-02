@@ -476,7 +476,6 @@
                 <h3 class="font-bold text-slate-900">
                     {{ $isToday ? "Today's Tasks" : 'Tasks for '.$date->format('d M Y') }}
                 </h3>
-                <p class="text-xs text-slate-500 mt-1">Timed tasks are shown first in the order they are scheduled.</p>
             </div>
 
             @if($total)
@@ -683,7 +682,6 @@
                         <h3 class="font-bold text-slate-900">
                             Week of {{ $weekStart->format('d M') }} – {{ $weekEnd->format('d M Y') }}
                         </h3>
-                        <p class="text-sm text-slate-500">Every task due this week, including daily and repeating ones.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <a href="{{ route('daily-planner.index', ['date' => $weekStart->copy()->subWeek()->toDateString(), 'tab' => 'week']) }}"
@@ -999,9 +997,7 @@
                     <div class="grid h-9 w-9 place-items-center rounded-lg bg-white text-violet-700">
                         <i class="fa-solid fa-repeat"></i>
                     </div>
-                    <div>
-                        <h4 class="font-semibold text-slate-800">Repeat task</h4>
-                    </div>
+                    <div><h4 class="font-semibold text-slate-800">Repeat task</h4></div>
                 </div>
 
                 <label class="block text-sm font-medium">
@@ -1440,7 +1436,7 @@
                     <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="saturday"><span>Sat</span></label>
                     <label class="dp-day-check"><input type="checkbox" name="tasks[__i__][days][]" value="sunday"><span>Sun</span></label>
             </div>
-            <p class="hidden mt-1 text-xs text-rose-600" data-week-days-error>Tick at least one day.</p>
+            <p class="hidden mt-1 text-xs text-rose-600" data-week-days-error role="alert">Tick at least one day.</p>
         </div>
 
         <div class="mt-3 flex flex-wrap items-center justify-between gap-3">

@@ -173,7 +173,9 @@ class MeetingController extends CrudController
     }
 
     /**
-     * <input type="datetime-local"> submits "Y-m-d\TH:i". Convert that
+     * The visible controls are a date field plus 12-hour hour/minute and
+     * AM/PM selectors. A canonical hidden field named `start_at` or `end_at`
+     * retains the existing field name and submits "Y-m-dTH:i". Convert that
      * wall-clock string (in the user's timezone) to the same stored format
      * the rest of the module uses.
      */

@@ -431,7 +431,6 @@
             <div class="flex items-center justify-between mb-4"><h2 class="text-lg font-bold text-slate-800">What should the AI Planner generate?</h2><button type="button" onclick="this.closest('dialog').close()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button></div>
             <label for="custom_prompt" class="block text-sm font-medium text-slate-700 mb-1">Your request</label>
             <textarea id="custom_prompt" name="custom_prompt" rows="5" maxlength="3000" class="pm-input" placeholder="Example: Build a realistic 7-day plan focused on saving UGX 100,000, completing my overdue project tasks, exercising three times, and making time for prayer.">{{ old('custom_prompt') }}</textarea>
-            <p class="text-xs text-slate-500 mt-2">Optional. If left blank, the standard personalized planner will be used.</p>
             <div class="pm-ai-modal-actions flex flex-wrap justify-end gap-3 mt-5"><button type="button" onclick="this.closest('dialog').close()" class="px-4 py-2 text-sm text-slate-600">Cancel</button><button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate</button></div>
         </form>
     </dialog>
