@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'User Access Management')
 @section('content')
 <div id="admin-users" class="mx-auto max-w-7xl space-y-4 px-3 py-4 sm:px-5">
 <style>

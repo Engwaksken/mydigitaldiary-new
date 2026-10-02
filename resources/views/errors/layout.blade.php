@@ -282,7 +282,7 @@
 @endphp
 
 <main class="error-shell">
-    <section class="error-card" role="alert">
+    <section class="error-card" aria-labelledby="error-page-heading">
         <div class="error-accent"></div>
 
         <div class="error-content">
@@ -308,9 +308,18 @@
                 @yield('eyebrow', 'We could not complete that request')
             </p>
 
-            <h1 class="error-title">
-                @yield('heading', 'Something went wrong')
-            </h1>
+            {{-- The live region is scoped to the heading only. It used to wrap
+                 the whole card, which made a screen reader read the brand block,
+                 icon, message, help text and every button on load. Everything
+                 outside it is ordinary static content. The wrapper is a plain
+                 block box with no margins, and .error-title is margin: 0, so
+                 the rendered layout is unchanged — and the <h1> keeps its
+                 heading semantics instead of being overwritten by a role. --}}
+            <div role="alert">
+                <h1 class="error-title" id="error-page-heading">
+                    @yield('heading', 'Something went wrong')
+                </h1>
+            </div>
 
             <p class="error-message">
                 @yield(

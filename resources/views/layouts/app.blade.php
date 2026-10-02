@@ -7,16 +7,27 @@
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- viewport-fit=cover is required, not optional: without it the browser
+         resolves env(safe-area-inset-*) to 0px on notched phones and the
+         safe-area handling in modals.css / modal-responsive.css never fires.
+         Keep this in sync with layouts/guest.blade.php. --}}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>@yield('title', $siteSettings->site_name ?? 'Personal Monitor')</title>
     @if (isset($siteSettings) && $siteSettings->faviconUrl())
         <link rel="icon" href="{{ $siteSettings->faviconUrl() }}">
     @endif
 
     {{-- External assets --}}
+    {{-- Both the Tailwind CDN runtime and the Font Awesome stylesheet are
+         render-blocking third-party origins, so warm the connections before
+         the requests that need them. --}}
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {{-- &display=swap: without it Google applies font-display:auto, which
+         blocks text rendering for ~3s while the webfont downloads (FOIT). --}}
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 

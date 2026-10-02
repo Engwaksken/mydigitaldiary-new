@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Daily Planner')
+
 @section('content')
 @php
     $isToday = $date->isToday();

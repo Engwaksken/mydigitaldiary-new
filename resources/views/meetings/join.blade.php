@@ -3,7 +3,12 @@
 @section('title', 'Meeting: ' . $meeting->title)
 
 @section('content')
-    <main class="max-w-2xl mx-auto px-4 py-8">
+    {{-- A <section>, not a <main>: layouts/app.blade.php already owns the
+         page's only <main> landmark, and two of them is a landmark-structure
+         failure (WCAG 1.3.1). Classes and spacing are unchanged; public/
+         css/responsive.css matches `section` and `main > *` with the same
+         declarations, so mobile rendering is identical. --}}
+    <section class="max-w-2xl mx-auto px-4 py-8" aria-label="Meeting details">
         <section class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
             <p class="text-sm font-semibold text-emerald-700">My Digital Diary meeting</p>
             <h1 class="mt-1 text-2xl font-bold text-slate-900">{{ $meeting->title }}</h1>
@@ -33,5 +38,5 @@
                 Open my meetings
             </a>
         </section>
-    </main>
+    </section>
 @endsection

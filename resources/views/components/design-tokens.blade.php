@@ -15,9 +15,17 @@
         /* Brand / semantic colors */
         --color-primary: var(--brand-1, #00897B);
         --color-secondary: var(--brand-2, #73BEB6);
-        --color-success: #16a34a;
-        --color-warning: #d97706;
-        --color-danger: #dc2626;
+        /* Contrast on white, measured (WCAG 1.4.3 AA for text needs 4.5:1):
+             success #15803d = 4.83:1  (was #16a34a = 3.30:1 — FAILED)
+             warning #b45309 = 4.53:1  (was #d97706 = 3.19:1 — FAILED)
+             danger  #b91c1c = 6.30:1  (was #dc2626 = 4.46:1 on
+                                       --color-background #f4f6f8 — FAILED by 0.04)
+           These darker steps are already used elsewhere in this codebase. Please
+           do not "brighten" them back: the previous values are the green/amber/
+           red-500 family and they are not AA-compliant as text. */
+        --color-success: #15803d;
+        --color-warning: #b45309;
+        --color-danger: #b91c1c;
         --color-info: #2563eb;
 
         /* Neutrals */

@@ -1,4 +1,7 @@
 @extends('layouts.app')
+
+@section('title', 'Shared Workspace')
+
 @section('content')
 <div id="team-workspace" class="mx-auto max-w-6xl space-y-5 px-3 py-4 sm:px-5">
 <style>
@@ -18,7 +21,7 @@
   <p class="mt-1 text-sm text-slate-500">Personal diary information remains private until a member deliberately shares it.</p></div>
   <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{{ ucfirst($role) }}</span>
  </div>
- <nav class="ws-tabs mt-4">
+  <nav class="ws-tabs mt-4" aria-label="Workspace sections">
   <a href="#members" class="rounded-xl border px-3 py-2 text-sm font-bold">Members</a>
   <a href="#shared" class="rounded-xl border px-3 py-2 text-sm font-bold">Shared Items</a>
   <a href="#files" class="rounded-xl border px-3 py-2 text-sm font-bold">Files</a>
@@ -26,7 +29,11 @@
  </nav>
 </div>
 
-@if(session('success'))<div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>@endif
+{{-- Passed as the `message` prop so components/alert.blade.php registers it in
+     its per-request dedupe list: the shared layout flash (partials/
+     flash-messages.blade.php) renders the same session('success'), and this
+     page's alert renders first, so only one of the two reaches the browser. --}}
+@if(session('success'))<x-alert type="success" :message="session('success')" />@endif
 
 <div class="grid gap-3 sm:grid-cols-3">
  <div class="ws-card"><p class="text-xs text-slate-400">MEMBERS</p><p class="text-2xl font-black">{{ $members->count() }}</p></div>

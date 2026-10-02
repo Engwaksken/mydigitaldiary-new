@@ -36,7 +36,21 @@
 ])
 
 @php
-    $fieldId = $attributes->get('id', $name);
+    // DOM id for the control. An explicitly passed `id` always wins (the
+    // component reads it out of the attribute bag rather than echoing the bag,
+    // so it never produced a duplicate id attribute). Otherwise derive one from
+    // $name plus a per-render counter: two <x-input name="x"> on one page (array
+    // / repeated rows) would otherwise share an id and every <label for> would
+    // point at the first control. The counter lives on the request, so the same
+    // page renders the same ids every time — Str::random() would not be stable
+    // across a re-render.
+    $passedId = $attributes->get('id');
+    $counterKey = 'pm.field_id_seq.' . $name;
+    $sequence = (int) request()->attributes->get($counterKey, 0) + 1;
+    request()->attributes->set($counterKey, $sequence);
+
+    $fieldId = $passedId ?: $name . '-' . $sequence;
+
     // Hints live inside the field (placeholder), never as text under it.
     $placeholder = $placeholder ?: $help;
     $errorId = $error ? $fieldId . '-error' : null;
