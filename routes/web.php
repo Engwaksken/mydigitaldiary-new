@@ -422,7 +422,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::delete('feedback/bulk-destroy', [FeedbackController::class, 'bulkDestroy'])->name('feedback.bulk-destroy');
 
     // Budget document extraction/import routes must be before Route::resource('budgets', ...).
-    Route::post('budgets/extract', [BudgetController::class, 'extractImport'])->name('budgets.extract');
+    Route::post('budgets/extract', [BudgetController::class, 'extractImport'])->middleware('throttle:5,1')->name('budgets.extract');
     Route::post('budgets/import/confirm', [BudgetController::class, 'confirmImport'])->name('budgets.import.confirm');
     Route::post('budgets/{budget}/expense-status', [BudgetController::class, 'setExpenseStatus'])->name('budgets.expense-status');
 
@@ -450,14 +450,14 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::post('meetings/{meeting}/notes/email', [MeetingController::class, 'emailNotes'])->name('meetings.notes.email');
 
     Route::post('meetings/{meeting}/recordings', [MeetingRecordingController::class, 'store'])->name('meetings.recordings.store');
-    Route::post('meetings/{meeting}/recordings/upload', [MeetingRecordingController::class, 'upload'])->name('meetings.recordings.upload');
+    Route::post('meetings/{meeting}/recordings/upload', [MeetingRecordingController::class, 'upload'])->middleware('throttle:5,1')->name('meetings.recordings.upload');
     Route::patch('meeting-recordings/{recording}/status', [MeetingRecordingController::class, 'updateStatus'])->name('meeting-recordings.status');
     Route::post('meeting-recordings/{recording}/stop', [MeetingRecordingController::class, 'stop'])->name('meeting-recordings.stop');
-    Route::post('meeting-recordings/{recording}/transcribe', [MeetingRecordingController::class, 'transcribe'])->name('meeting-recordings.transcribe');
+    Route::post('meeting-recordings/{recording}/transcribe', [MeetingRecordingController::class, 'transcribe'])->middleware('throttle:5,1')->name('meeting-recordings.transcribe');
     Route::post('meeting-recordings/{recording}/check-capacity', [MeetingRecordingController::class, 'checkTranscriptionCapacity'])->name('meeting-recordings.check-capacity');
     Route::post('meeting-recordings/{recording}/process', [MeetingRecordingController::class, 'transcribeAndSummarize'])->name('meeting-recordings.process');
     Route::put('meeting-recordings/{recording}/transcript', [MeetingRecordingController::class, 'updateTranscript'])->name('meeting-recordings.transcript.update');
-    Route::post('meeting-recordings/{recording}/summarize', [MeetingRecordingController::class, 'generateSummary'])->name('meeting-recordings.summarize');
+    Route::post('meeting-recordings/{recording}/summarize', [MeetingRecordingController::class, 'generateSummary'])->middleware('throttle:5,1')->name('meeting-recordings.summarize');
     Route::get('meeting-recordings/{recording}/audio/stream', [MeetingRecordingController::class, 'streamAudio'])->name('meeting-recordings.audio.stream');
     Route::get('meeting-recordings/{recording}/audio', [MeetingRecordingController::class, 'downloadAudio'])->name('meeting-recordings.audio');
     Route::get('meeting-recordings/{recording}/transcript-download', [MeetingRecordingController::class, 'downloadTranscript'])->name('meeting-recordings.transcript.download');
@@ -467,8 +467,8 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
 
     Route::post('meeting-recordings/{recording}/segments', [MeetingRecordingController::class, 'createSegment'])->name('meeting-recordings.segments.store');
     Route::get('meeting-recordings/{recording}/segments', [MeetingRecordingController::class, 'listSegments'])->name('meeting-recordings.segments.index');
-    Route::post('meeting-recording-segments/{segment}/transcribe', [MeetingRecordingController::class, 'transcribeSegment'])->name('meeting-recording-segments.transcribe');
-    Route::post('meeting-recording-segments/{segment}/summarize', [MeetingRecordingController::class, 'generateSegmentSummary'])->name('meeting-recording-segments.summarize');
+    Route::post('meeting-recording-segments/{segment}/transcribe', [MeetingRecordingController::class, 'transcribeSegment'])->middleware('throttle:5,1')->name('meeting-recording-segments.transcribe');
+    Route::post('meeting-recording-segments/{segment}/summarize', [MeetingRecordingController::class, 'generateSegmentSummary'])->middleware('throttle:5,1')->name('meeting-recording-segments.summarize');
     Route::put('meeting-recording-segments/{segment}', [MeetingRecordingController::class, 'updateSegment'])->name('meeting-recording-segments.update');
     Route::delete('meeting-recording-segments/{segment}', [MeetingRecordingController::class, 'destroySegment'])->name('meeting-recording-segments.destroy');
     Route::get('meeting-recording-segments/{segment}/audio/stream', [MeetingRecordingController::class, 'streamSegmentAudio'])->name('meeting-recording-segments.audio.stream');

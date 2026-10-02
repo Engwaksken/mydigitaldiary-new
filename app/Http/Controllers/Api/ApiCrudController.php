@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Http\Requests\Api\ApiCrudIndexRequest;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use App\Services\OfflineConflictGuard;
@@ -30,7 +31,7 @@ abstract class ApiCrudController extends Controller
      * archived items never mix into the normal list by default, which
      * is the whole point of archiving something.
      */
-    public function index(Request $request): JsonResponse
+    public function index(ApiCrudIndexRequest $request): JsonResponse
     {
         $query = $this->filteredIndexQuery($request);
         $items = $query->orderByDesc('id')->paginate(20)->withQueryString();

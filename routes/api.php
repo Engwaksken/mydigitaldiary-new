@@ -248,7 +248,7 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
 
     // Literal module actions MUST remain before the shared apiResource loop.
     Route::post('meetings/sync-calendar', [MeetingController::class, 'syncCalendar'])->name('meetings.sync-calendar');
-    Route::post('budgets/extract', [BudgetController::class, 'extractImport'])->name('budgets.extract');
+    Route::post('budgets/extract', [BudgetController::class, 'extractImport'])->middleware('throttle:5,1')->name('budgets.extract');
     Route::post('budgets/import/confirm', [BudgetController::class, 'confirmImport'])->name('budgets.import.confirm');
     Route::get('budgets/debts', [BudgetController::class, 'debts'])->name('budgets.debts');
     Route::post('budgets/duplicate-month', [BudgetController::class, 'duplicateMonth'])->name('budgets.duplicate-month');
@@ -359,16 +359,16 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::post('meetings/{meeting}/recordings', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'store']);
     Route::patch('meeting-recordings/{recording}/status', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'updateStatus']);
     Route::post('meeting-recordings/{recording}/stop', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'stop']);
-    Route::post('meeting-recordings/{recording}/transcribe', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'transcribe']);
+    Route::post('meeting-recordings/{recording}/transcribe', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'transcribe'])->middleware('throttle:5,1');
     Route::put('meeting-recordings/{recording}/transcript', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'updateTranscript']);
-    Route::post('meeting-recordings/{recording}/summarize', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'generateSummary']);
+    Route::post('meeting-recordings/{recording}/summarize', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'generateSummary'])->middleware('throttle:5,1');
     Route::delete('meeting-recordings/{recording}', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'destroy']);
 
     // Meeting recording segments
     Route::get('meeting-recordings/{recording}/segments', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'listSegments']);
     Route::post('meeting-recordings/{recording}/segments', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'createSegment']);
-    Route::post('meeting-recording-segments/{segment}/transcribe', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'transcribeSegment']);
-    Route::post('meeting-recording-segments/{segment}/summarize', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'generateSegmentSummary']);
+    Route::post('meeting-recording-segments/{segment}/transcribe', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'transcribeSegment'])->middleware('throttle:5,1');
+    Route::post('meeting-recording-segments/{segment}/summarize', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'generateSegmentSummary'])->middleware('throttle:5,1');
     Route::delete('meeting-recording-segments/{segment}', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'destroySegment']);
 
     // Organization / Team management

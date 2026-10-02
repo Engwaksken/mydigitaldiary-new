@@ -41,7 +41,9 @@ return [
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
-            'after_commit' => false,
+            // Avoid workers processing jobs before the transaction that
+            // dispatched them has committed (or dispatching jobs for rollbacks).
+            'after_commit' => true,
         ],
 
         'beanstalkd' => [

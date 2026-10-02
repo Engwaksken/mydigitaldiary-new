@@ -32,7 +32,11 @@
     $hasError = $errors->has($name);
     $isRequired = !empty($field['required']);
     $inputClasses = 'pm-input' . ($hasError ? ' border-rose-400' : '');
-    $describedBy = $hasError ? $errorId : '';
+    $hintId = $fieldId . '-hint';
+    $describedBy = implode(' ', array_filter([
+        !empty($field['hint']) ? $hintId : null,
+        $hasError ? $errorId : null,
+    ]));
 
     // Hints go inside the field: "(optional)" moves from the label to
     // the placeholder, and a field's 'hint' is used as its placeholder
@@ -47,7 +51,7 @@
     $selectPlaceholder = $field['placeholder']
         ?? ('Choose ' . \Illuminate\Support\Str::lower($labelText) . ($isRequired ? '' : ' (optional)'));
 @endphp
-<div>
+<div class="min-w-0 space-y-1">
     @if ($field['type'] !== 'checkbox')
         <label for="{{ $fieldId }}" class="block text-sm font-medium text-slate-700 mb-1">
             {{ $labelText }}
@@ -111,7 +115,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-[minmax(180px,1fr)_90px_100px_90px] gap-2 items-end">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1" for="{{ $fieldId }}-date">Date</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1" for="{{ $fieldId }}-date">Date</label>
                     <input type="date"
                            id="{{ $fieldId }}-date"
                            value="{{ $datePart }}"
@@ -433,6 +437,10 @@
             @if ($hasError) aria-invalid="true" @endif @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif
             class="{{ $inputClasses }}"
         >
+    @endif
+
+    @if (!empty($field['hint']) && !in_array($field['type'], ['datetime-local', 'sleep-range'], true))
+        <p id="{{ $hintId }}" class="text-xs leading-5 text-slate-500">{{ $field['hint'] }}</p>
     @endif
 
     @error($name)

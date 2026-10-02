@@ -1,3 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Keyboard focus for controls whose component styles replace browser defaults. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid var(--brand-2, #6d9773);
+    outline-offset: 2px;
+}
+
+/* Keep custom switches and form actions accessible without motion. */
+@media (prefers-reduced-motion: reduce) {
+    :where(button, input, select, textarea, .form-control, .pm-input),
+    .form-switch input[type="checkbox"],
+    .form-switch input[type="checkbox"]::after {
+        transition: none !important;
+    }
+
+    :where(button, .btn, .btn-primary, .btn-secondary, a[class*="btn-"]):hover,
+    :where(button, .btn, .btn-primary, .btn-secondary, a[class*="btn-"]):active {
+        transform: none !important;
+    }
+}

@@ -16,6 +16,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // These convenience accounts use public, intentionally simple
+        // credentials. Never create them when seeding a deployed app.
+        if (! app()->environment(['local', 'testing'])) {
+            return;
+        }
+
         if (! User::where('email', 'admin@kemmytech.com')->exists()) {
             User::create([
                 'name' => 'Admin',
