@@ -353,13 +353,7 @@
         </div>
     </div>
 
-    {{-- Flash / validation --}}
-    @if(session('success'))
-        <div id="dpFlash" class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3">
-            <i class="fa-solid fa-circle-check mr-2"></i>{{ session('success') }}
-        </div>
-    @endif
-
+    {{-- Validation --}}
     @if($errors->any())
         <div id="dpError" class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3">
             <div class="font-semibold mb-1"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Please fix the following:</div>
@@ -2044,7 +2038,6 @@
     });
 
     setTimeout(() => {
-        document.getElementById('dpFlash')?.remove();
         document.getElementById('dpError')?.remove();
     }, 5000);
 </script>
