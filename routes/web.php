@@ -386,6 +386,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::post('daily-planner/week', [DailyPlannerController::class, 'storeWeek'])->name('daily-planner.week.store');
     Route::post('daily-planner/items', [DailyPlannerController::class, 'storeItem'])->name('daily-planner.items.store');
     Route::patch('daily-planner/items/bulk-move', [DailyPlannerController::class, 'bulkMove'])->name('daily-planner.items.bulk-move');
+    Route::patch('daily-planner/items/bulk-complete', [DailyPlannerController::class, 'bulkComplete'])->name('daily-planner.items.bulk-complete');
     Route::delete('daily-planner/items/bulk-destroy', [DailyPlannerController::class, 'bulkDestroy'])->name('daily-planner.items.bulk-destroy');
     Route::patch('daily-planner/items/{item}/move', [DailyPlannerController::class, 'moveItem'])->name('daily-planner.items.move');
     Route::patch('daily-planner/items/{item}/toggle', [DailyPlannerController::class, 'toggle'])->name('daily-planner.items.toggle');

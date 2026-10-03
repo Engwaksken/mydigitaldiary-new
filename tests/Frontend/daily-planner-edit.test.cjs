@@ -79,3 +79,42 @@ test('switching tasks clears stale times and resets scope while preserving the r
     assert.equal(scope.value, 'series');
     assert.equal(fields.get('editRepeatInterval').value, 3);
 });
+
+test('bulk completion submits selected pending IDs and replaces the previous selection', () => {
+    const script = template.slice(
+        template.indexOf('    window.completeSelectedTasks = function() {'),
+        template.indexOf("    document.querySelectorAll('.daily-row').forEach(box => {"),
+    );
+    let selected = [];
+    let submissions = 0;
+    const holder = {
+        inputs: [],
+        replaceChildren() { this.inputs = []; },
+        appendChild(input) { this.inputs.push(input); },
+    };
+    const form = { requestSubmit() { submissions++; } };
+    const context = {
+        window: {},
+        document: {
+            querySelectorAll(selector) {
+                assert.equal(selector, '.daily-row[data-pending="1"]:checked');
+                return selected;
+            },
+            getElementById: id => id === 'bulkCompleteTaskIds' ? holder : form,
+            createElement: () => ({}),
+        },
+    };
+    vm.runInNewContext(script, context);
+    context.window.completeSelectedTasks();
+    assert.equal(submissions, 0);
+
+    selected = [{ value: '12' }, { value: '34' }];
+    context.window.completeSelectedTasks();
+    assert.deepEqual(holder.inputs.map(input => [input.name, input.value]), [['ids[]', '12'], ['ids[]', '34']]);
+    assert.equal(submissions, 1);
+
+    selected = [{ value: '56' }];
+    context.window.completeSelectedTasks();
+    assert.deepEqual(holder.inputs.map(input => input.value), ['56']);
+    assert.equal(submissions, 2);
+});

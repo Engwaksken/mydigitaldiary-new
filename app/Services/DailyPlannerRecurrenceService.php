@@ -316,6 +316,43 @@ class DailyPlannerRecurrenceService
         return $occurrence->fresh();
     }
 
+    public function completeOccurrence(
+        DailyPlanItem $item,
+        int $userId,
+        CarbonInterface $date
+    ): bool {
+        if (! $item->isRecurring()) {
+            if ($item->is_completed) {
+                return false;
+            }
+
+            $item->update(['is_completed' => true, 'completed_at' => now()]);
+
+            return true;
+        }
+
+        abort_unless($item->occursOn($date), 422,
+            'This recurring task is not scheduled for the selected date.');
+
+        $occurrence = DailyPlanItemOccurrence::query()
+            ->where('daily_plan_item_id', $item->id)
+            ->where('user_id', $userId)
+            ->whereDate('occurrence_date', $date->toDateString())
+            ->first() ?? DailyPlanItemOccurrence::create([
+                'daily_plan_item_id' => $item->id,
+                'user_id' => $userId,
+                'occurrence_date' => $date->toDateString(),
+            ]);
+
+        if ($occurrence->is_completed || $occurrence->is_skipped) {
+            return false;
+        }
+
+        $occurrence->update(['is_completed' => true, 'completed_at' => now()]);
+
+        return true;
+    }
+
     public function skipOccurrence(
         DailyPlanItem $item,
         int $userId,

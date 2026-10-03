@@ -481,6 +481,11 @@
             @if($total)
                 <div class="flex flex-wrap items-center gap-2">
                     @if($pending)
+                        <button type="button" id="bulkCompleteButton" disabled
+                                onclick="completeSelectedTasks()"
+                                class="inline-flex items-center gap-2 text-sm text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-check-double"></i> Mark selected complete
+                        </button>
                         <button type="button"
                                 onclick="openBulkMoveModal('{{ $tomorrowDate }}', true)"
                                 class="inline-flex items-center gap-2 text-sm dp-primary-text border dp-primary-border rounded-lg px-3 py-2 bg-white hover:bg-slate-50">
@@ -517,7 +522,7 @@
                     <table class="w-full text-sm min-w-[900px]">
                         <thead class="bg-slate-50">
                             <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
-                                <th class="px-4 py-3 w-10"><input type="checkbox" id="dailySelectAll"></th>
+                                <th class="px-4 py-3 w-10"><input type="checkbox" id="dailySelectAll" aria-label="Select all tasks"></th>
                                 <th class="px-3 py-3">Time</th>
                                 <th class="px-3 py-3">Task</th>
                                 <th class="px-3 py-3">Priority</th>
@@ -533,7 +538,7 @@
                                 @endphp
                                 <tr class="dp-timeline-row border-t border-slate-100 {{ $item->is_completed ? 'bg-slate-50/70' : '' }}">
                                     <td class="px-4 py-4">
-                                        <input class="daily-row" type="checkbox" name="ids[]" value="{{ $item->id }}" data-pending="{{ $item->is_completed ? '0' : '1' }}">
+                                        <input class="daily-row" type="checkbox" name="ids[]" value="{{ $item->id }}" data-pending="{{ $item->is_completed ? '0' : '1' }}" aria-label="Select {{ $item->title }}">
                                     </td>
                                     <td class="px-3 py-4 w-40">
                                         @if($start)
@@ -649,6 +654,13 @@
                         </tbody>
                     </table>
                 </div>
+            </form>
+
+            <form id="bulkCompleteTaskForm" method="POST" action="{{ route('daily-planner.items.bulk-complete') }}" class="hidden">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="occurrence_date" value="{{ $date->toDateString() }}">
+                <div id="bulkCompleteTaskIds"></div>
             </form>
 
             @foreach($plan->items as $item)
@@ -1987,9 +1999,37 @@
         customRange.classList.toggle('hidden', period.value !== 'custom');
     }
 
+    function updateBulkCompleteButton() {
+        const button = document.getElementById('bulkCompleteButton');
+        if (button) button.disabled = !document.querySelector('.daily-row[data-pending="1"]:checked');
+    }
+
+    window.completeSelectedTasks = function() {
+        const selected = [...document.querySelectorAll('.daily-row[data-pending="1"]:checked')];
+        if (!selected.length) return;
+
+        const holder = document.getElementById('bulkCompleteTaskIds');
+        holder.replaceChildren();
+        selected.forEach(box => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = box.value;
+            holder.appendChild(input);
+        });
+        document.getElementById('bulkCompleteTaskForm').requestSubmit();
+    };
+
+    document.querySelectorAll('.daily-row').forEach(box => {
+        box.addEventListener('change', updateBulkCompleteButton);
+    });
+
     document.getElementById('dailySelectAll')?.addEventListener('change', function () {
         document.querySelectorAll('.daily-row').forEach(cb => cb.checked = this.checked);
+        updateBulkCompleteButton();
     });
+
+    updateBulkCompleteButton();
 
     document.querySelectorAll('.dp-modal-backdrop').forEach(modal => {
         modal.addEventListener('click', e => {

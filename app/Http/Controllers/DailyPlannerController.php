@@ -708,6 +708,43 @@ class DailyPlannerController extends Controller
         );
     }
 
+    public function bulkComplete(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+            'occurrence_date' => ['required', 'date'],
+        ]);
+
+        $date = Carbon::parse($data['occurrence_date'])->startOfDay();
+        $user = $request->user();
+        // Resolve the viewed day's tasks to enforce ownership, recurrence
+        // schedules and skipped occurrences before completing anything.
+        $items = $this->recurrence->itemsForDate($user->id, $date)
+            ->whereIn('id', $data['ids']);
+        $completed = 0;
+
+        foreach ($items as $item) {
+            // Date-resolved items contain runtime attributes and overrides;
+            // persist completion on a fresh model, keeping those for wellbeing.
+            $freshItem = $item->fresh();
+            if (! $freshItem || ! $this->recurrence->completeOccurrence($freshItem, $user->id, $date)) {
+                continue;
+            }
+
+            $this->taskReminders->cancel($freshItem, $user);
+            app(DailyPlannerWellbeingSyncService::class)->syncCompletion($user, $item, $date, true);
+            $completed++;
+        }
+
+        return $this->backToDate(
+            $date->toDateString(),
+            $completed === 0
+                ? 'No pending tasks were selected for this day.'
+                : $completed.' '.($completed === 1 ? 'task' : 'tasks').' marked complete.'
+        );
+    }
+
     public function bulkDestroy(Request $request): RedirectResponse
     {
         $data = $request->validate([
