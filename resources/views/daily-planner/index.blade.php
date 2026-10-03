@@ -1231,7 +1231,7 @@
                         <input id="editRepeatEnds" type="date" name="repeat_ends_on" class="pm-input mt-1 w-full">
                     </label>
 
-                    <input type="hidden" name="repeat_interval" value="1">
+                    <input id="editRepeatInterval" type="hidden" name="repeat_interval" value="1">
                 </div>
 
                 <div id="editScopeBox" class="hidden mt-4">
@@ -1803,11 +1803,7 @@
             return;
         }
 
-        /*
-         * Open the modal first so an optional/missing field can never stop
-         * the user from seeing the edit form.
-         */
-        openDpModal('editTaskModal');
+        form.reset();
 
         const setValue = function(id, value) {
             const element = document.getElementById(id);
@@ -1833,6 +1829,7 @@
             task.repeat_starts_on || task.plan_date || ''
         );
         setValue('editRepeatEnds', task.repeat_ends_on || '');
+        setValue('editRepeatInterval', task.repeat_interval || 1);
 
         /*
          * Reminder controls are optional in this Blade. The previous code
@@ -1889,6 +1886,14 @@
         }
 
         toggleRepeatFields('edit');
+
+        // The visible AM/PM controls must match the source inputs before
+        // submission, otherwise their previous values overwrite this task.
+        if (typeof window.pmSync12HourTimeControls === 'function') {
+            window.pmSync12HourTimeControls(form);
+        }
+
+        openDpModal('editTaskModal');
     };
 
     window.openMoveTaskModal = function(id, title, action, tomorrow) {
