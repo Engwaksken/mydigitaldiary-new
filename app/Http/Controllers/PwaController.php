@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\SiteSetting;
+use App\Services\PwaIconService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -26,6 +28,25 @@ use Throwable;
  */
 class PwaController extends Controller
 {
+    public function __construct(private readonly PwaIconService $icons)
+    {
+    }
+
+    public function icon(string $version, string $variant): Response
+    {
+        return response($this->icons->png($version, $variant), 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'public, max-age=31536000, immutable',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function favicon(): RedirectResponse
+    {
+        return redirect($this->icons->url('icon-192'))
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+
     /**
      * Part of the cache key. Bump this ONLY when the service worker's own
      * logic changes; a new build already busts the cache because the key also
@@ -34,7 +55,7 @@ class PwaController extends Controller
      * Public so the test that recomputes the cache key can read it instead of
      * copying the number, which would rot the first time it was bumped.
      */
-    public const SCHEMA_VERSION = 1;
+    public const SCHEMA_VERSION = 2;
 
     /** Default brand teal, matching the fallback in layouts/app.blade.php. */
     private const THEME_COLOR = '#00897B';
@@ -56,10 +77,6 @@ class PwaController extends Controller
         '/css/time-12h.css',
         '/js/time-12h.js',
         '/js/pwa.js',
-        '/icons/icon-192.png',
-        '/icons/icon-512.png',
-        '/icons/maskable-512.png',
-        '/icons/apple-touch-icon.png',
     ];
 
     /**
@@ -100,44 +117,16 @@ class PwaController extends Controller
             'background_color' => self::BACKGROUND_COLOR,
             'categories' => ['productivity', 'lifestyle', 'health', 'finance'],
             'prefer_related_applications' => false,
-            'icons' => [
-                [
-                    'src' => '/icons/icon-192.png',
-                    'sizes' => '192x192',
-                    'type' => 'image/png',
-                    'purpose' => 'any',
-                ],
-                [
-                    'src' => '/icons/icon-512.png',
-                    'sizes' => '512x512',
-                    'type' => 'image/png',
-                    'purpose' => 'any',
-                ],
-                [
-                    // Android crops a maskable icon to whatever shape the
-                    // launcher uses, so this one keeps its glyph well inside
-                    // the safe zone and bleeds to the edges.
-                    'src' => '/icons/maskable-512.png',
-                    'sizes' => '512x512',
-                    'type' => 'image/png',
-                    'purpose' => 'maskable',
-                ],
-                [
-                    'src' => '/icons/apple-touch-icon.png',
-                    'sizes' => '180x180',
-                    'type' => 'image/png',
-                ],
-            ],
+            'icons' => $this->icons->icons(),
             'shortcuts' => $this->shortcuts(),
         ];
 
         return response()
             ->json($manifest, 200, [
                 'Content-Type' => 'application/manifest+json; charset=utf-8',
-                // The manifest only changes when an admin changes branding, so
-                // an hour of browser caching costs nothing and saves a request
-                // on every page view.
-                'Cache-Control' => 'public, max-age=3600',
+                // Revalidate branding so a previous install attempt cannot pin
+                // the default logo after an administrator uploads a new one.
+                'Cache-Control' => 'no-cache, must-revalidate',
             ]);
     }
 
@@ -180,6 +169,9 @@ class PwaController extends Controller
     private function precacheUrls(): array
     {
         $urls = self::SHELL_ASSETS;
+        foreach ($this->icons->icons() as $icon) {
+            $urls[] = $icon['src'];
+        }
 
         foreach ($this->viteAssets() as $asset) {
             $urls[] = '/build/'.$asset;
@@ -243,7 +235,7 @@ class PwaController extends Controller
                 'url' => route($routeName),
                 'icons' => [
                     [
-                        'src' => '/icons/icon-192.png',
+                        'src' => $this->icons->url('icon-192'),
                         'sizes' => '192x192',
                         'type' => 'image/png',
                     ],
@@ -315,7 +307,7 @@ class PwaController extends Controller
         ];
 
         /* Only these are ever read from / written to the cache. */
-        const SHELL_PREFIXES = ['/build/', '/css/', '/js/', '/icons/', '/fonts/', '/images/'];
+        const SHELL_PREFIXES = ['/build/', '/css/', '/js/', '/icons/', '/pwa-icons/', '/fonts/', '/images/'];
 
         self.addEventListener('install', (event) => {
             event.waitUntil((async () => {

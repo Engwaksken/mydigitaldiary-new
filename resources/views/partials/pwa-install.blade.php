@@ -26,7 +26,7 @@
         <div class="mx-auto w-full max-w-xl pointer-events-auto">
             <div class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 shadow-2xl">
                 <img
-                    src="{{ asset('icons/icon-192.png') }}"
+                    src="{{ app(\App\Services\PwaIconService::class)->url('icon-192') }}"
                     alt=""
                     width="44"
                     height="44"

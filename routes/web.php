@@ -83,6 +83,11 @@ Route::get('/', function () {
 |
 */
 Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
+Route::get('/favicon.ico', [PwaController::class, 'favicon'])->name('pwa.favicon');
+Route::get('/pwa-icons/{version}/{variant}.png', [PwaController::class, 'icon'])
+    ->where('version', '[a-f0-9]{16}')
+    ->where('variant', 'icon-192|icon-512|maskable-512|apple-touch-icon')
+    ->name('pwa.icon');
 Route::get('/sw.js', [PwaController::class, 'serviceWorker'])->name('pwa.service-worker');
 
 // Public — reachable without an account, since it's linked from the

@@ -13,9 +13,6 @@
          Keep this in sync with layouts/guest.blade.php. --}}
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>@yield('title', $siteSettings->site_name ?? 'Personal Monitor')</title>
-    @if (isset($siteSettings) && $siteSettings->faviconUrl())
-        <link rel="icon" href="{{ $siteSettings->faviconUrl() }}">
-    @endif
 
     {{-- External assets --}}
     {{-- Both the Tailwind CDN runtime and the Font Awesome stylesheet are

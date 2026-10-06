@@ -18,7 +18,7 @@
 
 <div id="pm-auth-app" class="mt-6 rounded-xl border border-slate-200 bg-slate-50/70 p-4" @unless ($appAndroidUrl || $appIosUrl) hidden @endunless>
     <div class="flex items-center gap-3">
-        <img src="{{ asset('icons/icon-192.png') }}" alt="" width="36" height="36" class="h-9 w-9 rounded-lg shrink-0">
+        <img src="{{ app(\App\Services\PwaIconService::class)->url('icon-192') }}" alt="" width="36" height="36" class="h-9 w-9 rounded-lg shrink-0">
         <div class="min-w-0">
             <p class="text-sm font-semibold text-slate-800">Get the {{ $appName }} app</p>
             <p class="text-xs text-slate-500">Open your diary from your home screen in one tap.</p>

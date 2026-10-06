@@ -5,8 +5,7 @@
     link and the theme-colour meta tags a browser will not offer the app for
     install, no matter how good the install button on the page is.
 
-    The favicon link above is left alone — layouts/app.blade.php already emits
-    the admin's uploaded favicon, and this must never take precedence over it.
+    Browser favicons and installation icons share the uploaded branding logo.
 --}}
 @php
     /*
@@ -46,6 +45,7 @@
     }
 @endphp
 <link rel="manifest" href="{{ route('pwa.manifest') }}">
+@include('partials.favicon')
 {{-- One hardcoded colour cannot be right for both schemes. The unqualified
      tag is the fallback for user agents that ignore the media attribute;
      modern browsers use the light/dark pair below. --}}
@@ -59,4 +59,4 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="{{ $siteSettings->site_name ?? 'My Digital Diary' }}">
-<link rel="apple-touch-icon" sizes="180x180" href="{{ asset('icons/apple-touch-icon.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ app(\App\Services\PwaIconService::class)->url('apple-touch-icon') }}">
