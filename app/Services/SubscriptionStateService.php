@@ -13,7 +13,9 @@ class SubscriptionStateService
 
         return match ($status) {
             'active', 'trial', 'expired', 'inactive', 'suspended', 'cancelled' => $status,
-            default => 'trial',
+            'trialing' => 'trial',
+            'canceled' => 'cancelled',
+            default => 'inactive',
         };
     }
 
@@ -110,7 +112,7 @@ class SubscriptionStateService
 
         return max(
             0,
-            now()->startOfDay()->diffInDays(
+            (int) now()->startOfDay()->diffInDays(
                 Carbon::parse($user->trial_ends_at)->startOfDay(),
                 false
             )

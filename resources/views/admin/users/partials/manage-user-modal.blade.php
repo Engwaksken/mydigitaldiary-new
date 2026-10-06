@@ -105,6 +105,7 @@
                 >
                     @csrf
                     @method('PATCH')
+                    <input type="hidden" name="_managed_user_id" value="{{ $managedUser->id }}">
 
                     <div class="admin-user-form-grid grid gap-3 sm:grid-cols-2">
                         <div>
@@ -120,7 +121,7 @@
                                 @foreach(['active','trial','inactive','expired','suspended','cancelled'] as $status)
                                     <option
                                         value="{{ $status }}"
-                                        @selected($canonicalStatus === $status)
+                                        @selected(((string) old('_managed_user_id') === (string) $managedUser->id ? old('subscription_status', $canonicalStatus) : $canonicalStatus) === $status)
                                     >
                                         {{ ucfirst($status) }}
                                     </option>
@@ -138,17 +139,22 @@
                                 class="pm-input mt-1 w-full"
                             >
                                 <option value="">
-                                    {{ $plans->isEmpty() ? 'No subscription plans configured' : 'No plan / keep unassigned' }}
+                                    {{ $plans->isEmpty() ? 'No subscription plans configured' : 'No plan / unassigned' }}
                                 </option>
 
                                 @foreach($plans as $plan)
                                     <option
                                         value="{{ $plan->id }}"
-                                        @selected((int) ($managedUser->subscription_plan_id ?? 0) === (int) $plan->id)
+                                        @selected((string) ((string) old('_managed_user_id') === (string) $managedUser->id ? old('subscription_plan_id', $managedUser->subscription_plan_id) : $managedUser->subscription_plan_id) === (string) $plan->id)
                                     >
                                         {{ $plan->name ?? $plan->title ?? ('Plan #'.$plan->id) }}
                                     </option>
                                 @endforeach
+                                @if ($managedUser->subscriptionPlan && ! $plans->contains('id', $managedUser->subscription_plan_id))
+                                    <option value="{{ $managedUser->subscription_plan_id }}" @selected((string) ((string) old('_managed_user_id') === (string) $managedUser->id ? old('subscription_plan_id', $managedUser->subscription_plan_id) : $managedUser->subscription_plan_id) === (string) $managedUser->subscription_plan_id)>
+                                        {{ $managedUser->subscriptionPlan->name }} (current plan)
+                                    </option>
+                                @endif
                             </select>
                         </div>
 
@@ -160,7 +166,7 @@
                             <input
                                 type="date"
                                 name="subscription_started_at"
-                                value="{{ $managedUser->subscription_started_at ? \Illuminate\Support\Carbon::parse($managedUser->subscription_started_at)->format('Y-m-d') : now()->format('Y-m-d') }}"
+                                value="{{ (string) old('_managed_user_id') === (string) $managedUser->id ? old('subscription_started_at', $managedUser->subscription_started_at ? \Illuminate\Support\Carbon::parse($managedUser->subscription_started_at)->format('Y-m-d') : '') : ($managedUser->subscription_started_at ? \Illuminate\Support\Carbon::parse($managedUser->subscription_started_at)->format('Y-m-d') : '') }}"
                                 class="pm-input mt-1 w-full"
                             >
                         </div>
@@ -173,7 +179,7 @@
                             <input
                                 type="date"
                                 name="subscription_expires_at"
-                                value="{{ $managedUser->subscription_expires_at ? \Illuminate\Support\Carbon::parse($managedUser->subscription_expires_at)->format('Y-m-d') : '' }}"
+                                value="{{ (string) old('_managed_user_id') === (string) $managedUser->id ? old('subscription_expires_at', optional($managedUser->subscription_expires_at)->format('Y-m-d')) : optional($managedUser->subscription_expires_at)->format('Y-m-d') }}"
                                 class="pm-input mt-1 w-full"
                             >
                         </div>
@@ -186,7 +192,7 @@
                             <input
                                 type="date"
                                 name="trial_ends_at"
-                                value="{{ $managedUser->trial_ends_at ? \Illuminate\Support\Carbon::parse($managedUser->trial_ends_at)->format('Y-m-d') : '' }}"
+                                value="{{ (string) old('_managed_user_id') === (string) $managedUser->id ? old('trial_ends_at', optional($managedUser->trial_ends_at)->format('Y-m-d')) : optional($managedUser->trial_ends_at)->format('Y-m-d') }}"
                                 class="pm-input mt-1 w-full"
                             >
 
@@ -234,10 +240,7 @@
                             class="pm-input mt-1 w-full"
                             {{ $isSelf ? 'disabled' : '' }}
                         >
-                            @foreach(
-                                \App\Http\Controllers\Admin\AdminUserController::availableRoles()
-                                as $value => $label
-                            )
+                            @foreach($availableRoles as $value => $label)
                                 <option
                                     value="{{ $value }}"
                                     @selected($roleValue === $value)

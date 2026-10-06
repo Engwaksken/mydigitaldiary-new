@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DailyPlannerItemRequest;
+use App\Http\Requests\DailyPlannerPlanRequest;
+use App\Http\Requests\DailyPlannerWeekRequest;
 use App\Models\DailyPlan;
 use App\Models\DailyPlanItem;
 use App\Models\PersonalGoal;
@@ -227,25 +230,9 @@ class DailyPlannerController extends Controller
      * (daily when all seven days are ticked, otherwise specific days)
      * starting this week; otherwise a one-off task is created per day.
      */
-    public function storeWeek(Request $request): RedirectResponse
+    public function storeWeek(DailyPlannerWeekRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'week_start' => ['required', 'date'],
-            'tasks' => ['required', 'array', 'min:1', 'max:30'],
-            'tasks.*.title' => ['required', 'string', 'max:255'],
-            'tasks.*.description' => ['nullable', 'string'],
-            'tasks.*.priority' => ['required', Rule::in(['low', 'medium', 'high'])],
-            'tasks.*.start_time' => ['nullable', 'date_format:H:i'],
-            'tasks.*.end_time' => ['nullable', 'date_format:H:i', 'after:tasks.*.start_time'],
-            'tasks.*.personal_goal_id' => ['nullable', 'integer', 'exists:personal_goals,id'],
-            'tasks.*.days' => ['required', 'array', 'min:1'],
-            'tasks.*.days.*' => [Rule::in(DailyPlannerRecurrenceService::WEEK_DAYS)],
-            'tasks.*.repeat_weekly' => ['nullable', 'boolean'],
-        ], [
-            'tasks.*.title.required' => 'Every week task needs a name.',
-            'tasks.*.days.required' => 'Tick at least one day for every week task.',
-            'tasks.*.end_time.after' => 'A week task\'s end time must be after its start time.',
-        ]);
+        $data = $request->validated();
 
         $userId = $request->user()->id;
         $monday = Carbon::parse($data['week_start'])->startOfWeek(Carbon::MONDAY);
@@ -320,15 +307,9 @@ class DailyPlannerController extends Controller
                 : "{$created} tasks added to your week.");
     }
 
-    public function updatePlan(Request $request): RedirectResponse
+    public function updatePlan(DailyPlannerPlanRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'plan_date' => ['required', 'date'],
-            'title' => ['required', 'string', 'max:255'],
-            'notes' => ['nullable', 'string'],
-            'achievements' => ['nullable', 'string'],
-            'challenges' => ['nullable', 'string'],
-        ]);
+        $data = $request->validated();
 
         $date = Carbon::parse(
             $data['plan_date']
@@ -355,9 +336,9 @@ class DailyPlannerController extends Controller
         );
     }
 
-    public function storeItem(Request $request): RedirectResponse
+    public function storeItem(DailyPlannerItemRequest $request): RedirectResponse
     {
-        $data = $this->validateItem($request, true);
+        $data = $request->itemData();
 
         $planDate = Carbon::parse(
             $data['plan_date']
@@ -405,15 +386,12 @@ class DailyPlannerController extends Controller
     }
 
     public function updateItem(
-        Request $request,
+        DailyPlannerItemRequest $request,
         DailyPlanItem $item
     ): RedirectResponse {
         $this->owned($request, $item);
 
-        $data = $this->validateItem(
-            $request,
-            false
-        );
+        $data = $request->itemData();
 
         $scope = $data['edit_scope'] ?? 'series';
 
@@ -447,7 +425,7 @@ class DailyPlannerController extends Controller
 
         $recurrence =
             $this->recurrence->normalizeRecurrence(
-                $data,
+                $request->recurrenceInput($item, $data),
                 $targetDate
             );
 
@@ -471,7 +449,7 @@ class DailyPlannerController extends Controller
             if ($item->is_completed) {
                 return $this->backToDate(
                     $oldDate
-                )->withErrors([
+                )->withInput()->withErrors([
                     'task' =>
                         'Completed tasks cannot be moved. Reopen the task first.',
                 ]);
@@ -494,7 +472,7 @@ class DailyPlannerController extends Controller
 
         $item->update($data);
 
-        $this->taskReminders->sync($item->fresh(), $request->user(), Carbon::parse($viewDate ?? $occurrenceDate ?? $targetDate ?? $oldDate));
+        $this->taskReminders->sync($item->fresh(), $request->user(), Carbon::parse($viewDate));
 
         if (
             ! $item->isRecurring()
@@ -786,106 +764,6 @@ class DailyPlannerController extends Controller
             $date->toDateString(),
             $items->count().' task(s) updated.'
         );
-    }
-
-    private function validateItem(
-        Request $request,
-        bool $creating
-    ): array {
-        /*
-         * The reminder <select> offers "custom" alongside the minute
-         * offsets; a custom reminder is stored as reminder_custom_at with
-         * no offset, and a preset offset clears any old custom time.
-         */
-        $customReminder = $request->input('reminder_offset_minutes') === 'custom';
-
-        if ($customReminder) {
-            $request->merge(['reminder_offset_minutes' => null]);
-        }
-
-        $data = $request->validate([
-            'plan_date' => [
-                $creating ? 'required' : 'nullable',
-                'date',
-            ],
-            'title' => ['required', 'string', 'max:255'],
-            'personal_goal_id' => [
-                'nullable',
-                'integer',
-                'exists:personal_goals,id',
-            ],
-            'description' => ['nullable', 'string'],
-            'achievements' => ['nullable', 'string'],
-            'challenges' => ['nullable', 'string'],
-            'priority' => [
-                'required',
-                Rule::in(['low', 'medium', 'high']),
-            ],
-            'start_time' => [
-                'nullable',
-                'date_format:H:i',
-            ],
-            'end_time' => [
-                'nullable',
-                'date_format:H:i',
-                'after:start_time',
-            ],
-            'repeat_type' => [
-                'nullable',
-                Rule::in(
-                    DailyPlannerRecurrenceService::REPEAT_TYPES
-                ),
-            ],
-            'repeat_days' => [
-                'nullable',
-                'array',
-                Rule::requiredIf(
-                    fn () =>
-                        $request->input('repeat_type')
-                        === 'specific_days'
-                ),
-            ],
-            'repeat_days.*' => [
-                Rule::in(
-                    DailyPlannerRecurrenceService::WEEK_DAYS
-                ),
-            ],
-            'repeat_interval' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:52',
-            ],
-            'repeat_starts_on' => ['nullable', 'date'],
-            'repeat_ends_on' => [
-                'nullable',
-                'date',
-                'after_or_equal:repeat_starts_on',
-            ],
-            'occurrence_date' => ['nullable', 'date'],
-            'edit_scope' => [
-                'nullable',
-                Rule::in(['occurrence', 'series']),
-            ],
-            'reminder_enabled' => ['nullable', 'boolean'],
-            'reminder_offset_minutes' => ['nullable', 'integer', Rule::in(DailyPlannerTaskReminderService::OFFSETS)],
-            'reminder_custom_at' => [
-                Rule::requiredIf(fn () => $customReminder && $request->boolean('reminder_enabled')),
-                'nullable',
-                'date',
-            ],
-            'reminder_channels' => ['nullable', 'array'],
-            'reminder_channels.*' => [Rule::in(['in_app', 'push', 'email'])],
-        ]);
-
-        // An unticked checkbox is not submitted, so read it explicitly.
-        $data['reminder_enabled'] = $request->boolean('reminder_enabled');
-
-        if (! $customReminder) {
-            $data['reminder_custom_at'] = null;
-        }
-
-        return $data;
     }
 
     private function owned(

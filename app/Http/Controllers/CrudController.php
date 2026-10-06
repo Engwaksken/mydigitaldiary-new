@@ -251,7 +251,7 @@ abstract class CrudController extends Controller
                   foreach ($this->fields as $f) {
                       $v = data_get($item, $f['name']);
                       if (is_object($v) && method_exists($v, 'format')) {
-                          $v = $f['type'] === 'datetime-local' ? $v->format('Y-m-d\TH:i') : $v->format('Y-m-d');
+                          $v = in_array($f['type'], ['datetime-local', 'datetime-native'], true) ? $v->format('Y-m-d\TH:i') : $v->format('Y-m-d');
                       }
                       $values[$f['name']] = $v;
                   }

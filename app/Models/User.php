@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -102,6 +103,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'trial_ends_at' => 'datetime',
             'subscribed_at' => 'datetime',
+            'subscription_started_at' => 'datetime',
             'data_consent_at' => 'datetime',
             'suspended_at' => 'datetime',
             'alarms_muted' => 'boolean',
@@ -189,9 +191,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return is_null($this->subscription_expires_at) || $this->subscription_expires_at->isFuture();
         }
 
-        return $this->subscription_status === 'trialing'
-            && $this->trial_ends_at
-            && $this->trial_ends_at->isFuture();
+        return $this->onTrial();
     }
 
     public function organization()
@@ -206,7 +206,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->first();
     }
 
-    public function subscriptionPlan()
+    public function subscriptionPlan(): BelongsTo
     {
         return $this->belongsTo(SubscriptionPlan::class);
     }
@@ -232,14 +232,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function onTrial(): bool
     {
-        return $this->subscription_status === 'trialing'
+        return in_array($this->subscription_status, ['trial', 'trialing'], true)
             && $this->trial_ends_at
             && $this->trial_ends_at->isFuture();
     }
 
     public function trialDaysLeft(): int
     {
-        if (! $this->trial_ends_at || $this->trial_ends_at->isPast()) {
+        if (! $this->onTrial()) {
             return 0;
         }
 
@@ -255,7 +255,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function relevantExpiryDate(): ?\Illuminate\Support\Carbon
     {
-        if ($this->subscription_status === 'trialing') {
+        if (in_array($this->subscription_status, ['trial', 'trialing'], true)) {
             return $this->trial_ends_at;
         }
 

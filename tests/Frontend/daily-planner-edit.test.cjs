@@ -6,7 +6,7 @@ const { test } = require('node:test');
 
 const template = fs.readFileSync(path.join(__dirname, '../../resources/views/daily-planner/index.blade.php'), 'utf8');
 const editScript = template.slice(
-    template.indexOf('    window.openEditTask = function(task) {'),
+    template.indexOf('    function dpChecked(value) {'),
     template.indexOf('    window.openMoveTaskModal = function('),
 );
 
@@ -49,6 +49,7 @@ function editor() {
 test('editing synchronizes saved times and custom reminders before opening', () => {
     const { fields, form, clocks, open } = editor();
     open({
+        id: 42,
         action: '/daily-planner/items/42',
         title: 'Call the bank',
         plan_date: '2026-10-03',
@@ -69,9 +70,9 @@ test('editing synchronizes saved times and custom reminders before opening', () 
 
 test('switching tasks clears stale times and resets scope while preserving the repeat interval', () => {
     const { fields, scope, clocks, open } = editor();
-    open({ title: 'First task', start_time: '14:30', reminder_custom_at: '2026-10-03T14:15' });
+    open({ id: 42, action: '/daily-planner/items/42', title: 'First task', start_time: '14:30', reminder_custom_at: '2026-10-03T14:15' });
     scope.value = 'occurrence';
-    open({ title: 'Second task', repeat_type: 'weekly', repeat_interval: 3 });
+    open({ id: 43, action: '/daily-planner/items/43', title: 'Second task', repeat_type: 'weekly', repeat_interval: 3 });
 
     assert.equal(fields.get('editTaskName').value, 'Second task');
     assert.equal(clocks.editTaskStart, '');

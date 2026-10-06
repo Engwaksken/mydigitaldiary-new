@@ -3,7 +3,10 @@
 @section('title', 'Manage ' . $user->name)
 
 @section('content')
-    @php $isSelf = $user->id === auth()->id(); @endphp
+    @php
+        $isSelf = $user->id === auth()->id();
+        $subscriptionHasErrors = $errors->hasAny(['subscription', 'subscription_status', 'subscription_plan_id', 'subscription_started_at', 'subscription_expires_at', 'trial_ends_at']);
+    @endphp
 
     <a href="{{ route('admin.users.index') }}" class="text-sm text-[var(--brand-1)] hover:underline">&larr; All users</a>
 
@@ -15,6 +18,16 @@
     </h1>
 
     <div class="max-w-xl">
+        @if ($errors->any())
+            <x-alert type="error" :dismissible="false" :autoDismiss="false">
+                <p class="font-semibold">The user update could not be saved.</p>
+                <ul class="list-disc pl-5">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </x-alert>
+        @endif
         {{-- Account info is always visible, never tabbed — same reasoning
              as stat cards elsewhere: a quick-reference summary shouldn't
              be hidden behind a click. --}}
@@ -50,16 +63,16 @@
         @else
             <div role="tablist" aria-label="Manage {{ $user->name }}" class="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto">
                 <button type="button" role="tab" id="pm-user-tab-login" aria-controls="pm-user-panel-login"
-                        aria-selected="true" tabindex="0" data-tab="login"
+                        aria-selected="{{ $subscriptionHasErrors ? 'false' : 'true' }}" tabindex="{{ $subscriptionHasErrors ? '-1' : '0' }}" data-tab="login"
                         onclick="pmSelectUserTab('login')" onkeydown="pmUserTabKeydown(event, 'login')"
-                        class="pm-user-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap border-[var(--brand-1)] text-[var(--brand-1)]">
+                        class="pm-user-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap {{ $subscriptionHasErrors ? 'border-transparent text-slate-500' : 'border-[var(--brand-1)] text-[var(--brand-1)]' }}">
                     <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
                     <span>Login Access</span>
                 </button>
                 <button type="button" role="tab" id="pm-user-tab-subscription" aria-controls="pm-user-panel-subscription"
-                        aria-selected="false" tabindex="-1" data-tab="subscription"
+                        aria-selected="{{ $subscriptionHasErrors ? 'true' : 'false' }}" tabindex="{{ $subscriptionHasErrors ? '0' : '-1' }}" data-tab="subscription"
                         onclick="pmSelectUserTab('subscription')" onkeydown="pmUserTabKeydown(event, 'subscription')"
-                        class="pm-user-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">
+                        class="pm-user-tab flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap {{ $subscriptionHasErrors ? 'border-[var(--brand-1)] text-[var(--brand-1)]' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}">
                     <i class="fa-solid fa-crown" aria-hidden="true"></i>
                     <span>Subscription</span>
                 </button>
@@ -86,7 +99,7 @@
                 </button>
             </div>
 
-            <div role="tabpanel" id="pm-user-panel-login" aria-labelledby="pm-user-tab-login" tabindex="0" class="pm-user-panel pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6">
+            <div role="tabpanel" id="pm-user-panel-login" aria-labelledby="pm-user-tab-login" tabindex="0" class="pm-user-panel pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6" @if($subscriptionHasErrors) hidden @endif>
                 @if ($user->isSuspended())
                     <p class="text-sm text-slate-600 mb-3">This account is currently suspended and cannot log in.</p>
                     <form method="POST" action="{{ route('admin.users.unsuspend', $user->id) }}">
@@ -107,28 +120,47 @@
                 @endif
             </div>
 
-            <div role="tabpanel" id="pm-user-panel-subscription" aria-labelledby="pm-user-tab-subscription" tabindex="0" class="pm-user-panel pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6" hidden>
-                <form method="POST" action="{{ route('admin.users.subscription', $user->id) }}" class="space-y-4">
+            <div role="tabpanel" id="pm-user-panel-subscription" aria-labelledby="pm-user-tab-subscription" tabindex="0" class="pm-user-panel pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6" @unless($subscriptionHasErrors) hidden @endunless>
+                <form method="POST" action="{{ route('admin.users.subscription.update', $user) }}" class="space-y-4">
                     @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="_managed_user_id" value="{{ $user->id }}">
                     <div>
                         <label for="subscription_status" class="block text-sm font-medium text-slate-700 mb-1">Status</label>
                         <select id="subscription_status" name="subscription_status"
-                                class="pm-input">
-                            @foreach (['trialing' => 'Trialing', 'active' => 'Active', 'canceled' => 'Canceled', 'expired' => 'Expired'] as $value => $label)
-                                <option value="{{ $value }}" @selected($user->subscription_status === $value)>{{ $label }}</option>
+                                class="pm-input" required>
+                            @foreach (['trial' => 'Trial', 'active' => 'Active', 'inactive' => 'Inactive', 'cancelled' => 'Cancelled', 'expired' => 'Expired', 'suspended' => 'Suspended'] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('subscription_status', match ($user->subscription_status) { 'trialing' => 'trial', 'canceled' => 'cancelled', default => $user->subscription_status }) === $value)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label for="extend_trial_days" class="block text-sm font-medium text-slate-700 mb-1">
-                            Extend trial by (days, optional)
-                        </label>
-                        <input type="number" id="extend_trial_days" name="extend_trial_days" min="1" max="365"
-                               placeholder="e.g. 14"
-                               class="pm-input">
-                        <p class="text-xs text-slate-400 mt-1">
-                            Current trial ends: {{ optional($user->trial_ends_at)->format('Y-m-d') ?? '—' }}
-                        </p>
+                        <label for="subscription_plan_id" class="block text-sm font-medium text-slate-700 mb-1">Plan</label>
+                        <select id="subscription_plan_id" name="subscription_plan_id" class="pm-input">
+                            <option value="">No plan / unassigned</option>
+                            @foreach ($plans as $plan)
+                                <option value="{{ $plan->id }}" @selected((string) old('subscription_plan_id', $user->subscription_plan_id) === (string) $plan->id)>{{ $plan->name ?? $plan->title ?? ('Plan #'.$plan->id) }}</option>
+                            @endforeach
+                            @if ($user->subscriptionPlan && ! $plans->contains('id', $user->subscription_plan_id))
+                                <option value="{{ $user->subscription_plan_id }}" @selected((string) old('subscription_plan_id', $user->subscription_plan_id) === (string) $user->subscription_plan_id)>
+                                    {{ $user->subscriptionPlan->name ?? $user->subscriptionPlan->title ?? ('Plan #'.$user->subscription_plan_id) }} (current plan)
+                                </option>
+                            @endif
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">Choose an enabled plan, keep the current assigned plan, or select No plan to remove the assignment.</p>
+                    </div>
+                    <div>
+                        <label for="subscription_started_at" class="block text-sm font-medium text-slate-700 mb-1">Subscription starts</label>
+                        <input type="date" id="subscription_started_at" name="subscription_started_at" value="{{ old('subscription_started_at', $user->subscription_started_at ? \Illuminate\Support\Carbon::parse($user->subscription_started_at)->format('Y-m-d') : '') }}" class="pm-input">
+                    </div>
+                    <div>
+                        <label for="subscription_expires_at" class="block text-sm font-medium text-slate-700 mb-1">Subscription expires</label>
+                        <input type="date" id="subscription_expires_at" name="subscription_expires_at" value="{{ old('subscription_expires_at', optional($user->subscription_expires_at)->format('Y-m-d')) }}" class="pm-input">
+                    </div>
+                    <div>
+                        <label for="trial_ends_at" class="block text-sm font-medium text-slate-700 mb-1">Trial ends</label>
+                        <input type="date" id="trial_ends_at" name="trial_ends_at" value="{{ old('trial_ends_at', optional($user->trial_ends_at)->format('Y-m-d')) }}" class="pm-input">
+                        <p class="text-xs text-slate-500 mt-1">Selecting Active closes the free trial.</p>
                     </div>
                     <button type="submit" class="btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all">
                         Update subscription

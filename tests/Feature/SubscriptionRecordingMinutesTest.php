@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Admin\AdminUserController;
 use App\Models\IoTecSubscriptionTransaction;
 use App\Models\SubscriptionPlan;
 use App\Models\SubscriptionRecordingExtraGrant;
@@ -12,9 +11,9 @@ use App\Services\ApplyExtraRequestService;
 use App\Services\SubscriptionPaymentActivationService;
 use App\Services\SubscriptionRecordingQuotaGrantService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Tests\TestCase;
+use Tests\Feature\Support\SubscriptionPlanFactory;
 
 class SubscriptionRecordingMinutesTest extends TestCase
 {
@@ -106,7 +105,7 @@ class SubscriptionRecordingMinutesTest extends TestCase
     public function test_admin_activation_grants_plan_included_recording_minutes(): void
     {
         $user = User::factory()->create(['subscription_status' => 'trial']);
-        $plan = SubscriptionPlan::create([
+        $plan = SubscriptionPlanFactory::new()->create([
             'key' => 'admin-grant-monthly',
             'name' => 'Admin Grant Monthly',
             'duration_months' => 1,
@@ -117,15 +116,13 @@ class SubscriptionRecordingMinutesTest extends TestCase
             'included_extra_recording_minutes' => 200,
         ]);
 
-        app(AdminUserController::class)->updateSubscription(
-            Request::create('/', 'PUT', [
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->patch(route('admin.users.subscription.update', $user), [
                 'subscription_status' => 'active',
                 'subscription_plan_id' => $plan->id,
                 'subscription_started_at' => now()->toDateString(),
                 'subscription_expires_at' => now()->addMonth()->toDateString(),
-            ]),
-            $user
-        );
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('subscription_recording_extra_grants', [
             'user_id' => $user->id,
@@ -137,15 +134,12 @@ class SubscriptionRecordingMinutesTest extends TestCase
         $this->assertSame(200, $user->extra_recording_quota_minutes);
 
         // Repeat save should not double-grant
-        app(AdminUserController::class)->updateSubscription(
-            Request::create('/', 'PUT', [
+        $this->actingAs($admin)->patch(route('admin.users.subscription.update', $user), [
                 'subscription_status' => 'active',
                 'subscription_plan_id' => $plan->id,
                 'subscription_started_at' => now()->toDateString(),
                 'subscription_expires_at' => now()->addMonth()->toDateString(),
-            ]),
-            $user
-        );
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
 
         $this->assertSame(1, SubscriptionRecordingExtraGrant::where('user_id', $user->id)->count());
         $user->refresh();
@@ -189,7 +183,7 @@ class SubscriptionRecordingMinutesTest extends TestCase
     public function test_admin_activation_of_lifetime_plan_grants_minutes_without_expiry(): void
     {
         $user = User::factory()->create(['subscription_status' => 'trial']);
-        $plan = SubscriptionPlan::create([
+        $plan = SubscriptionPlanFactory::new()->create([
             'key' => 'admin-grant-lifetime',
             'name' => 'Admin Grant Lifetime',
             'duration_months' => null,
@@ -200,14 +194,11 @@ class SubscriptionRecordingMinutesTest extends TestCase
             'included_extra_recording_minutes' => 300,
         ]);
 
-        app(AdminUserController::class)->updateSubscription(
-            Request::create('/', 'PUT', [
+        $this->actingAs(User::factory()->create(['role' => 'admin']))->patch(route('admin.users.subscription.update', $user), [
                 'subscription_status' => 'active',
                 'subscription_plan_id' => $plan->id,
                 'subscription_started_at' => now()->toDateString(),
-            ]),
-            $user
-        );
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
 
         $grant = SubscriptionRecordingExtraGrant::where('user_id', $user->id)->firstOrFail();
 
@@ -334,7 +325,7 @@ class SubscriptionRecordingMinutesTest extends TestCase
             'extra_recording_quota_minutes' => 60,
             'extra_quota_expires_at' => now()->addDays(30),
         ]);
-        $plan = SubscriptionPlan::create([
+        $plan = SubscriptionPlanFactory::new()->create([
             'key' => 'lifetime-preserve-expiry',
             'name' => 'Lifetime Preserve Expiry',
             'duration_months' => null,
@@ -345,14 +336,11 @@ class SubscriptionRecordingMinutesTest extends TestCase
             'included_extra_recording_minutes' => 300,
         ]);
 
-        app(AdminUserController::class)->updateSubscription(
-            Request::create('/', 'PUT', [
+        $this->actingAs(User::factory()->create(['role' => 'admin']))->patch(route('admin.users.subscription.update', $user), [
                 'subscription_status' => 'active',
                 'subscription_plan_id' => $plan->id,
                 'subscription_started_at' => now()->toDateString(),
-            ]),
-            $user
-        );
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
 
         $user->refresh();
 
@@ -371,7 +359,7 @@ class SubscriptionRecordingMinutesTest extends TestCase
             'extra_recording_quota_minutes' => 50,
             'extra_quota_expires_at' => now()->subDay(),
         ]);
-        $plan = SubscriptionPlan::create([
+        $plan = SubscriptionPlanFactory::new()->create([
             'key' => 'lifetime-clear-stale',
             'name' => 'Lifetime Clear Stale',
             'duration_months' => null,
@@ -382,14 +370,11 @@ class SubscriptionRecordingMinutesTest extends TestCase
             'included_extra_recording_minutes' => 300,
         ]);
 
-        app(AdminUserController::class)->updateSubscription(
-            Request::create('/', 'PUT', [
+        $this->actingAs(User::factory()->create(['role' => 'admin']))->patch(route('admin.users.subscription.update', $user), [
                 'subscription_status' => 'active',
                 'subscription_plan_id' => $plan->id,
                 'subscription_started_at' => now()->toDateString(),
-            ]),
-            $user
-        );
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
 
         $user->refresh();
 

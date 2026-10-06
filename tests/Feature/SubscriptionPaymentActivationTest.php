@@ -5,13 +5,12 @@ namespace Tests\Feature;
 use App\Models\IoTecSubscriptionTransaction;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
-use App\Http\Controllers\Admin\AdminUserController;
 use App\Services\SubscriptionPaymentActivationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
+use Tests\Feature\Support\SubscriptionPlanFactory;
 
 class SubscriptionPaymentActivationTest extends TestCase
 {
@@ -117,7 +116,7 @@ class SubscriptionPaymentActivationTest extends TestCase
 
         $admin = User::factory()->create(['role' => 'admin']);
         $subscriber = User::factory()->create(['subscription_status' => 'trial']);
-        $plan = SubscriptionPlan::create([
+        $plan = SubscriptionPlanFactory::new()->create([
             'key' => 'admin-granted-monthly',
             'name' => 'Admin Granted Monthly',
             'duration_months' => 1,
@@ -127,15 +126,12 @@ class SubscriptionPaymentActivationTest extends TestCase
             'sort_order' => 99,
         ]);
 
-        app(AdminUserController::class)->updateSubscription(
-            Request::create('/', 'PUT', [
+        $this->actingAs($admin)->patch(route('admin.users.subscription.update', $subscriber), [
                 'subscription_status' => 'active',
                 'subscription_plan_id' => $plan->id,
                 'subscription_started_at' => now()->toDateString(),
                 'subscription_expires_at' => now()->addMonth()->toDateString(),
-            ]),
-            $subscriber
-        );
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
 
         Notification::assertSentTo($admin, \App\Notifications\SubscriptionActivatedNotification::class, function ($notification, array $channels) use ($subscriber) {
             return $notification->subscriber->is($subscriber) && $channels === ['database'];

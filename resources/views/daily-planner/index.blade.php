@@ -392,7 +392,7 @@
                         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border dp-primary-border dp-primary-text bg-white font-medium">
                     <i class="fa-solid fa-calendar-week"></i> Plan Week
                 </button>
-                <button type="button" onclick="openAddTaskForDate(@js($date->toDateString()), @js($date->format('l, d M Y')), '')"
+                <button type="button" onclick="openAddTaskForDate({{ \Illuminate\Support\Js::from($date->toDateString()) }}, {{ \Illuminate\Support\Js::from($date->format('l, d M Y')) }}, '')"
                         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg dp-btn-primary font-medium shadow-sm">
                     <i class="fa-solid fa-plus"></i> Add Task
                 </button>
@@ -623,7 +623,7 @@
 
                                         @if(!$item->is_completed && !$item->isRecurring())
                                             <button type="button"
-                                                    onclick="openMoveTaskModal({{ $item->id }}, @js($item->title), @js(route('daily-planner.items.move', $item)), @js($date->copy()->addDay()->toDateString()))"
+                                                    onclick="openMoveTaskModal({{ $item->id }}, {{ \Illuminate\Support\Js::from($item->title) }}, {{ \Illuminate\Support\Js::from(route('daily-planner.items.move', $item)) }}, {{ \Illuminate\Support\Js::from($date->copy()->addDay()->toDateString()) }})"
                                                     class="px-2.5 py-2 rounded-lg border border-amber-200 text-amber-700 bg-white"
                                                     title="Move task to another date">
                                                 <i class="fa-solid fa-calendar-days"></i>
@@ -723,7 +723,7 @@
                                     <span class="block text-lg font-bold text-slate-900">{{ $dayDate->format('d M') }}</span>
                                 </a>
                                 <button type="button"
-                                        onclick="openAddTaskForDate(@js($dayDate->toDateString()), @js($dayDate->format('l, d M Y')), 'week')"
+                                        onclick="openAddTaskForDate({{ \Illuminate\Support\Js::from($dayDate->toDateString()) }}, {{ \Illuminate\Support\Js::from($dayDate->format('l, d M Y')) }}, 'week')"
                                         class="grid h-8 w-8 place-items-center rounded-lg border bg-white text-slate-600 hover:text-[var(--brand-1)]"
                                         aria-label="Add a task on {{ $dayDate->format('l, d M') }}">
                                     <i class="fa-solid fa-plus"></i>
@@ -1129,9 +1129,11 @@
             <h3 id="editTaskTitle" class="font-bold text-lg">Edit Task</h3>
             <button type="button" class="p-2 text-slate-500" onclick="closeDpModal('editTaskModal')"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
-        <form id="editTaskForm" method="POST" action="" class="p-5 space-y-4">
+        <form id="editTaskForm" method="POST" action="" class="p-5 space-y-4" data-old-input="{{ json_encode(old()) }}" data-error-fields="{{ json_encode($errors->keys()) }}">
             @csrf
             @method('PUT')
+            <input type="hidden" name="_planner_form" value="edit-task">
+            <input type="hidden" id="editTaskId" name="_editing_task_id" value="{{ old('_editing_task_id') }}">
 
             <div class="dp-form-tabs" role="tablist" aria-label="Task form sections">
                 <button type="button" role="tab" id="editTask-tab-details" aria-controls="editTask-panel-details" aria-selected="true" tabindex="0" data-form-tab="details" class="dp-form-tab is-active">
@@ -1148,7 +1150,7 @@
             <div class="dp-form-panel space-y-4" role="tabpanel" id="editTask-panel-details" aria-labelledby="editTask-tab-details" data-form-panel="details">
 
             <label class="block text-sm font-medium">Task <span class="text-rose-600">*</span>
-                <input id="editTaskName" required name="title" class="pm-input mt-1 w-full">
+                <input id="editTaskName" required maxlength="255" name="title" class="pm-input mt-1 w-full">
             </label>
 
             <label class="block text-sm font-medium">Description
@@ -1171,7 +1173,7 @@
             <div class="dp-form-panel space-y-4" role="tabpanel" id="editTask-panel-schedule" aria-labelledby="editTask-tab-schedule" data-form-panel="schedule" hidden>
             <div class="grid sm:grid-cols-3 gap-3">
                 <label class="block text-sm font-medium">Priority
-                    <select id="editTaskPriority" name="priority" class="pm-input mt-1 w-full">
+                    <select id="editTaskPriority" name="priority" class="pm-input mt-1 w-full" required>
                         <option value="high">High</option>
                         <option value="medium">Medium</option>
                         <option value="low">Low</option>
@@ -1747,8 +1749,8 @@
             starts.required = recurring;
         }
 
-        if (ends && starts && starts.value) {
-            ends.min = starts.value;
+        if (ends && starts) {
+            ends.min = starts.value || '';
         }
     };
 
@@ -1774,14 +1776,13 @@
 
     toggleRepeatFields('add');
 
-    window.openEditTaskFromButton = function(button) {
-        if (!button) return;
-
+    function decodeDpTaskButton(button) {
+        if (!button) return null;
         const encoded = button.dataset.taskEncoded || '';
 
         if (!encoded) {
             console.error('Daily Planner edit payload is missing.');
-            return;
+            return null;
         }
 
         try {
@@ -1794,18 +1795,32 @@
                 new TextDecoder('utf-8').decode(bytes)
             );
 
-            window.openEditTask(task);
+            return task;
         } catch (error) {
             console.error('Could not open Daily Planner edit form.', error);
+            return null;
         }
+    }
+
+    window.openEditTaskFromButton = function(button) {
+        const task = decodeDpTaskButton(button);
+        if (task) window.openEditTask(task);
     };
 
-    window.openEditTask = function(task) {
+    function dpChecked(value) {
+        return value === true || value === 1 || value === '1' || value === 'true';
+    }
+
+    window.openEditTask = function(task, oldInput = null) {
         const modal = document.getElementById('editTaskModal');
         const form = document.getElementById('editTaskForm');
 
         if (!modal || !form) {
             console.error('Daily Planner edit modal/form was not found.');
+            return;
+        }
+        if (!task || !task.id || typeof task.action !== 'string' || !task.action.trim()) {
+            console.error('Daily Planner edit task/action is missing.');
             return;
         }
 
@@ -1816,7 +1831,9 @@
             if (element) element.value = value ?? '';
         };
 
-        form.action = task.action || '';
+        // Only the rendered task payload supplies the update URL.
+        form.action = task.action;
+        setValue('editTaskId', task.id);
 
         setValue('editTaskName', task.title || '');
         setValue('editTaskDescription', task.description || '');
@@ -1843,7 +1860,7 @@
          * "Cannot set properties of null"
          * and stopped execution before the modal could open.
          */
-        const reminderEnabled = !!task.reminder_enabled;
+        const reminderEnabled = dpChecked(task.reminder_enabled);
         const reminderEnabledField =
             document.getElementById('editReminderEnabled');
 
@@ -1888,7 +1905,59 @@
 
         const scopeBox = document.getElementById('editScopeBox');
         if (scopeBox) {
-            scopeBox.classList.toggle('hidden', !task.is_recurring);
+            scopeBox.classList.toggle('hidden', !dpChecked(task.is_recurring));
+        }
+
+        if (oldInput) {
+            const has = key => Object.prototype.hasOwnProperty.call(oldInput, key);
+            const fields = {
+                title: 'editTaskName',
+                description: 'editTaskDescription',
+                plan_date: 'editTaskDate',
+                personal_goal_id: 'editTaskGoal',
+                priority: 'editTaskPriority',
+                start_time: 'editTaskStart',
+                end_time: 'editTaskEnd',
+                repeat_type: 'editRepeatType',
+                repeat_starts_on: 'editRepeatStarts',
+                repeat_ends_on: 'editRepeatEnds',
+                repeat_interval: 'editRepeatInterval',
+                occurrence_date: 'editOccurrenceDate',
+                reminder_custom_at: 'editReminderCustom',
+            };
+            Object.entries(fields).forEach(([key, id]) => {
+                // A present null/empty value means the user cleared the field.
+                if (has(key)) setValue(id, oldInput[key]);
+            });
+
+            const restoredEnabled = has('reminder_enabled') && dpChecked(oldInput.reminder_enabled);
+            if (reminderEnabledField) reminderEnabledField.checked = restoredEnabled;
+
+            let restoredOffset = document.getElementById('editReminderOffset')?.value || '';
+            if (has('reminder_offset_minutes')) {
+                // The request normalizes the submitted "custom" sentinel to null.
+                restoredOffset = oldInput.reminder_offset_minutes === null
+                    ? 'custom'
+                    : String(oldInput.reminder_offset_minutes);
+                setValue('editReminderOffset', restoredOffset);
+            } else if (has('reminder_custom_at') && oldInput.reminder_custom_at) {
+                restoredOffset = 'custom';
+                setValue('editReminderOffset', restoredOffset);
+            }
+
+            const days = Array.isArray(oldInput.repeat_days) ? oldInput.repeat_days : [];
+            const channels = Array.isArray(oldInput.reminder_channels) ? oldInput.reminder_channels : [];
+            form.querySelectorAll('.edit-repeat-day').forEach(checkbox => {
+                checkbox.checked = days.includes(checkbox.value);
+            });
+            form.querySelectorAll('.edit-reminder-channel').forEach(checkbox => {
+                checkbox.checked = channels.includes(checkbox.value);
+            });
+            form.querySelectorAll('[name="edit_scope"]').forEach(radio => {
+                radio.checked = radio.value === (has('edit_scope') ? oldInput.edit_scope : 'series');
+            });
+            toggleTaskReminderFields('edit', restoredEnabled);
+            toggleCustomTaskReminder('edit', restoredOffset);
         }
 
         toggleRepeatFields('edit');
@@ -1900,7 +1969,46 @@
         }
 
         openDpModal('editTaskModal');
+        if (oldInput) {
+            // openDpModal resets the tabs: choose the error panel afterwards.
+            try {
+                const errors = JSON.parse(form.dataset.errorFields || '[]');
+                const controls = [...form.querySelectorAll('[name]')];
+                for (const key of errors) {
+                    const field = controls.find(control =>
+                        control.name === key || control.name.replace(/\[\]$/, '') === key.split('.')[0]
+                    );
+                    const panel = field?.closest('[data-form-panel]');
+                    if (panel) {
+                        selectDpFormTab(form, panel.dataset.formPanel, false);
+                        break;
+                    }
+                }
+            } catch (error) {
+                console.error('Could not select Daily Planner validation panel.', error);
+            }
+        }
     };
+
+    function recoverDpTaskEdit() {
+        const form = document.getElementById('editTaskForm');
+        if (!form || !document.getElementById('dpError')) return;
+        try {
+            const oldInput = JSON.parse(form.dataset.oldInput || '{}');
+            if (!oldInput || oldInput._planner_form !== 'edit-task' || !oldInput._editing_task_id) return;
+            for (const button of document.querySelectorAll('[data-task-encoded]')) {
+                const task = decodeDpTaskButton(button);
+                if (task && String(task.id) === String(oldInput._editing_task_id)) {
+                    window.openEditTask(task, oldInput);
+                    return;
+                }
+            }
+            // The task may no longer be on this page. Never invent an action.
+            console.warn('Daily Planner failed edit task is not present on this page.');
+        } catch (error) {
+            console.error('Could not restore Daily Planner edit form.', error);
+        }
+    }
 
     window.openMoveTaskModal = function(id, title, action, tomorrow) {
         document.getElementById('moveTaskForm').action = action;
@@ -1953,9 +2061,8 @@
         if (!editButton) return;
 
         /*
-         * The inline onclick remains for backwards compatibility, but this
-         * delegated listener guarantees Edit still responds if a page-level
-         * script or CSP prevents the inline handler from resolving.
+         * Delegate from the encoded payload button so clicks on its icon also
+         * open the editor without embedding task text in an inline handler.
          */
         if (
             typeof window.openEditTaskFromButton === 'function'
@@ -2037,8 +2144,11 @@
         }
     });
 
-    setTimeout(() => {
-        document.getElementById('dpError')?.remove();
-    }, 5000);
+    // Run after DOM-ready enhancement of the source time inputs.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => window.setTimeout(recoverDpTaskEdit, 0));
+    } else {
+        window.setTimeout(recoverDpTaskEdit, 0);
+    }
 </script>
 @endsection

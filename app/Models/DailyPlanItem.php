@@ -5,6 +5,8 @@ namespace App\Models;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DailyPlanItem extends Model
 {
@@ -51,7 +53,7 @@ class DailyPlanItem extends Model
         'reminder_channels' => 'array',
     ];
 
-    public function personalGoal()
+    public function personalGoal(): BelongsTo
     {
         return $this->belongsTo(
             PersonalGoal::class,
@@ -59,12 +61,12 @@ class DailyPlanItem extends Model
         );
     }
 
-    public function plan()
+    public function plan(): BelongsTo
     {
         return $this->belongsTo(DailyPlan::class, 'daily_plan_id');
     }
 
-    public function occurrences()
+    public function occurrences(): HasMany
     {
         return $this->hasMany(
             DailyPlanItemOccurrence::class,
@@ -72,7 +74,7 @@ class DailyPlanItem extends Model
         );
     }
 
-    public function seriesParent()
+    public function seriesParent(): BelongsTo
     {
         return $this->belongsTo(
             self::class,
@@ -107,26 +109,31 @@ class DailyPlanItem extends Model
         $starts = $this->repeat_starts_on
             ?: $this->plan?->plan_date;
 
-        if (! $starts || $date->lt($starts->startOfDay())) {
+        $date = $date->copy()->startOfDay();
+        $starts = $starts?->copy()->startOfDay();
+
+        if (! $starts || $date->lt($starts)) {
             return false;
         }
 
         if (
             $this->repeat_ends_on
-            && $date->gt($this->repeat_ends_on->endOfDay())
+            && $date->gt($this->repeat_ends_on->copy()->endOfDay())
         ) {
             return false;
         }
 
         $interval = max(1, (int) ($this->repeat_interval ?: 1));
+        // Carbon 3 returns floating-point differences; recurrence uses whole days.
+        $daysSinceStart = (int) $starts->diffInDays($date);
 
         return match ($this->repeat_type) {
             'daily' =>
-                $starts->diffInDays($date) % $interval === 0,
+                $daysSinceStart % $interval === 0,
 
             'weekly' =>
                 $date->dayOfWeekIso === $starts->dayOfWeekIso
-                && intdiv($starts->diffInDays($date), 7) % $interval === 0,
+                && intdiv($daysSinceStart, 7) % $interval === 0,
 
             'specific_days' =>
                 in_array(
@@ -137,14 +144,15 @@ class DailyPlanItem extends Model
                     ),
                     true
                 )
-                && intdiv($starts->diffInDays($date), 7) % $interval === 0,
+                && intdiv($daysSinceStart, 7) % $interval === 0,
 
             'monthly' =>
                 $date->day === min(
                     $starts->day,
                     $date->daysInMonth
                 )
-                && $starts->diffInMonths($date) % $interval === 0,
+                // Calendar months preserve the short-month day clamp above.
+                && (($date->year - $starts->year) * 12 + $date->month - $starts->month) % $interval === 0,
 
             default => false,
         };

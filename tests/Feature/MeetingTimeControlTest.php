@@ -51,10 +51,11 @@ class MeetingTimeControlTest extends TestCase
         ]);
 
         $html = $this->actingAs($user)->get(route('meetings.index'))->assertOk()->getContent();
-        $this->assertStringContainsString('"start_at":"2026-10-15T21:37:00', $html);
-        $this->assertStringContainsString('"end_at":"2026-10-15T22:37:00', $html);
-        $this->assertStringContainsString('<option value="37" selected', $html);
-        $this->assertStringContainsString('<option value="PM" selected', $html);
+        $decodedHtml = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $this->assertStringContainsString('"start_at":"2026-10-15T21:37"', $decodedHtml);
+        $this->assertStringContainsString('"end_at":"2026-10-15T22:37"', $decodedHtml);
+        $this->assertStringNotContainsString('"start_at":"2026-10-15"', $decodedHtml);
+        $this->assertStringNotContainsString('"end_at":"2026-10-15"', $decodedHtml);
     }
 
     public function test_required_start_time_error_is_associated_with_visible_controls(): void

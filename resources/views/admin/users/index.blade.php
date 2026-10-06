@@ -489,13 +489,6 @@
                             </td>
                         </tr>
 
-                        @include('admin.users.partials.manage-user-modal', [
-                            'managedUser' => $user,
-                            'plans' => $plans,
-                            'canonicalStatus' => $canonicalStatus,
-                            'accountStatus' => $accountStatus,
-                            'displayRole' => $displayRole,
-                        ])
                     @empty
                         <tr>
                             <td colspan="7" class="px-4 py-10 text-center text-sm text-slate-400">
@@ -592,13 +585,6 @@
                         Manage User
                     </button>
 
-                    @include('admin.users.partials.manage-user-modal', [
-                        'managedUser' => $user,
-                        'plans' => $plans,
-                        'canonicalStatus' => $canonicalStatus,
-                        'accountStatus' => $accountStatus,
-                        'displayRole' => $displayRole,
-                    ])
                 </article>
             @empty
                 <div class="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
@@ -611,6 +597,22 @@
             {{ $users->links() }}
         </div>
     </section>
+
+{{-- One dialog per user, outside both responsive lists and the table markup. --}}
+@foreach ($users as $user)
+    @include('admin.users.partials.manage-user-modal', [
+        'managedUser' => $user,
+        'plans' => $plans,
+        'canonicalStatus' => match ($user->subscription_status) {
+            'trialing' => 'trial',
+            'canceled' => 'cancelled',
+            default => $user->subscription_status ?? 'trial',
+        },
+        'accountStatus' => $user->account_status ?? 'active',
+        'displayRole' => $user->system_role ?? $user->role ?? ($user->isAdmin() ? 'admin' : 'user'),
+        'availableRoles' => $availableRoles,
+    ])
+@endforeach
 
 <dialog
     id="admin-bulk-user-modal"
@@ -681,10 +683,7 @@
                 </label>
 
                 <select name="role" class="pm-input mt-1 w-full">
-                    @foreach(
-                        \App\Http\Controllers\Admin\AdminUserController::availableRoles()
-                        as $value => $label
-                    )
+                    @foreach($availableRoles as $value => $label)
                         <option value="{{ $value }}">
                             {{ $label }}
                         </option>
@@ -911,8 +910,7 @@
     }
 
     function pmUpdateBulkSelection() {
-        var selected = pmSelectedUserCheckboxes();
-        var count = selected.length;
+        var count = pmUniqueSelectedUserIds().length;
         var button = document.getElementById('admin-bulk-open');
         var badge = document.getElementById('admin-bulk-count');
         var dialogCount = document.getElementById('admin-bulk-dialog-count');
@@ -982,9 +980,7 @@
                 '.admin-user-mobile-list .admin-user-selector'
             )
             .forEach(function (checkbox) {
-                if (selectedIds.has(checkbox.value)) {
-                    checkbox.checked = true;
-                }
+                checkbox.checked = selectedIds.has(checkbox.value);
             });
     }
 
@@ -1052,7 +1048,7 @@
 
     function pmValidateBulkUserForm(form) {
         var ids = pmUniqueSelectedUserIds();
-        var action = form.action.value;
+        var action = form.elements.namedItem('action').value;
 
         if (!ids.length) {
             alert('Select at least one user.');
@@ -1103,7 +1099,19 @@
 
     document.addEventListener(
         'DOMContentLoaded',
-        pmUpdateBulkSelection
+        function () {
+            pmUpdateBulkSelection();
+            @if ($errors->any())
+                var managedUserId = {{ \Illuminate\Support\Js::from(old('_managed_user_id')) }};
+                if (managedUserId !== null && managedUserId !== '') {
+                    var dialog = document.getElementById('manage-user-modal-' + managedUserId);
+                    if (dialog && typeof dialog.showModal === 'function') {
+                        if (!dialog.open) dialog.showModal();
+                        pmSelectAdminUserTab(managedUserId, 'subscription');
+                    }
+                }
+            @endif
+        }
     );
 
 </script>

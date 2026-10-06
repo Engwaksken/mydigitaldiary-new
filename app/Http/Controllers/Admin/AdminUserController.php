@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkUserRequest;
+use App\Http\Requests\Admin\UpdateUserSubscriptionRequest;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -70,22 +72,7 @@ class AdminUserController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $plansQuery = SubscriptionPlan::query()
-            ->where('is_enabled', true);
-
-        if (Schema::hasColumn('subscription_plans', 'display_order')) {
-            $plansQuery->orderBy('display_order');
-        }
-
-        if (Schema::hasColumn('subscription_plans', 'name')) {
-            $plansQuery->orderBy('name');
-        } elseif (Schema::hasColumn('subscription_plans', 'title')) {
-            $plansQuery->orderBy('title');
-        } else {
-            $plansQuery->orderBy('id');
-        }
-
-        $plans = $plansQuery->get();
+        $plans = $this->subscriptionPlans();
 
         $statsQuery = User::query();
 
@@ -365,6 +352,7 @@ class AdminUserController extends Controller
 
         return view('admin.users.show', [
             'user' => $user,
+            'plans' => $this->subscriptionPlans(),
             'availableRoles' => self::availableRoles(),
         ]);
     }
@@ -481,333 +469,164 @@ class AdminUserController extends Controller
     }
 
     public function updateSubscription(
-        Request $request,
+        UpdateUserSubscriptionRequest $request,
         User $user
     ): RedirectResponse {
-        $data = $request->validate([
-            'subscription_status' => [
-                'required',
-                'string',
-                Rule::in([
-                    'active',
-                    'trial',
-                    'inactive',
-                    'expired',
-                    'suspended',
-                    'cancelled',
-                ]),
-            ],
-            'subscription_plan_id' => [
-                'nullable',
-                'integer',
-                'exists:subscription_plans,id',
-            ],
-            'subscription_started_at' => [
-                'nullable',
-                'date',
-            ],
-            'subscription_expires_at' => [
-                'nullable',
-                'date',
-            ],
-            'trial_ends_at' => [
-                'nullable',
-                'date',
-            ],
-        ]);
-
-        $status = strtolower(trim((string) $data['subscription_status']));
-        $planId = filled($data['subscription_plan_id'] ?? null)
-            ? (int) $data['subscription_plan_id']
-            : null;
-
-        $plan = $planId !== null
-            ? SubscriptionPlan::query()->find($planId)
-            : null;
-
-        $startedAt = filled($data['subscription_started_at'] ?? null)
-            ? Carbon::parse($data['subscription_started_at'])->startOfDay()
-            : null;
-
-        $expiresAt = filled($data['subscription_expires_at'] ?? null)
-            ? Carbon::parse($data['subscription_expires_at'])->endOfDay()
-            : null;
-
-        $trialEndsAt = filled($data['trial_ends_at'] ?? null)
-            ? Carbon::parse($data['trial_ends_at'])->endOfDay()
-            : null;
-
-        if ($status === 'active' && $startedAt === null) {
-            $startedAt = now();
-        }
-
-        if ($status === 'active') {
-            $trialEndsAt = null;
-
-            if ($expiresAt === null && $plan !== null) {
-                $isLifetime = method_exists($plan, 'isLifetime')
-                    ? (bool) $plan->isLifetime()
-                    : (Schema::hasColumn('subscription_plans', 'is_lifetime')
-                        ? (bool) $plan->getAttribute('is_lifetime')
-                        : false);
-
-                if (! $isLifetime) {
-                    $months = max(1, (int) ($plan->duration_months ?? 1));
-                    $expiresAt = ($startedAt ?? now())
-                        ->copy()
-                        ->addMonths($months)
-                        ->endOfDay();
-                }
-            }
-        }
-
-        if ($status === 'trial' && $trialEndsAt === null) {
-            $trialEndsAt = now()->addDays(14)->endOfDay();
-        }
-
-        if (
-            $startedAt !== null
-            && $expiresAt !== null
-            && $expiresAt->lt($startedAt)
-        ) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'subscription_expires_at' =>
-                        'Subscription expiry date cannot be before the start date.',
-                ]);
-        }
-
-        $subscriptionActivated = false;
-
+        $data = $request->validated();
         try {
-            DB::transaction(function () use (
-                $user,
-                $status,
-                $planId,
-                $plan,
-                $startedAt,
-                $expiresAt,
-                $trialEndsAt,
-                &$subscriptionActivated
-            ): void {
-                $updates = [];
+            $this->applySubscriptionUpdate($user, $data);
 
-                if (Schema::hasColumn('users', 'subscription_status')) {
-                    $updates['subscription_status'] = $status;
-                }
-
-                if (Schema::hasColumn('users', 'subscription_plan_id')) {
-                    $updates['subscription_plan_id'] = $planId;
-                }
-
-                if (Schema::hasColumn('users', 'subscription_started_at')) {
-                    $updates['subscription_started_at'] = $startedAt;
-                }
-
-                if (Schema::hasColumn('users', 'subscription_expires_at')) {
-                    $updates['subscription_expires_at'] = $expiresAt;
-                }
-
-                if (Schema::hasColumn('users', 'trial_ends_at')) {
-                    $updates['trial_ends_at'] = $trialEndsAt;
-                }
-
-                if (Schema::hasColumn('users', 'account_status')) {
-                    if ($status === 'suspended') {
-                        $updates['account_status'] = 'suspended';
-                    } elseif ((string) $user->account_status === 'suspended') {
-                        $updates['account_status'] = 'active';
-                    }
-                }
-
-                if (Schema::hasColumn('users', 'is_suspended')) {
-                    $updates['is_suspended'] = $status === 'suspended';
-                }
-
-                if (Schema::hasColumn('users', 'suspended')) {
-                    $updates['suspended'] = $status === 'suspended';
-                }
-
-                if (
-                    Schema::hasColumn('users', 'suspended_at')
-                    && $status !== 'suspended'
-                ) {
-                    $updates['suspended_at'] = null;
-                }
-
-                if (
-                    Schema::hasColumn('users', 'auto_renew_subscription')
-                    && in_array(
-                        $status,
-                        ['inactive', 'expired', 'suspended', 'cancelled'],
-                        true
-                    )
-                ) {
-                    $updates['auto_renew_subscription'] = false;
-                }
-
-                if (
-                    Schema::hasColumn('users', 'auto_renew_disabled_at')
-                    && in_array(
-                        $status,
-                        ['inactive', 'expired', 'suspended', 'cancelled'],
-                        true
-                    )
-                ) {
-                    $updates['auto_renew_disabled_at'] = now();
-                }
-
-                if ($updates !== []) {
-                    $user->forceFill($updates)->save();
-
-                    $subscriptionActivated = (string) $user->subscription_status === 'active'
-                        && $user->wasChanged([
-                            'subscription_status',
-                            'subscription_plan_id',
-                            'subscription_started_at',
-                            'subscription_expires_at',
-                        ]);
-                }
-
-                /*
-                 * Grant the plan's included recording minutes when
-                 * an admin activates a subscription. The key is
-                 * deterministic so repeat saves won't double-grant.
-                 */
-                if (
-                    $status === 'active'
-                    && $plan !== null
-                    && class_exists(\App\Services\SubscriptionRecordingQuotaGrantService::class)
-                    && Schema::hasTable('subscription_recording_extra_grants')
-                ) {
-                    $grantService = app(\App\Services\SubscriptionRecordingQuotaGrantService::class);
-                    $grantService->grantIncludedMinutes(
-                        $user,
-                        $plan,
-                        $grantService->key('admin', $user->id, $planId, $startedAt->toDateString()),
-                        $expiresAt,
-                        null,
-                        'admin_activation'
-                    );
-                }
-
-                if (
-                    $plan !== null
-                    && class_exists(\App\Models\Organization::class)
-                ) {
-                    $isIndividual = method_exists($plan, 'isIndividual')
-                        ? (bool) $plan->isIndividual()
-                        : true;
-
-                    if (! $isIndividual) {
-                        $organization = \App\Models\Organization::query()
-                            ->where('owner_user_id', $user->id)
-                            ->first();
-
-                        if ($organization !== null) {
-                            $organization->forceFill([
-                                'subscription_plan_id' => $plan->id,
-                            ])->save();
-                        }
-                    }
-                }
-            });
-
-            if ($subscriptionActivated) {
-                app(\App\Services\SubscriptionAdminNotificationService::class)->notify($user->fresh());
-            }
-
-            return redirect()
-                ->route('admin.users.index')
-                ->with(
-                    'success',
-                    'Subscription for '.$user->name.' updated successfully.'
-                );
+            return redirect()->route('admin.users.index')->with(
+                'success', 'Subscription for '.$user->name.' updated successfully.'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withInput()->withErrors($e->errors());
         } catch (\Throwable $e) {
             Log::error('Admin subscription update failed', [
                 'user_id' => $user->id,
                 'admin_id' => auth()->id(),
-                'subscription_status' => $status,
-                'subscription_plan_id' => $planId,
+                'subscription_status' => $data['subscription_status'] ?? null,
+                'subscription_plan_id' => $data['subscription_plan_id'] ?? null,
                 'message' => $e->getMessage(),
             ]);
 
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'subscription' =>
-                        'The subscription could not be updated. Please review the selected plan and dates and try again.',
-                ]);
+            return back()->withInput()->withErrors([
+                'subscription' => 'The subscription could not be updated. Please review the selected plan and dates and try again.',
+            ]);
         }
     }
 
-    public function bulk(Request $request): RedirectResponse
+    /**
+     * Shared single/bulk orchestration. Bulk supplies only nonblank edits.
+     * This existing orchestration should move to an application service in
+     * a follow-up once service ownership is available.
+     */
+    private function applySubscriptionUpdate(User $user, array $data): void
     {
-        $roles = array_keys(self::availableRoles());
+        DB::transaction(function () use ($user, $data): void {
+            // Lock before merging omitted fields, including within a bulk batch.
+            $user = User::query()->lockForUpdate()->findOrFail($user->getKey());
+            $suppliedFields = array_keys($data);
+            foreach (['subscription_status', 'subscription_plan_id', 'subscription_started_at', 'subscription_expires_at', 'trial_ends_at'] as $field) {
+                if (! array_key_exists($field, $data)) {
+                    $data[$field] = $user->{$field};
+                }
+            }
 
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:users,id'],
-            'action' => [
-                'required',
-                Rule::in([
-                    'role',
-                    'subscription',
-                    'suspend',
-                    'reactivate',
-                    'delete',
-                ]),
-            ],
+            $status = strtolower(trim((string) $data['subscription_status']));
+            $status = match ($status) {
+                'trialing' => 'trial',
+                'canceled' => 'cancelled',
+                default => $status,
+            };
+            $planId = filled($data['subscription_plan_id']) ? (int) $data['subscription_plan_id'] : null;
+            $plan = $planId !== null ? SubscriptionPlan::query()->find($planId) : null;
 
-            // Bulk role
-            'role' => [
-                'nullable',
-                Rule::in($roles),
-            ],
+            $dates = [];
+            foreach (['subscription_started_at', 'subscription_expires_at', 'trial_ends_at'] as $field) {
+                $dates[$field] = filled($data[$field]) ? Carbon::parse($data[$field]) : null;
+                // Omitted timestamps stay stable on repeated partial saves.
+                if ($dates[$field] && in_array($field, $suppliedFields, true)) {
+                    $dates[$field] = $field === 'subscription_started_at'
+                        ? $dates[$field]->startOfDay() : $dates[$field]->endOfDay();
+                }
+            }
+            $startedAt = $dates['subscription_started_at'];
+            $expiresAt = $dates['subscription_expires_at'];
+            $trialEndsAt = $dates['trial_ends_at'];
 
-            // Bulk subscription
-            'subscription_plan_id' => [
-                'nullable',
-                'integer',
-                'exists:subscription_plans,id',
-            ],
-            'subscription_status' => [
-                'nullable',
-                Rule::in([
-                    'active',
-                    'trial',
-                    'inactive',
-                    'expired',
-                    'suspended',
-                    'cancelled',
-                ]),
-            ],
-            'subscription_started_at' => [
-                'nullable',
-                'date',
-            ],
-            'subscription_expires_at' => [
-                'nullable',
-                'date',
-            ],
-            'trial_ends_at' => [
-                'nullable',
-                'date',
-            ],
+            if ($status === 'active') {
+                // Stable day boundary avoids a second save looking like a renewal.
+                $startedAt ??= now()->startOfDay();
+                if ($expiresAt === null && $plan !== null) {
+                    $isLifetime = method_exists($plan, 'isLifetime')
+                        ? (bool) $plan->isLifetime()
+                        : (Schema::hasColumn('subscription_plans', 'is_lifetime')
+                            ? (bool) $plan->getAttribute('is_lifetime') : false);
+                    if (! $isLifetime) {
+                        $expiresAt = $startedAt->copy()
+                            ->addMonths(max(1, (int) ($plan->duration_months ?? 1)))
+                            ->endOfDay();
+                    }
+                }
+            }
+            $trialEndsAt = $status === 'trial'
+                ? ($trialEndsAt ?? now()->addDays(14)->endOfDay()) : null;
 
-            // Bulk suspension/delete confirmation
-            'reason' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-            'confirmation' => [
-                'nullable',
-                'string',
-                'max:20',
-            ],
-        ]);
+            // Check the effective dates after defaults and retained values,
+            // inside the transaction so any earlier batch writes roll back.
+            if ($startedAt !== null && $expiresAt !== null && $expiresAt->lt($startedAt)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'subscription_expires_at' => 'Subscription expiry date cannot be before the start date.',
+                ]);
+            }
+
+            $updates = [
+                'subscription_plan_id' => $planId,
+                'subscription_started_at' => $startedAt,
+                'subscription_expires_at' => $expiresAt,
+                'trial_ends_at' => $trialEndsAt,
+                'is_suspended' => $status === 'suspended',
+                'suspended' => $status === 'suspended',
+                'suspended_at' => $status === 'suspended' ? ($user->suspended_at ?: now()) : null,
+            ];
+            // Legacy aliases inform side effects without rewriting an omitted
+            // status: blank bulk status still means leave the value unchanged.
+            if (in_array('subscription_status', $suppliedFields, true)) {
+                $updates['subscription_status'] = $status;
+            }
+            if ($status === 'suspended') {
+                $updates['account_status'] = 'suspended';
+            } else {
+                if ((string) $user->account_status === 'suspended') {
+                    $updates['account_status'] = 'active';
+                }
+                $updates['suspended_reason'] = null;
+            }
+            if (in_array($status, ['inactive', 'expired', 'suspended', 'cancelled'], true)) {
+                $updates['auto_renew_subscription'] = false;
+                $updates['auto_renew_disabled_at'] = $user->auto_renew_disabled_at ?: now();
+            }
+            $updates = array_filter(
+                $updates, fn ($column) => Schema::hasColumn('users', $column), ARRAY_FILTER_USE_KEY
+            );
+            $user->forceFill($updates)->save();
+            $subscriptionActivated = $status === 'active' && $user->wasChanged([
+                'subscription_status', 'subscription_plan_id', 'subscription_started_at', 'subscription_expires_at',
+            ]);
+
+            // Both entry points use the existing deterministic activation key.
+            if ($status === 'active' && $plan !== null
+                && class_exists(\App\Services\SubscriptionRecordingQuotaGrantService::class)
+                && Schema::hasTable('subscription_recording_extra_grants')) {
+                $grantService = app(\App\Services\SubscriptionRecordingQuotaGrantService::class);
+                $grantService->grantIncludedMinutes(
+                    $user, $plan,
+                    $grantService->key('admin', $user->id, $planId, $startedAt->toDateString()),
+                    $expiresAt, null, 'admin_activation'
+                );
+            }
+            if ($plan !== null && class_exists(\App\Models\Organization::class)) {
+                $isIndividual = method_exists($plan, 'isIndividual') ? (bool) $plan->isIndividual() : true;
+                if (! $isIndividual) {
+                    $organization = \App\Models\Organization::query()
+                        ->where('owner_user_id', $user->id)->lockForUpdate()->first();
+                    if ($organization !== null) {
+                        $organization->forceFill(['subscription_plan_id' => $plan->id])->save();
+                    }
+                }
+            }
+            if ($subscriptionActivated) {
+                // Nested calls in bulk register callbacks on the outer
+                // transaction. Rollback discards all activation notifications.
+                DB::afterCommit(fn () => $this->notifySubscriptionActivation($user));
+            }
+        });
+    }
+
+    public function bulk(BulkUserRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
 
         $currentUserId = (int) $request->user()->id;
 
@@ -870,6 +689,7 @@ class AdminUserController extends Controller
             ->whereIn('id', $ids)
             ->get();
 
+        try {
         DB::transaction(
             function () use (
                 $users,
@@ -892,54 +712,15 @@ class AdminUserController extends Controller
                             break;
 
                         case 'subscription':
-                            foreach ([
-                                'subscription_plan_id',
-                                'subscription_status',
-                                'subscription_started_at',
-                                'subscription_expires_at',
-                                'trial_ends_at',
-                            ] as $column) {
-                                if (
-                                    Schema::hasColumn(
-                                        'users',
-                                        $column
-                                    )
-                                    && array_key_exists(
-                                        $column,
-                                        $data
-                                    )
-                                    && $data[$column] !== null
-                                    && $data[$column] !== ''
-                                ) {
-                                    $user->{$column} =
-                                        $data[$column];
-                                }
-                            }
-
-                            if (
-                                ($data['subscription_status'] ?? null)
-                                    === 'active'
-                                && Schema::hasColumn(
-                                    'users',
-                                    'trial_ends_at'
-                                )
-                            ) {
-                                $user->trial_ends_at = null;
-                            }
-
-                            $user->save();
-
-                            if (
-                                (string) $user->subscription_status === 'active'
-                                && $user->wasChanged([
-                                    'subscription_status',
-                                    'subscription_plan_id',
-                                    'subscription_started_at',
-                                    'subscription_expires_at',
-                                ])
-                            ) {
-                                app(\App\Services\SubscriptionAdminNotificationService::class)->notify($user);
-                            }
+                            // Blank bulk fields mean leave unchanged, whereas
+                            // explicit blanks in the single form can clear.
+                            $this->applySubscriptionUpdate($user, array_filter(
+                                array_intersect_key($data, array_flip([
+                                    'subscription_plan_id', 'subscription_status',
+                                    'subscription_started_at', 'subscription_expires_at', 'trial_ends_at',
+                                ])),
+                                fn ($value) => $value !== null && $value !== ''
+                            ));
                             break;
 
                         case 'suspend':
@@ -1057,6 +838,12 @@ class AdminUserController extends Controller
                 }
             }
         );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withInput()->withErrors($e->errors());
+        } catch (\Throwable $e) {
+            Log::error('Admin bulk user update failed', ['admin_id' => $currentUserId, 'action' => $data['action'], 'message' => $e->getMessage()]);
+            return back()->withInput()->withErrors(['bulk' => 'The selected users could not be updated. No changes were saved. Please review the values and try again.']);
+        }
 
         $count = $users->count();
 
@@ -1115,6 +902,36 @@ class AdminUserController extends Controller
         }
     }
 
+    private function notifySubscriptionActivation(User $user): void
+    {
+        try {
+            app(\App\Services\SubscriptionAdminNotificationService::class)->notify($user);
+        } catch (\Throwable $e) {
+            // Notification failure must not roll back a bulk edit or misreport a committed single edit.
+            Log::warning('Admin subscription saved but activation notification failed', ['user_id' => $user->id, 'message' => $e->getMessage()]);
+            session()->flash('warning', 'Subscription changes were saved, but an activation notification could not be delivered.');
+        }
+    }
+
+
+    private function subscriptionPlans(): \Illuminate\Database\Eloquent\Collection
+    {
+        $query = SubscriptionPlan::query()->where('is_enabled', true);
+
+        if (Schema::hasColumn('subscription_plans', 'display_order')) {
+            $query->orderBy('display_order');
+        }
+
+        if (Schema::hasColumn('subscription_plans', 'name')) {
+            $query->orderBy('name');
+        } elseif (Schema::hasColumn('subscription_plans', 'title')) {
+            $query->orderBy('title');
+        } else {
+            $query->orderBy('id');
+        }
+
+        return $query->get();
+    }
 
     private function monthlyPlanId(): ?int
     {

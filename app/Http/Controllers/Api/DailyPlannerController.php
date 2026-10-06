@@ -3,6 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DailyPlannerItemRequest;
+use App\Http\Requests\DailyPlannerPlanRequest;
+use App\Http\Requests\DailyPlannerOccurrenceRequest;
+use App\Http\Requests\DailyPlannerBulkDestroyRequest;
+use App\Http\Resources\DailyPlannerResource;
 use App\Models\DailyPlan;
 use App\Models\DailyPlanItem;
 use App\Models\Reminder;
@@ -14,7 +19,6 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Validation\Rule;
 
 class DailyPlannerController extends Controller
 {
@@ -54,7 +58,7 @@ class DailyPlannerController extends Controller
 
         $stats = $this->recurrence->statistics($items);
 
-        return response()->json([
+        return (new DailyPlannerResource([
             'plan' => $plan,
             'items' => $items->values(),
             'total' => $stats['total'],
@@ -62,7 +66,7 @@ class DailyPlannerController extends Controller
             'pending' => $stats['pending'],
             'timed' => $stats['timed'],
             'progress' => $stats['progress'],
-        ]);
+        ]))->response();
     }
 
     public function history(Request $request): JsonResponse
@@ -152,18 +156,12 @@ class DailyPlannerController extends Controller
             }
         );
 
-        return response()->json($plans);
+        return (new DailyPlannerResource($plans))->response();
     }
 
-    public function updatePlan(Request $request): JsonResponse
+    public function updatePlan(DailyPlannerPlanRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'plan_date' => ['required', 'date'],
-            'title' => ['required', 'string', 'max:255'],
-            'notes' => ['nullable', 'string'],
-            'achievements' => ['nullable', 'string'],
-            'challenges' => ['nullable', 'string'],
-        ]);
+        $data = $request->validated();
 
         $plan = DailyPlan::firstOrCreate(
             [
@@ -181,18 +179,14 @@ class DailyPlannerController extends Controller
                 $plan
             )
         ) {
-            return $conflict;
+            return (new DailyPlannerResource($conflict->getData(true)))->response()->setStatusCode($conflict->getStatusCode());
         }
 
-        $plan->update([
-            'title' => $data['title'],
-            'notes' => $data['notes'] ?? null,
-            'achievements' => $data['achievements'] ?? null,
-            'challenges' => $data['challenges'] ?? null,
-        ]);
+        unset($data['plan_date']);
+        $plan->update($data);
 
         return $this->index(
-            Request::createFromBase(
+            Request::createFrom(
                 $request
             )->merge([
                 'date' => $plan->plan_date->toDateString(),
@@ -200,9 +194,9 @@ class DailyPlannerController extends Controller
         );
     }
 
-    public function storeItem(Request $request): JsonResponse
+    public function storeItem(DailyPlannerItemRequest $request): JsonResponse
     {
-        $data = $this->validateItem($request, true);
+        $data = $request->itemData();
 
         $planDate = Carbon::parse(
             $data['plan_date']
@@ -241,17 +235,14 @@ class DailyPlannerController extends Controller
 
         $this->taskReminders->sync($item, $request->user(), Carbon::parse($planDate));
 
-        return response()->json(
-            $item->fresh([
+        return (new DailyPlannerResource($item->fresh([
                 'plan',
                 'personalGoal',
-            ]),
-            201
-        );
+            ])))->response()->setStatusCode(201);
     }
 
     public function updateItem(
-        Request $request,
+        DailyPlannerItemRequest $request,
         DailyPlanItem $item
     ): JsonResponse {
         $this->owned($request, $item);
@@ -262,10 +253,10 @@ class DailyPlannerController extends Controller
                 $item
             )
         ) {
-            return $conflict;
+            return (new DailyPlannerResource($conflict->getData(true)))->response()->setStatusCode($conflict->getStatusCode());
         }
 
-        $data = $this->validateItem($request, false);
+        $data = $request->itemData();
 
         $scope = $data['edit_scope'] ?? 'series';
         $occurrenceDate = $data['occurrence_date']
@@ -277,13 +268,13 @@ class DailyPlannerController extends Controller
                 $item,
                 $request->user()->id,
                 Carbon::parse($occurrenceDate),
-                $data
+                $request->occurrenceData($item, Carbon::parse($occurrenceDate)->toDateString(), $data)
             );
 
-            return response()->json([
+            return (new DailyPlannerResource([
                 'message' => 'This occurrence was updated.',
                 'occurrence' => $occurrence,
-            ]);
+            ]))->response();
         }
 
         $oldDate = $item->plan->plan_date->toDateString();
@@ -292,7 +283,7 @@ class DailyPlannerController extends Controller
             : null;
 
         $recurrence = $this->recurrence->normalizeRecurrence(
-            $data,
+            $request->recurrenceInput($item, $data),
             $targetDate ?: $oldDate
         );
 
@@ -315,10 +306,10 @@ class DailyPlannerController extends Controller
             && $targetDate !== $oldDate
         ) {
             if ($item->is_completed) {
-                return response()->json([
+                return (new DailyPlannerResource([
                     'message' =>
                         'Completed tasks cannot be moved. Reopen the task first if it needs rescheduling.',
-                ], 422);
+                ]))->response()->setStatusCode(422);
             }
 
             $targetPlan = DailyPlan::firstOrCreate(
@@ -350,16 +341,14 @@ class DailyPlannerController extends Controller
             );
         }
 
-        return response()->json(
-            $item->fresh([
+        return (new DailyPlannerResource($item->fresh([
                 'plan',
                 'personalGoal',
-            ])
-        );
+            ])))->response();
     }
 
     public function toggle(
-        Request $request,
+        DailyPlannerOccurrenceRequest $request,
         DailyPlanItem $item
     ): JsonResponse {
         $this->owned($request, $item);
@@ -370,7 +359,7 @@ class DailyPlannerController extends Controller
                 $item
             )
         ) {
-            return $conflict;
+            return (new DailyPlannerResource($conflict->getData(true)))->response()->setStatusCode($conflict->getStatusCode());
         }
 
         $date = Carbon::parse(
@@ -387,7 +376,8 @@ class DailyPlannerController extends Controller
         );
 
         $freshItem = $item->fresh(['plan', 'personalGoal']);
-        if ($freshItem->is_completed) {
+        $completed = (bool) $result->is_completed;
+        if ($completed) {
             $this->taskReminders->cancel($freshItem, $request->user());
         } else {
             $this->taskReminders->sync($freshItem, $request->user(), $date);
@@ -398,14 +388,14 @@ class DailyPlannerController extends Controller
                 $request->user(),
                 $freshItem,
                 $date,
-                (bool) $freshItem->is_completed
+                $completed
             );
 
-        return response()->json([
+        return (new DailyPlannerResource([
             'message' => $syncMessage ?: 'Task status updated.',
             'result' => $result,
             'occurrence_date' => $date->toDateString(),
-        ]);
+        ]))->response();
     }
 
     public function moveItem(
@@ -415,10 +405,10 @@ class DailyPlannerController extends Controller
         $this->owned($request, $item);
 
         if ($item->isRecurring()) {
-            return response()->json([
+            return (new DailyPlannerResource([
                 'message' =>
                     'Recurring tasks follow their repeat schedule. Edit the series instead of moving one recurring task.',
-            ], 422);
+            ]))->response()->setStatusCode(422);
         }
 
         if (
@@ -427,14 +417,14 @@ class DailyPlannerController extends Controller
                 $item
             )
         ) {
-            return $conflict;
+            return (new DailyPlannerResource($conflict->getData(true)))->response()->setStatusCode($conflict->getStatusCode());
         }
 
         if ($item->is_completed) {
-            return response()->json([
+            return (new DailyPlannerResource([
                 'message' =>
                     'Completed tasks cannot be moved. Reopen the task first if it needs rescheduling.',
-            ], 422);
+            ]))->response()->setStatusCode(422);
         }
 
         $data = $request->validate([
@@ -451,10 +441,10 @@ class DailyPlannerController extends Controller
             $targetDate
         );
 
-        return response()->json([
+        return (new DailyPlannerResource([
             'message' => 'Task moved successfully.',
             'item' => $item->fresh()->load('plan'),
-        ]);
+        ]))->response();
     }
 
     public function bulkMove(Request $request): JsonResponse
@@ -505,13 +495,13 @@ class DailyPlannerController extends Controller
             $moved++;
         }
 
-        return response()->json([
+        return (new DailyPlannerResource([
             'message' =>
                 $moved.' task'.($moved === 1 ? '' : 's').' moved.',
             'moved' => $moved,
             'skipped' => $skipped,
             'target_date' => $targetDate,
-        ]);
+        ]))->response();
     }
 
     public function destroyItem(
@@ -526,7 +516,7 @@ class DailyPlannerController extends Controller
                 $item
             )
         ) {
-            return $conflict;
+            return (new DailyPlannerResource($conflict->getData(true)))->response()->setStatusCode($conflict->getStatusCode());
         }
 
         $scope = $request->input('delete_scope', 'series');
@@ -544,9 +534,9 @@ class DailyPlannerController extends Controller
                 $date
             );
 
-            return response()->json([
+            return (new DailyPlannerResource([
                 'message' => 'This occurrence was removed.',
-            ]);
+            ]))->response();
         }
 
         if (
@@ -558,32 +548,23 @@ class DailyPlannerController extends Controller
                     $date->copy()->subDay()->toDateString(),
             ]);
 
-            return response()->json([
+            return (new DailyPlannerResource([
                 'message' =>
                     'This and future occurrences were removed.',
-            ]);
+            ]))->response();
         }
 
         $this->taskReminders->cancel($item, $request->user());
         $item->delete();
 
-        return response()->json([
+        return (new DailyPlannerResource([
             'message' => 'Task deleted.',
-        ]);
+        ]))->response();
     }
 
-    public function bulkDestroy(Request $request): JsonResponse
+    public function bulkDestroy(DailyPlannerBulkDestroyRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer'],
-            'reminder_enabled' => ['nullable', 'boolean'],
-            'reminder_offset_minutes' => ['nullable', 'integer', Rule::in(DailyPlannerTaskReminderService::OFFSETS)],
-            'reminder_custom_at' => ['nullable', 'date'],
-            'reminder_channels' => ['nullable', 'array'],
-            'reminder_channels.*' => [Rule::in(['in_app', 'push', 'email'])],
-            'occurrence_date' => ['nullable', 'date'],
-        ]);
+        $data = $request->validated();
 
         $items = DailyPlanItem::query()
             ->with('plan')
@@ -620,100 +601,12 @@ class DailyPlannerController extends Controller
             $deleted++;
         }
 
-        return response()->json([
+        return (new DailyPlannerResource([
             'message' =>
                 ($deleted + $skippedOccurrences).' task(s) updated.',
             'deleted_series_or_once' => $deleted,
             'removed_occurrences' => $skippedOccurrences,
-        ]);
-    }
-
-    private function validateItem(
-        Request $request,
-        bool $creating
-    ): array {
-        return $request->validate([
-            'plan_date' => [
-                $creating ? 'required' : 'nullable',
-                'date',
-            ],
-            'title' => ['required', 'string', 'max:255'],
-            'personal_goal_id' => [
-                'nullable',
-                'integer',
-                'exists:personal_goals,id',
-            ],
-            'description' => ['nullable', 'string'],
-            'achievements' => ['nullable', 'string'],
-            'challenges' => ['nullable', 'string'],
-            'priority' => [
-                'required',
-                Rule::in(['low', 'medium', 'high']),
-            ],
-            'start_time' => [
-                'nullable',
-                'date_format:H:i',
-            ],
-            'end_time' => [
-                'nullable',
-                'date_format:H:i',
-                'after:start_time',
-            ],
-
-            'repeat_type' => [
-                'nullable',
-                Rule::in(
-                    DailyPlannerRecurrenceService::REPEAT_TYPES
-                ),
-            ],
-
-            'repeat_days' => [
-                'nullable',
-                'array',
-                Rule::requiredIf(
-                    fn () =>
-                        $request->input('repeat_type')
-                        === 'specific_days'
-                ),
-            ],
-
-            'repeat_days.*' => [
-                Rule::in(
-                    DailyPlannerRecurrenceService::WEEK_DAYS
-                ),
-            ],
-
-            'repeat_interval' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:52',
-            ],
-
-            'repeat_starts_on' => [
-                'nullable',
-                'date',
-            ],
-
-            'repeat_ends_on' => [
-                'nullable',
-                'date',
-                'after_or_equal:repeat_starts_on',
-            ],
-
-            'occurrence_date' => [
-                'nullable',
-                'date',
-            ],
-
-            'edit_scope' => [
-                'nullable',
-                Rule::in([
-                    'occurrence',
-                    'series',
-                ]),
-            ],
-        ]);
+        ]))->response();
     }
 
     private function movePendingItemToDate(

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DailyPlanItemOccurrence extends Model
 {
@@ -31,17 +32,26 @@ class DailyPlanItemOccurrence extends Model
         'completed_at' => 'datetime',
     ];
 
-    public function item()
+    public function setOccurrenceDateAttribute(mixed $value): void
+    {
+        // Match the DATE column and the date-only firstOrCreate lookup.
+        // The default date cast otherwise writes a timestamp on SQLite.
+        $this->attributes['occurrence_date'] = $value === null
+            ? null
+            : $this->asDate($value)->format('Y-m-d');
+    }
+
+    public function item(): BelongsTo
     {
         return $this->belongsTo(DailyPlanItem::class, 'daily_plan_item_id');
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function personalGoalOverride()
+    public function personalGoalOverride(): BelongsTo
     {
         return $this->belongsTo(
             PersonalGoal::class,
