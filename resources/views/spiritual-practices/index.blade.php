@@ -82,55 +82,12 @@
             </p>
         </div>
     @else
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-emerald-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Total Practices</div>
-                        <div class="mt-1 text-2xl font-black text-slate-900">{{ number_format($stats['total'] ?? 0) }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                        <i class="fa-solid fa-seedling"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-sky-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">This Week</div>
-                        <div class="mt-1 text-2xl font-black text-slate-900">{{ number_format($stats['this_week'] ?? 0) }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center">
-                        <i class="fa-solid fa-calendar-week"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-violet-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">This Month</div>
-                        <div class="mt-1 text-2xl font-black text-slate-900">{{ number_format($stats['this_month'] ?? 0) }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-violet-50 text-violet-700 flex items-center justify-center">
-                        <i class="fa-solid fa-calendar-days"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-amber-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Recurring</div>
-                        <div class="mt-1 text-2xl font-black text-slate-900">{{ number_format($stats['recurring'] ?? 0) }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-                        <i class="fa-solid fa-repeat"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <x-summary-strip class="mb-5" label="Spiritual practices summary" :stats="[
+            ['label' => 'Total practices', 'value' => number_format($stats['total'] ?? 0), 'icon' => 'fa-solid fa-seedling', 'color' => 'emerald', 'href' => route('spiritual-practices.index')],
+            ['label' => 'This week', 'value' => number_format($stats['this_week'] ?? 0), 'icon' => 'fa-solid fa-calendar-week', 'color' => 'sky', 'href' => route('spiritual-practices.index', ['period' => 'week'])],
+            ['label' => 'This month', 'value' => number_format($stats['this_month'] ?? 0), 'icon' => 'fa-solid fa-calendar-days', 'color' => 'violet', 'href' => route('spiritual-practices.index', ['period' => 'month'])],
+            ['label' => 'Recurring', 'value' => number_format($stats['recurring'] ?? 0), 'icon' => 'fa-solid fa-repeat', 'color' => 'amber'],
+        ]" />
 
         <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="p-4 border-b border-slate-100">

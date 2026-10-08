@@ -63,9 +63,14 @@ class AdminUserController extends Controller
                 $subscriptionStatus !== ''
                     && Schema::hasColumn('users', 'subscription_status'),
                 fn ($query) =>
-                    $query->where(
-                        'subscription_status',
-                        $subscriptionStatus
+                    // Legacy rows may still hold the old enum spellings.
+                    $query->whereIn(
+                        DB::raw("LOWER(TRIM(COALESCE(subscription_status, '')))"),
+                        match (strtolower($subscriptionStatus)) {
+                            'trial', 'trialing' => ['trial', 'trialing'],
+                            'cancelled', 'canceled' => ['cancelled', 'canceled'],
+                            default => [strtolower($subscriptionStatus)],
+                        }
                     )
             )
             ->latest('id')

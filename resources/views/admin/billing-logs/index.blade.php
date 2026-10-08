@@ -10,20 +10,11 @@
         <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Billing Activity</h1>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="pm-card-bg rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-slate-400 p-4">
-            <p class="text-xs text-slate-500 uppercase tracking-wide">Total Events</p>
-            <p class="text-xl font-bold text-slate-800">{{ $stats['total'] }}</p>
-        </div>
-        <div class="pm-card-bg rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-rose-400 p-4">
-            <p class="text-xs text-slate-500 uppercase tracking-wide">Failed Deliveries</p>
-            <p class="text-xl font-bold text-slate-800">{{ $stats['failed'] }}</p>
-        </div>
-        <div class="pm-card-bg rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-amber-400 p-4">
-            <p class="text-xs text-slate-500 uppercase tracking-wide">Reminders Sent</p>
-            <p class="text-xl font-bold text-slate-800">{{ $stats['reminders_sent'] }}</p>
-        </div>
-    </div>
+    <x-summary-strip class="mb-6" label="Billing activity summary" :stats="[
+        ['label' => 'Total events', 'value' => number_format((int) $stats['total']), 'icon' => 'fa-solid fa-list', 'color' => 'slate', 'href' => route('admin.billing-logs.index')],
+        ['label' => 'Failed deliveries', 'value' => number_format((int) $stats['failed']), 'icon' => 'fa-solid fa-triangle-exclamation', 'color' => 'rose', 'href' => route('admin.billing-logs.index', ['status' => 'failed'])],
+        ['label' => 'Reminders sent', 'value' => number_format((int) $stats['reminders_sent']), 'icon' => 'fa-solid fa-bell', 'color' => 'amber', 'href' => route('admin.billing-logs.index', ['event_type' => 'reminder_sent', 'status' => 'success'])],
+    ]" />
 
     <form method="GET" action="{{ route('admin.billing-logs.index') }}" class="flex flex-wrap items-end gap-3 mb-4">
         <div class="flex-1 min-w-[200px] max-w-xs">

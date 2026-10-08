@@ -11,21 +11,13 @@
     </div>
 
     {{-- ================= STATS ================= --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        @foreach ([
-            ['label' => 'Today', 'value' => $stats['today'], 'color' => 'slate'],
-            ['label' => 'This Week', 'value' => $stats['this_week'], 'color' => 'blue'],
-            ['label' => 'This Month', 'value' => $stats['this_month'], 'color' => 'indigo'],
-            ['label' => 'New', 'value' => $stats['new'], 'color' => 'amber'],
-            ['label' => 'Contacted', 'value' => $stats['contacted'], 'color' => 'violet'],
-            ['label' => 'Closed', 'value' => $stats['closed'], 'color' => 'emerald'],
-        ] as $card)
-            <div class="pm-card-bg rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-{{ $card['color'] }}-400 p-3">
-                <p class="text-xs text-slate-500 uppercase tracking-wide">{{ $card['label'] }}</p>
-                <p class="text-xl font-bold text-slate-800">{{ $card['value'] }}</p>
-            </div>
-        @endforeach
-    </div>
+    <x-summary-strip class="mb-6" label="Enterprise inquiries summary" :stats="[
+        ['label' => 'Today', 'value' => number_format((int) $stats['today']), 'icon' => 'fa-solid fa-calendar-day', 'color' => 'slate', 'href' => route('admin.enterprise-inquiries.index', ['period' => 'daily'])],
+        ['label' => 'This week', 'value' => number_format((int) $stats['this_week']), 'icon' => 'fa-solid fa-calendar-week', 'color' => 'blue', 'href' => route('admin.enterprise-inquiries.index', ['period' => 'weekly']), 'title' => number_format((int) $stats['this_month']) . ' this month'],
+        ['label' => 'New', 'value' => number_format((int) $stats['new']), 'icon' => 'fa-solid fa-envelope', 'color' => 'amber', 'href' => route('admin.enterprise-inquiries.index', ['status' => 'new'])],
+        ['label' => 'Contacted', 'value' => number_format((int) $stats['contacted']), 'icon' => 'fa-solid fa-reply', 'color' => 'violet', 'href' => route('admin.enterprise-inquiries.index', ['status' => 'contacted'])],
+        ['label' => 'Closed', 'value' => number_format((int) $stats['closed']), 'icon' => 'fa-solid fa-circle-check', 'color' => 'emerald', 'href' => route('admin.enterprise-inquiries.index', ['status' => 'closed'])],
+    ]" />
 
     {{-- ================= FILTERS ================= --}}
     <form method="GET" action="{{ route('admin.enterprise-inquiries.index') }}" class="flex flex-wrap items-end gap-3 mb-4" id="pm-inquiry-filter-form">

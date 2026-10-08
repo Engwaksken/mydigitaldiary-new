@@ -147,98 +147,13 @@
     </section>
 
 
-    {{-- =========================================================
-         USER STATISTICS — same wide/accent card pattern as
-         other My Digital Diary pages
-    ========================================================== --}}
-    <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-
-        <div class="relative overflow-hidden rounded-3xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-            <span class="absolute inset-y-0 left-0 w-1 bg-lime-400"></span>
-            <div class="flex min-h-[58px] items-center gap-4">
-                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime-50 text-lime-600">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Total Users
-                    </div>
-                    <div class="mt-0.5 text-xl font-black text-slate-900">
-                        {{ number_format((int) $userStats['total']) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="relative overflow-hidden rounded-3xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-            <span class="absolute inset-y-0 left-0 w-1 bg-emerald-400"></span>
-            <div class="flex min-h-[58px] items-center gap-4">
-                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                    <i class="fa-solid fa-user-check"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Active
-                    </div>
-                    <div class="mt-0.5 text-xl font-black text-slate-900">
-                        {{ number_format((int) $userStats['active']) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="relative overflow-hidden rounded-3xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-            <span class="absolute inset-y-0 left-0 w-1 bg-amber-400"></span>
-            <div class="flex min-h-[58px] items-center gap-4">
-                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                    <i class="fa-solid fa-hourglass-half"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Trial
-                    </div>
-                    <div class="mt-0.5 text-xl font-black text-slate-900">
-                        {{ number_format((int) $userStats['trial']) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="relative overflow-hidden rounded-3xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-            <span class="absolute inset-y-0 left-0 w-1 bg-rose-400"></span>
-            <div class="flex min-h-[58px] items-center gap-4">
-                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                    <i class="fa-solid fa-user-clock"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Expired / Inactive
-                    </div>
-                    <div class="mt-0.5 text-xl font-black text-slate-900">
-                        {{ number_format((int) $userStats['expired_inactive']) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="relative overflow-hidden rounded-3xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-            <span class="absolute inset-y-0 left-0 w-1 bg-violet-400"></span>
-            <div class="flex min-h-[58px] items-center gap-4">
-                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                    <i class="fa-solid fa-user-lock"></i>
-                </div>
-                <div class="min-w-0">
-                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Suspended
-                    </div>
-                    <div class="mt-0.5 text-xl font-black text-slate-900">
-                        {{ number_format((int) $userStats['suspended']) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </section>
+    <x-summary-strip label="User summary" :stats="[
+        ['label' => 'Total users', 'value' => number_format((int) $userStats['total']), 'icon' => 'fa-solid fa-users', 'color' => 'lime', 'href' => route('admin.users.index')],
+        ['label' => 'Active', 'value' => number_format((int) $userStats['active']), 'icon' => 'fa-solid fa-user-check', 'color' => 'emerald', 'href' => route('admin.users.index', ['subscription_status' => 'active'])],
+        ['label' => 'Trial', 'value' => number_format((int) $userStats['trial']), 'icon' => 'fa-solid fa-hourglass-half', 'color' => 'amber', 'href' => route('admin.users.index', ['subscription_status' => 'trial'])],
+        ['label' => 'Expired / inactive', 'value' => number_format((int) $userStats['expired_inactive']), 'icon' => 'fa-solid fa-user-clock', 'color' => 'rose'],
+        ['label' => 'Suspended', 'value' => number_format((int) $userStats['suspended']), 'icon' => 'fa-solid fa-user-lock', 'color' => 'violet'],
+    ]" />
 
     <section class="apple-surface rounded-2xl overflow-hidden" id="admin-user-list">
         <style>

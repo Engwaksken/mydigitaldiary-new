@@ -633,7 +633,7 @@
             <div class="min-w-0">
                 <div class="td-streak">
                     <span class="td-streak-pill {{ $tdStreak > 0 ? '' : 'cold' }}" title="Best streak: {{ $bestGrowthStreak }} days">
-                        <span class="td-flame" aria-hidden="true">🔥</span>
+                        <span class="td-flame" aria-hidden="true"> </span>
                         {{ $tdStreak }} day{{ $tdStreak === 1 ? '' : 's' }}
                     </span>
                     <div class="td-dots" aria-label="Active days this week">

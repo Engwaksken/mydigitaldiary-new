@@ -28,19 +28,7 @@
         {{-- Stats always visible, never tabbed same reasoning as
              everywhere else in the app: a quick-reference summary
              shouldn't be hidden behind a click. --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-            @foreach ($stats as $stat)
-                <div class="pm-card-bg rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-{{ $stat['color'] }}-400 p-3 flex items-center gap-3 min-w-0">
-                    <div class="w-9 h-9 rounded-lg bg-{{ $stat['color'] }}-50 text-{{ $stat['color'] }}-600 flex items-center justify-center shrink-0">
-                        <i class="{{ $stat['icon'] }} text-sm" aria-hidden="true"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <p class="text-[11px] text-slate-500 uppercase tracking-wide truncate">{{ $stat['label'] }}</p>
-                        <p class="text-lg font-bold text-slate-800 truncate">{{ $stat['value'] }}</p>
-                    </div>
-                </div>
-            @endforeach
-        </div>
+        <x-summary-strip :stats="$stats" accent="violet" icon="fa-solid fa-robot" class="mb-5" label="AI Planner summary" />
 
         @php $pmShowTabs = !empty($chart); @endphp
 
@@ -388,10 +376,6 @@
 
             #ai-plans-page .pm-ai-desktop-table {
                 display: none;
-            }
-
-            #ai-plans-page .grid.sm\:grid-cols-3 {
-                grid-template-columns: minmax(0, 1fr) !important;
             }
 
             #ai-plans-page form input,

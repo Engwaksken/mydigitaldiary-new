@@ -196,16 +196,10 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 mb-5">
-                    <div class="rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                        <p class="text-xs text-slate-500 uppercase tracking-wide">Usage progress</p>
-                        <p class="text-2xl font-extrabold text-slate-800 mt-1">{{ $usageProgress ?? 0 }}%</p>
-                    </div>
-                    <div class="rounded-2xl bg-amber-50 border border-amber-100 p-4">
-                        <p class="text-xs text-amber-700 uppercase tracking-wide">Recoverable items</p>
-                        <p class="text-2xl font-extrabold text-amber-900 mt-1">{{ $recoverableCount ?? 0 }}</p>
-                    </div>
-                </div>
+                <x-summary-strip class="mb-5" label="Restore summary" :stats="[
+                    ['label' => 'Usage progress', 'value' => ($usageProgress ?? 0) . '%', 'icon' => 'fa-solid fa-chart-line', 'color' => 'sky'],
+                    ['label' => 'Recoverable items', 'value' => number_format((int) ($recoverableCount ?? 0)), 'icon' => 'fa-solid fa-trash-arrow-up', 'color' => 'amber'],
+                ]" />
 
                 @if (($recoverableCount ?? 0) > 0)
                     <form method="POST" action="{{ route('admin.users.restore-data', $user) }}"

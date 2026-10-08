@@ -23,17 +23,19 @@
         @endforeach
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        @foreach ($stats as $stat)
-            <div class="pm-card-bg rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-{{ $stat['color'] }}-400 p-4">
-                <div class="w-9 h-9 rounded-lg bg-{{ $stat['color'] }}-50 text-{{ $stat['color'] }}-600 flex items-center justify-center mb-2">
-                    <i class="{{ $stat['icon'] }} text-sm" aria-hidden="true"></i>
-                </div>
-                <p class="text-xs text-slate-500 uppercase tracking-wide truncate">{{ $stat['label'] }}</p>
-                <p class="text-xl font-bold text-slate-800 truncate">{{ $stat['value'] }}</p>
-            </div>
-        @endforeach
-    </div>
+    @php
+        // Same period filter kept; each cell narrows the status like the pills above.
+        $pmPaymentsBase = request()->except(['status', 'page']);
+        $pmPaymentLinks = [
+            route('admin.payments.index', array_merge($pmPaymentsBase, ['status' => 'completed'])),
+            route('admin.payments.index', $pmPaymentsBase),
+            route('admin.payments.index', array_merge($pmPaymentsBase, ['status' => 'pending'])),
+        ];
+        $pmPaymentStats = collect($stats)->values()
+            ->map(fn ($stat, $i) => $stat + (isset($pmPaymentLinks[$i]) ? ['href' => $pmPaymentLinks[$i]] : []))
+            ->all();
+    @endphp
+    <x-summary-strip :stats="$pmPaymentStats" accent="emerald" icon="fa-solid fa-money-check-dollar" class="mb-6" label="Payments summary" />
 
     <form method="GET" action="{{ route('admin.payments.index') }}" class="flex flex-wrap items-end gap-3 mb-4">
         @if ($status)

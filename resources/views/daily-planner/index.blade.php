@@ -54,30 +54,6 @@
         border-radius: 1rem;
         box-shadow: 0 24px 70px rgba(15,23,42,.22);
     }
-    .dp-stat-card {
-        --dp-stat-accent: var(--brand-1);
-        --dp-stat-soft: var(--brand-1-tint-10);
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-left: 4px solid var(--dp-stat-accent);
-        border-radius: .85rem;
-        padding: .8rem .9rem;
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-        box-shadow: 0 3px 10px rgba(15,23,42,.04);
-    }
-    .dp-stat-icon {
-        width: 2.25rem;
-        height: 2.25rem;
-        border-radius: .65rem;
-        background: var(--dp-stat-soft);
-        color: var(--dp-stat-accent);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 auto;
-    }
     .dp-time-badge {
         display: inline-flex;
         align-items: center;
@@ -419,24 +395,12 @@
     </div>
 
     {{-- Statistics --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="dp-stat-card" style="--dp-stat-accent:#0f766e;--dp-stat-soft:#f0fdfa">
-            <div class="dp-stat-icon"><i class="fa-solid fa-list-check"></i></div>
-            <div class="min-w-0"><div class="text-[11px] uppercase tracking-wide text-slate-500 truncate">Total Tasks</div><div class="text-xl font-bold text-slate-900">{{ $total }}</div></div>
-        </div>
-        <div class="dp-stat-card" style="--dp-stat-accent:#059669;--dp-stat-soft:#ecfdf5">
-            <div class="dp-stat-icon"><i class="fa-solid fa-circle-check"></i></div>
-            <div class="min-w-0"><div class="text-[11px] uppercase tracking-wide text-slate-500 truncate">Completed</div><div class="text-xl font-bold text-slate-900">{{ $done }}</div></div>
-        </div>
-        <div class="dp-stat-card" style="--dp-stat-accent:#d97706;--dp-stat-soft:#fffbeb">
-            <div class="dp-stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
-            <div class="min-w-0"><div class="text-[11px] uppercase tracking-wide text-slate-500 truncate">Pending</div><div class="text-xl font-bold text-slate-900">{{ $pending }}</div></div>
-        </div>
-        <div class="dp-stat-card" style="--dp-stat-accent:#2563eb;--dp-stat-soft:#eff6ff">
-            <div class="dp-stat-icon"><i class="fa-solid fa-clock"></i></div>
-            <div class="min-w-0"><div class="text-[11px] uppercase tracking-wide text-slate-500 truncate">Timed Tasks</div><div class="text-xl font-bold text-slate-900">{{ $scheduled }}</div></div>
-        </div>
-    </div>
+    <x-summary-strip label="Daily planner summary" :stats="[
+        ['label' => 'Total tasks', 'value' => number_format((int) $total), 'icon' => 'fa-solid fa-list-check', 'color' => 'teal'],
+        ['label' => 'Completed', 'value' => number_format((int) $done), 'icon' => 'fa-solid fa-circle-check', 'color' => 'emerald'],
+        ['label' => 'Pending', 'value' => number_format((int) $pending), 'icon' => 'fa-solid fa-hourglass-half', 'color' => 'amber'],
+        ['label' => 'Timed tasks', 'value' => number_format((int) $scheduled), 'icon' => 'fa-solid fa-clock', 'color' => 'blue'],
+    ]" />
 
     {{-- Planner tabs --}}
     <div class="space-y-4">

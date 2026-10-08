@@ -74,38 +74,7 @@
 
     {{-- Compact summary strip: a few glanceable numbers, always visible
          above the Chart/Table/Calendar tabs. --}}
-    @if (!empty($stats))
-        @php
-            $pmStatCount = count($stats);
-            $pmStatCols = $pmStatCount <= 5 ? $pmStatCount : ($pmStatCount % 3 === 0 ? 3 : 4);
-        @endphp
-        <div class="pm-summary mb-6" style="--pm-summary-cols: {{ $pmStatCols }}" aria-label="{{ $title }} summary">
-            @foreach ($stats as $stat)
-                @php
-                    $statColor = $stat['color'] ?? $accent;
-                    $statIcon = $stat['icon'] ?? $icon;
-                    $statRoute = $stat['route'] ?? ($stat['url'] ?? ($stat['link'] ?? null));
-                @endphp
-                @if ($statRoute)
-                    <a href="{{ $statRoute }}" class="pm-summary-cell">
-                @else
-                    <div class="pm-summary-cell">
-                @endif
-                        <span class="pm-summary-icon bg-{{ $statColor }}-50 text-{{ $statColor }}-600">
-                            <i class="{{ $statIcon }}" aria-hidden="true"></i>
-                        </span>
-                        <span class="min-w-0">
-                            <span class="pm-summary-label" title="{{ $stat['label'] }}">{{ $stat['label'] }}</span>
-                            <span class="pm-summary-value" title="{{ $stat['value'] }}">{{ $stat['value'] }}</span>
-                        </span>
-                @if ($statRoute)
-                    </a>
-                @else
-                    </div>
-                @endif
-            @endforeach
-        </div>
-    @endif
+    <x-summary-strip :stats="$stats ?? []" :accent="$accent" :icon="$icon" class="mb-6" label="{{ $title }} summary" />
 
     @php
         // Chart and Table are tabbed; Table is the default active

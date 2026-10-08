@@ -149,48 +149,12 @@
                 </x-alert>
             </div>
         @endif
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-emerald-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Total Budget</div>
-                        <div class="mt-1 text-xl font-black text-slate-900">{{ $money($statistics['total'] ?? 0) }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center"><i class="fa-solid fa-wallet"></i></div>
-                </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-blue-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">This Month</div>
-                        <div class="mt-1 text-xl font-black text-slate-900">{{ $money($statistics['monthly'] ?? 0) }}</div>
-                        <div class="text-[11px] text-slate-400 mt-1">{{ $selectedMonth }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center"><i class="fa-solid fa-calendar-days"></i></div>
-                </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-amber-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Weekly Budget</div>
-                        <div class="mt-1 text-xl font-black text-slate-900">{{ $money($statistics['weekly'] ?? 0) }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center"><i class="fa-solid fa-calendar-week"></i></div>
-                </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 border-l-violet-500">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Total Items</div>
-                        <div class="mt-1 text-xl font-black text-slate-900">{{ number_format((int) ($statistics['items'] ?? 0)) }}</div>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-violet-50 text-violet-700 flex items-center justify-center"><i class="fa-solid fa-list-check"></i></div>
-                </div>
-            </div>
-        </div>
+        <x-summary-strip class="mb-5" label="Budget summary" :stats="[
+            ['label' => 'Total budget', 'value' => $money($statistics['total'] ?? 0), 'icon' => 'fa-solid fa-wallet', 'color' => 'emerald'],
+            ['label' => 'This month', 'value' => $money($statistics['monthly'] ?? 0), 'icon' => 'fa-solid fa-calendar-days', 'color' => 'blue', 'title' => $selectedMonth],
+            ['label' => 'Weekly budget', 'value' => $money($statistics['weekly'] ?? 0), 'icon' => 'fa-solid fa-calendar-week', 'color' => 'amber'],
+            ['label' => 'Items', 'value' => number_format((int) ($statistics['items'] ?? 0)), 'icon' => 'fa-solid fa-list-check', 'color' => 'violet'],
+        ]" />
 
         @if($tableExists && !empty(array_diff(['user_id','category','amount','period','month_year'], $columns)))
             <div class="mb-4">

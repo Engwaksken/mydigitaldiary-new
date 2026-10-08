@@ -65,23 +65,13 @@
     @if(session('success'))<x-alert type="success" :message="session('success')" :dismissible="false" :autoDismiss="false" />@endif
     @if($errors->any())<x-alert type="error" :dismissible="false" :autoDismiss="false"><ul class="list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></x-alert>@endif
 
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        @foreach([
-            ['Total Plans', $total, 'fa-list-check', '#0f766e', '#ecfdf5'],
-            ['Completed', $completed, 'fa-circle-check', '#059669', '#ecfdf5'],
-            ['Monthly Plans', $monthly, 'fa-calendar-days', '#2563eb', '#eff6ff'],
-            ['With Reminder', $withReminder, 'fa-bell', '#d97706', '#fffbeb'],
-        ] as $stat)
-            <div class="pm-card-bg rounded-xl border border-slate-200 border-l-4 p-3 flex items-center gap-3 shadow-sm" style="border-left-color:{{ $stat[3] }}">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background:{{ $stat[4] }};color:{{ $stat[3] }}"><i class="fa-solid {{ $stat[2] }}"></i></div>
-                <div class="min-w-0"><p class="text-[11px] uppercase tracking-wide text-slate-500 truncate">{{ $stat[0] }}</p><p class="text-xl font-bold text-slate-800">{{ $stat[1] }}</p></div>
-            </div>
-        @endforeach
-        <div class="pm-card-bg rounded-xl border border-slate-200 border-l-4 p-3 shadow-sm" style="border-left-color:var(--brand-1)">
-            <div class="flex items-center justify-between gap-2"><span class="text-[11px] uppercase tracking-wide text-slate-500"><i class="fa-solid fa-chart-line mr-1 text-[var(--brand-1)]"></i> Progress</span><strong class="text-[var(--brand-1)]">{{ $overallProgress }}%</strong></div>
-            <div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-2"><div class="h-full bg-[var(--brand-1)]" style="width:{{ $overallProgress }}%"></div></div>
-        </div>
-    </div>
+    <x-summary-strip label="Annual plans summary" :stats="[
+        ['label' => 'Total plans', 'value' => number_format((int) $total), 'icon' => 'fa-solid fa-list-check', 'color' => 'teal', 'href' => route('annual-plans.index', ['year' => $year])],
+        ['label' => 'Completed', 'value' => number_format((int) $completed), 'icon' => 'fa-solid fa-circle-check', 'color' => 'emerald', 'href' => route('annual-plans.index', ['year' => $year, 'status' => 'completed'])],
+        ['label' => 'Monthly plans', 'value' => number_format((int) $monthly), 'icon' => 'fa-solid fa-calendar-days', 'color' => 'blue', 'href' => route('annual-plans.index', ['year' => $year, 'period' => 'monthly'])],
+        ['label' => 'With reminder', 'value' => number_format((int) $withReminder), 'icon' => 'fa-solid fa-bell', 'color' => 'amber'],
+        ['label' => 'Progress', 'value' => $overallProgress . '%', 'icon' => 'fa-solid fa-chart-line', 'color' => 'violet'],
+    ]" />
 
     <form method="GET" class="pm-card-bg rounded-xl border border-slate-100 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 items-end">
         <div class="lg:col-span-2"><label class="text-xs font-medium text-slate-600">Search</label><input type="search" name="q" value="{{ $search }}" class="pm-input mt-1" placeholder="Search plans..."></div>
