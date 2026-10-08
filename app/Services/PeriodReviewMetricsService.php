@@ -17,23 +17,43 @@ class PeriodReviewMetricsService
     {
         [$from, $to] = $this->range($period, $user);
 
-        $taskQuery = DailyPlanItem::query()
-            ->whereHas('plan', function ($query) use ($user, $from, $to) {
-                $query
-                    ->where('user_id', $user->id)
-                    ->whereBetween('plan_date', [
-                        $from->toDateString(),
-                        $to->toDateString(),
-                    ]);
-            });
+        // Recurrence-aware, exactly like GET /daily-planner?date=… summed
+        // over the period, but computed in two queries. The mobile app used
+        // to rebuild this itself with one request per day (31 sequential
+        // round trips for a month); `tasks_source` tells it these totals can
+        // be used as-is.
+        try {
+            $stats = app(DailyPlannerRecurrenceService::class)
+                ->statisticsForRange($user->id, $from, $to);
+            $tasksTotal = $stats['total'];
+            $tasksCompleted = $stats['completed'];
+            $plannerDays = $stats['days'];
+            $tasksSource = 'daily_planner';
+        } catch (\Throwable $exception) {
+            report($exception);
 
-        $tasksTotal = (clone $taskQuery)->count();
-        $tasksCompleted = (clone $taskQuery)
-            ->where('is_completed', true)
-            ->count();
+            $taskQuery = DailyPlanItem::query()
+                ->whereHas('plan', function ($query) use ($user, $from, $to) {
+                    $query
+                        ->where('user_id', $user->id)
+                        ->whereBetween('plan_date', [
+                            $from->toDateString(),
+                            $to->toDateString(),
+                        ]);
+                });
 
+            $tasksTotal = (clone $taskQuery)->count();
+            $tasksCompleted = (clone $taskQuery)
+                ->where('is_completed', true)
+                ->count();
+            $plannerDays = null;
+            $tasksSource = 'plan_items';
+        }
+
+        // Archived rows are excluded, matching the Incomes/Expenses lists.
         $income = (float) Income::query()
             ->where('user_id', $user->id)
+            ->where('is_archived', false)
             ->whereBetween('received_at', [
                 $from->toDateString(),
                 $to->toDateString(),
@@ -42,6 +62,7 @@ class PeriodReviewMetricsService
 
         $expenses = (float) Expense::query()
             ->where('user_id', $user->id)
+            ->where('is_archived', false)
             ->whereBetween('spent_at', [
                 $from->toDateString(),
                 $to->toDateString(),
@@ -67,6 +88,8 @@ class PeriodReviewMetricsService
             'completion_percent' => $tasksTotal > 0
                 ? (int) round(($tasksCompleted / $tasksTotal) * 100)
                 : 0,
+            'planner_days' => $plannerDays,
+            'tasks_source' => $tasksSource,
 
             'income' => $income,
             'expenses' => $expenses,

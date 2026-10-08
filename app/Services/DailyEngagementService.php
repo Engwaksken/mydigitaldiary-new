@@ -5,8 +5,22 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 class DailyEngagementService {
+ /**
+  * Schema lookups memoized per process. dashboard() + review() used to run
+  * ~60 information_schema queries per Today hub request (one per
+  * hasTable/hasColumn call), which is slow on MySQL.
+  *
+  * @var array<string,bool>
+  */
+ private static array $schemaCache=[];
+ private static function hasTable(string $table): bool {
+  return self::$schemaCache[$table] ??= Schema::hasTable($table);
+ }
+ private static function hasColumn(string $table,string $column): bool {
+  return self::$schemaCache[$table.'.'.$column] ??= Schema::hasColumn($table,$column);
+ }
  public function timezoneFor(User $user): string {
-  $tz=Schema::hasTable('engagement_preferences')?DB::table('engagement_preferences')->where('user_id',$user->id)->value('timezone'):null;
+  $tz=self::hasTable('engagement_preferences')?DB::table('engagement_preferences')->where('user_id',$user->id)->value('timezone'):null;
   return $tz ?: ($user->timezone ?? 'Africa/Kampala');
  }
  public function today(User $user): Carbon { return Carbon::now($this->timezoneFor($user))->startOfDay(); }
@@ -27,7 +41,7 @@ public function saveCheckin(User $user,string $type,array $data): array {
    return ['type'=>$type,'date'=>$today->toDateString(),'streak'=>$this->markMeaningfulAction($user,$type)];
   }
   private function syncWellbeingCheckin(User $user,Carbon $today,array $data): void {
-   if(!Schema::hasTable('daily_wellbeing_logs')||!Schema::hasColumn('daily_wellbeing_logs','mood'))return;
+   if(!self::hasTable('daily_wellbeing_logs')||!self::hasColumn('daily_wellbeing_logs','mood'))return;
    try {
     $log=app(DailyWellbeingSyncService::class)->sync($user,$today);
     $mood=isset($data['mood'])?(int)$data['mood']:null;
@@ -53,7 +67,7 @@ public function saveCheckin(User $user,string $type,array $data): array {
  private function topFocus(User $user,Carbon $day): array {
   $items=[];
 
-  if(Schema::hasTable('daily_plan_items') && Schema::hasTable('daily_plans')){
+  if(self::hasTable('daily_plan_items') && self::hasTable('daily_plans')){
    $rows=DB::table('daily_plan_items as dpi')
     ->join('daily_plans as dp','dp.id','=','dpi.daily_plan_id')
     ->where('dp.user_id',$user->id)
@@ -76,10 +90,10 @@ public function saveCheckin(User $user,string $type,array $data): array {
    }
   }
 
-  if(Schema::hasTable('meetings')){
-   $meetingDateColumn=Schema::hasColumn('meetings','meeting_date')
+  if(self::hasTable('meetings')){
+   $meetingDateColumn=self::hasColumn('meetings','meeting_date')
     ? 'meeting_date'
-    : (Schema::hasColumn('meetings','date') ? 'date' : null);
+    : (self::hasColumn('meetings','date') ? 'date' : null);
 
    if($meetingDateColumn){
     $meetingRows=DB::table('meetings')
@@ -110,7 +124,7 @@ public function saveCheckin(User $user,string $type,array $data): array {
   $income=0.0;
   $exercise=0;
 
-  if(Schema::hasTable('daily_plan_items') && Schema::hasTable('daily_plans')){
+  if(self::hasTable('daily_plan_items') && self::hasTable('daily_plans')){
    $q=DB::table('daily_plan_items as dpi')
     ->join('daily_plans as dp','dp.id','=','dpi.daily_plan_id')
     ->where('dp.user_id',$user->id)
@@ -118,16 +132,16 @@ public function saveCheckin(User $user,string $type,array $data): array {
 
    $total=(clone $q)->count();
 
-   if(Schema::hasColumn('daily_plan_items','status')){
+   if(self::hasColumn('daily_plan_items','status')){
     $done=(clone $q)->whereIn('dpi.status',['completed','done'])->count();
-   } elseif(Schema::hasColumn('daily_plan_items','is_completed')){
+   } elseif(self::hasColumn('daily_plan_items','is_completed')){
     $done=(clone $q)->where('dpi.is_completed',true)->count();
    }
   }
 
   foreach([['expenses','expenses'],['incomes','income']] as [$table,$key]){
-   if(Schema::hasTable($table) && Schema::hasColumn($table,'amount')){
-    $dc=Schema::hasColumn($table,'date') ? 'date' : 'created_at';
+   if(self::hasTable($table) && self::hasColumn($table,'amount')){
+    $dc=self::hasColumn($table,'date') ? 'date' : 'created_at';
     $$key=(float)DB::table($table)
      ->where('user_id',$user->id)
      ->whereDate($dc,$day->toDateString())
@@ -135,15 +149,15 @@ public function saveCheckin(User $user,string $type,array $data): array {
    }
   }
 
-  if(Schema::hasTable('exercise_logs')){
-   $dc=Schema::hasColumn('exercise_logs','date') ? 'date' : 'created_at';
+  if(self::hasTable('exercise_logs')){
+   $dc=self::hasColumn('exercise_logs','date') ? 'date' : 'created_at';
    $exercise=DB::table('exercise_logs')
     ->where('user_id',$user->id)
     ->whereDate($dc,$day->toDateString())
     ->count();
   }
 
-  $actions=Schema::hasTable('engagement_events')
+  $actions=self::hasTable('engagement_events')
    ? DB::table('engagement_events')
       ->where('user_id',$user->id)
       ->whereDate('event_date',$day->toDateString())
@@ -164,7 +178,7 @@ public function saveCheckin(User $user,string $type,array $data): array {
   $done=0;
   $total=0;
 
-  if(Schema::hasTable('daily_plan_items') && Schema::hasTable('daily_plans')){
+  if(self::hasTable('daily_plan_items') && self::hasTable('daily_plans')){
    $q=DB::table('daily_plan_items as dpi')
     ->join('daily_plans as dp','dp.id','=','dpi.daily_plan_id')
     ->where('dp.user_id',$user->id)
@@ -175,14 +189,14 @@ public function saveCheckin(User $user,string $type,array $data): array {
 
    $total=(clone $q)->count();
 
-   if(Schema::hasColumn('daily_plan_items','status')){
+   if(self::hasColumn('daily_plan_items','status')){
     $done=(clone $q)->whereIn('dpi.status',['completed','done'])->count();
-   } elseif(Schema::hasColumn('daily_plan_items','is_completed')){
+   } elseif(self::hasColumn('daily_plan_items','is_completed')){
     $done=(clone $q)->where('dpi.is_completed',true)->count();
    }
   }
 
-  $days=Schema::hasTable('engagement_events')
+  $days=self::hasTable('engagement_events')
    ? DB::table('engagement_events')
       ->where('user_id',$user->id)
       ->whereBetween('event_date',[
@@ -203,8 +217,8 @@ public function saveCheckin(User $user,string $type,array $data): array {
    'streak'=>$this->streak($user),
   ];
  }
- private function hasCheckin(User $u,Carbon $d,string $type): bool {return Schema::hasTable('daily_checkins')&&DB::table('daily_checkins')->where('user_id',$u->id)->whereDate('checkin_date',$d->toDateString())->where('type',$type)->exists();}
- private function streak(User $u): array {$r=Schema::hasTable('engagement_streaks')?DB::table('engagement_streaks')->where('user_id',$u->id)->first():null;return ['current'=>(int)($r->current_streak??0),'best'=>(int)($r->best_streak??0),'last_day'=>$r->last_meaningful_day??null];}
+ private function hasCheckin(User $u,Carbon $d,string $type): bool {return self::hasTable('daily_checkins')&&DB::table('daily_checkins')->where('user_id',$u->id)->whereDate('checkin_date',$d->toDateString())->where('type',$type)->exists();}
+ private function streak(User $u): array {$r=self::hasTable('engagement_streaks')?DB::table('engagement_streaks')->where('user_id',$u->id)->first():null;return ['current'=>(int)($r->current_streak??0),'best'=>(int)($r->best_streak??0),'last_day'=>$r->last_meaningful_day??null];}
  private function updateStreak(User $u,Carbon $today): array {$r=DB::table('engagement_streaks')->where('user_id',$u->id)->first();if(!$r){DB::table('engagement_streaks')->insert(['user_id'=>$u->id,'current_streak'=>1,'best_streak'=>1,'last_meaningful_day'=>$today->toDateString(),'created_at'=>now(),'updated_at'=>now()]);return $this->streak($u);} $last=$r->last_meaningful_day?Carbon::parse($r->last_meaningful_day,$this->timezoneFor($u))->startOfDay():null;if($last?->isSameDay($today))return $this->streak($u);$current=$last&&$last->copy()->addDay()->isSameDay($today)?$r->current_streak+1:1;$best=max((int)$r->best_streak,$current);DB::table('engagement_streaks')->where('user_id',$u->id)->update(['current_streak'=>$current,'best_streak'=>$best,'last_meaningful_day'=>$today->toDateString(),'updated_at'=>now()]);return $this->streak($u);}
  private function celebration(User $u,Carbon $today): ?array {$s=$this->streak($u);if(in_array($s['current'],[3,7,14,30,60,100,365],true))return ['type'=>'streak','title'=>'🔥 '.$s['current'].'-Day Growth Streak','message'=>'You have kept showing up through meaningful actions.'];$p=$this->progress($u,$today);if($p['tasks_total']>=3&&$p['tasks_completed']===$p['tasks_total'])return ['type'=>'tasks','title'=>'🎉 Today’s plan completed','message'=>'You completed every planned task for today.'];return null;}
 }

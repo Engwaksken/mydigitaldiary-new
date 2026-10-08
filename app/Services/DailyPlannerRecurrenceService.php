@@ -200,6 +200,127 @@ class DailyPlannerRecurrenceService
             ->values();
     }
 
+    /**
+     * Task totals for every date in [from, to], resolved exactly like
+     * itemsForDate() (recurring series expanded per date, skipped
+     * occurrences dropped, per-occurrence completion) but with ONE candidate
+     * query and ONE occurrence query for the whole range instead of one
+     * request/query set per day. Used by the week/month reviews.
+     *
+     * @return array{total:int, completed:int, days:int}
+     */
+    public function statisticsForRange(
+        int $userId,
+        CarbonInterface $from,
+        CarbonInterface $to
+    ): array {
+        // Date-only in the app timezone, like GET /daily-planner?date=…, so
+        // occursOn()'s same-day checks see the same calendar dates.
+        $from = Carbon::parse($from->toDateString())->startOfDay();
+        $to = Carbon::parse($to->toDateString())->startOfDay();
+
+        if ($to->lt($from)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $fromString = $from->toDateString();
+        $toString = $to->toDateString();
+
+        $candidates = DailyPlanItem::query()
+            ->with([
+                'plan',
+                'occurrences' => fn ($query) => $query
+                    ->whereDate('occurrence_date', '>=', $fromString)
+                    ->whereDate('occurrence_date', '<=', $toString),
+            ])
+            ->whereHas(
+                'plan',
+                fn ($query) => $query->where('user_id', $userId)
+            )
+            ->where(function ($query) use ($fromString, $toString) {
+                $query
+                    ->where(function ($once) use ($fromString, $toString) {
+                        $once->where(function ($q) {
+                            $q->whereNull('repeat_type')
+                                ->orWhere('repeat_type', 'once');
+                        })->whereHas(
+                            'plan',
+                            fn ($plan) => $plan
+                                ->whereDate('plan_date', '>=', $fromString)
+                                ->whereDate('plan_date', '<=', $toString)
+                        );
+                    })
+                    ->orWhere(function ($recurring) use ($fromString, $toString) {
+                        $recurring
+                            ->whereNotNull('repeat_type')
+                            ->where('repeat_type', '!=', 'once')
+                            ->where(function ($starts) use ($toString) {
+                                $starts
+                                    ->whereNull('repeat_starts_on')
+                                    ->orWhereDate('repeat_starts_on', '<=', $toString);
+                            })
+                            ->where(function ($ends) use ($fromString) {
+                                $ends
+                                    ->whereNull('repeat_ends_on')
+                                    ->orWhereDate('repeat_ends_on', '>=', $fromString);
+                            });
+                    });
+            })
+            ->get();
+
+        // item id => [Y-m-d => occurrence]
+        $occurrences = [];
+        foreach ($candidates as $item) {
+            foreach ($item->occurrences as $occurrence) {
+                $key = $occurrence->occurrence_date?->toDateString();
+                if ($key !== null) {
+                    $occurrences[$item->id][$key] = $occurrence;
+                }
+            }
+        }
+
+        $total = 0;
+        $completed = 0;
+        $days = 0;
+
+        for ($date = $from->copy(); $date->lte($to); $date->addDay()) {
+            $dateString = $date->toDateString();
+            $dayTotal = 0;
+
+            foreach ($candidates as $item) {
+                if (! $item->occursOn($date)) {
+                    continue;
+                }
+
+                $occurrence = $occurrences[$item->id][$dateString] ?? null;
+
+                if ($occurrence?->is_skipped) {
+                    continue;
+                }
+
+                $isCompleted = $item->isRecurring()
+                    ? (bool) ($occurrence?->is_completed ?? false)
+                    : (bool) $item->getRawOriginal('is_completed');
+
+                $dayTotal++;
+                if ($isCompleted) {
+                    $completed++;
+                }
+            }
+
+            $total += $dayTotal;
+            if ($dayTotal > 0) {
+                $days++;
+            }
+        }
+
+        return [
+            'total' => $total,
+            'completed' => $completed,
+            'days' => $days,
+        ];
+    }
+
     public function statistics(
         SupportCollection $items
     ): array {
