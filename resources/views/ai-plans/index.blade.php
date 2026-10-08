@@ -357,6 +357,24 @@
             overflow: hidden;
         }
 
+        #ai-generate-modal {
+            width: min(92vw, 600px);
+        }
+
+        #ai-generate-modal textarea {
+            display: block;
+            width: 100%;
+            min-height: 10rem;
+            max-height: min(52dvh, 24rem);
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        #ai-generate-modal button:focus-visible {
+            outline: 3px solid var(--brand-2);
+            outline-offset: 3px;
+        }
+
         .pm-ai-dialog > form,
         .pm-ai-dialog > div {
             max-height: calc(100dvh - 24px);
@@ -400,6 +418,16 @@
                 border-radius: 18px !important;
             }
 
+            #ai-generate-modal {
+                width: calc(100vw - 24px);
+                max-width: calc(100vw - 24px);
+            }
+
+            #ai-generate-modal textarea {
+                min-height: 8rem;
+                max-height: 42dvh;
+            }
+
             .pm-ai-dialog > form,
             .pm-ai-dialog > div {
                 max-height: calc(100dvh - 16px);
@@ -426,12 +454,20 @@
     </style>
 
     <dialog id="ai-generate-modal" class="pm-ai-dialog rounded-2xl p-0 pm-dialog-xl shadow-2xl backdrop:bg-slate-900/50">
-        <form method="POST" action="{{ route('ai-plans.store') }}" class="p-6">
+        <form method="POST" action="{{ route('ai-plans.store') }}" aria-labelledby="ai-generate-title" class="p-6 sm:p-7">
             @csrf
-            <div class="flex items-center justify-between mb-4"><h2 class="text-lg font-bold text-slate-800">What should the AI Planner generate?</h2><button type="button" onclick="this.closest('dialog').close()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button></div>
-            <label for="custom_prompt" class="block text-sm font-medium text-slate-700 mb-1">Your request</label>
-            <textarea id="custom_prompt" name="custom_prompt" rows="5" maxlength="3000" class="pm-input" placeholder="Example: Build a realistic 7-day plan focused on saving UGX 100,000, completing my overdue project tasks, exercising three times, and making time for prayer.">{{ old('custom_prompt') }}</textarea>
-            <div class="pm-ai-modal-actions flex flex-wrap justify-end gap-3 mt-5"><button type="button" onclick="this.closest('dialog').close()" class="px-4 py-2 text-sm text-slate-600">Cancel</button><button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate</button></div>
+            <div class="flex items-start justify-between gap-4 border-b border-slate-100 pb-4 mb-5">
+                <h2 id="ai-generate-title" class="text-xl font-bold leading-tight text-slate-800">What should the AI Planner generate?</h2>
+                <button type="button" onclick="this.closest('dialog').close()" aria-label="Close AI Planner request dialog" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <label for="custom_prompt" class="mb-2 block text-sm font-semibold text-slate-700">Your request</label>
+            <textarea id="custom_prompt" name="custom_prompt" rows="5" maxlength="3000" class="pm-input" placeholder="Describe your goals, priorities, and timeframe…">{{ old('custom_prompt') }}</textarea>
+            <div class="pm-ai-modal-actions mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-4">
+                <button type="button" onclick="this.closest('dialog').close()" class="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-2)]">Cancel</button>
+                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg btn-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-2)]"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>Generate</span></button>
+            </div>
         </form>
     </dialog>
 
