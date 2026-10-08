@@ -178,6 +178,19 @@ class DashboardController extends Controller
 
 
     /**
+     * The mobile "Today" hub in one payload (greeting, task progress,
+     * streak + last 7 days, nudge, routine state, get-started checklist,
+     * top tasks, coming up, progress rings, money, "On this day" and the
+     * daily reminder settings). See TodayHubService.
+     */
+    public function todayHub(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => app(\App\Services\TodayHubService::class)->build($request->user()),
+        ]);
+    }
+
+    /**
      * Dedicated mobile endpoint for Today's Focus. Keeping this separate from
      * the larger dashboard payload prevents stale/partially cached dashboard
      * responses from making the Home screen look empty.

@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\Budget;
 use App\Models\Expense;
-use App\Services\BudgetExpenseService;
+use App\Services\ExpenseBudgetLinkService;
 use App\Services\ReceiptExtractionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
@@ -25,7 +23,7 @@ class ExpenseController extends CrudController
     protected string $dateField = 'spent_at';
 
     /** Value of the budget picker's "+ Add new item" option. */
-    private const NEW_BUDGET_ITEM = 'new';
+    private const NEW_BUDGET_ITEM = ExpenseBudgetLinkService::NEW_BUDGET_ITEM;
 
     protected array $fields = [
         // Rendered by crud/_budget-picker.blade.php; its grouped options are
@@ -197,68 +195,21 @@ class ExpenseController extends CrudController
         return $rules;
     }
 
-    /**
-     * "+ Add new item" with "Also add to … budget" ticked: creates a
-     * monthly Budget item for the expense's month with the expense's
-     * category and amount, then links the expense to it.
-     */
-    private function addToMonthBudget(Expense $expense): void
+    private function links(): ExpenseBudgetLinkService
     {
-        if (! Schema::hasColumn('expenses', 'budget_id')) {
-            return;
-        }
-
-        $month = Carbon::parse($expense->spent_at ?? now())->format('Y-m');
-
-        $budget = Budget::create([
-            'user_id' => $expense->user_id,
-            'category' => $expense->category,
-            'amount' => (float) $expense->amount,
-            'period' => 'monthly',
-            'month_year' => $month,
-            'application_type' => 'expense',
-            'debt_id' => null,
-            'is_expensed' => false,
-            'expensed_at' => null,
-            'applied_amount' => 0,
-        ]);
-
-        $expense->forceFill(['budget_id' => $budget->id])->save();
+        return app(ExpenseBudgetLinkService::class);
     }
 
-    /**
-     * A Budget item already marked as paid keeps one automatic Expense
-     * that tops it up to the full amount; recompute that top-up whenever
-     * a manual Expense is linked to or unlinked from it, so the budget is
-     * never double counted. The automatic Expense itself is left alone.
-     */
+    /** See ExpenseBudgetLinkService::addToMonthBudget(). */
+    private function addToMonthBudget(Expense $expense): void
+    {
+        $this->links()->addToMonthBudget($expense);
+    }
+
+    /** See ExpenseBudgetLinkService::refreshBudgets(). */
     private function refreshBudgets(Expense $expense, array $budgetIds): void
     {
-        $budgetIds = array_values(array_unique(array_filter($budgetIds)));
-
-        if ($budgetIds === [] || $expense->payment_method === 'Budget') {
-            return;
-        }
-
-        try {
-            $service = app(BudgetExpenseService::class);
-
-            Budget::query()
-                ->where('user_id', $expense->user_id)
-                ->whereIn('id', $budgetIds)
-                ->get()
-                ->each(function (Budget $budget) use ($service, $expense) {
-                    if (! $budget->is_expensed
-                        || ($budget->application_type ?: 'expense') !== 'expense'
-                        || (int) ($budget->auto_expense_id ?? 0) === (int) $expense->id) {
-                        return;
-                    }
-
-                    $service->refreshLinkedExpense($budget);
-                });
-        } catch (\Throwable $exception) {
-            report($exception);
-        }
+        $this->links()->refreshBudgets($expense, $budgetIds);
     }
 
     /**
@@ -269,24 +220,13 @@ class ExpenseController extends CrudController
      */
     private function withBudgetOptions(Request $request, array $alsoInclude = []): array
     {
-        $budgets = $this->budgetItemsFor($request, $alsoInclude);
+        $groups = $this->links()->groupedOptions($request->user(), $alsoInclude);
 
-        $groups = [];
         $options = [];
-        foreach ($budgets as $budget) {
-            $groupLabel = $this->budgetGroupLabel($budget);
-            $planned = (float) $budget->amount;
-            $remaining = (float) $budget->remaining_amount;
-
-            $groups[$groupLabel][] = [
-                'id' => $budget->id,
-                'category' => (string) $budget->category,
-                'planned' => $planned,
-                'remaining' => $remaining,
-                'label' => $budget->category . ' — ' . format_money($planned) . ' planned · '
-                    . ($remaining >= 0 ? format_money($remaining) . ' left' : format_money(abs($remaining)) . ' over'),
-            ];
-            $options[$budget->id] = $budget->category . ' (' . $groupLabel . ')';
+        foreach ($groups as $groupLabel => $items) {
+            foreach ($items as $item) {
+                $options[$item['id']] = $item['category'] . ' (' . $groupLabel . ')';
+            }
         }
 
         $currentMonthLabel = Carbon::now()->format('F Y');
@@ -300,72 +240,6 @@ class ExpenseController extends CrudController
 
             return $field;
         }, $this->fields));
-    }
-
-    private function budgetItemsFor(Request $request, array $alsoInclude): Collection
-    {
-        if (! Schema::hasTable('budgets') || ! Schema::hasColumn('expenses', 'budget_id')) {
-            return collect();
-        }
-
-        try {
-            $months = [
-                now()->subMonthNoOverflow()->format('Y-m'),
-                now()->format('Y-m'),
-                now()->addMonthNoOverflow()->format('Y-m'),
-            ];
-
-            return Budget::query()
-                ->where('user_id', $request->user()->id)
-                ->when(Schema::hasColumn('budgets', 'is_archived'), fn ($q) => $q->where('is_archived', false))
-                ->when(Schema::hasColumn('budgets', 'application_type'), fn ($q) => $q->where(
-                    fn ($inner) => $inner->whereNull('application_type')->orWhere('application_type', 'expense')
-                ))
-                ->where(function ($q) use ($months, $alsoInclude) {
-                    $q->where(fn ($monthly) => $monthly->where('period', 'monthly')->whereIn('month_year', $months))
-                        ->orWhereIn('period', ['weekly', 'annually']);
-
-                    if ($alsoInclude !== []) {
-                        $q->orWhereIn('id', $alsoInclude);
-                    }
-                })
-                ->withSpending()
-                ->orderByDesc('month_year')
-                ->orderBy('category')
-                ->limit(200)
-                ->get()
-                ->each(fn (Budget $budget) => $budget->appendSpending())
-                // This month first, then next month, last month, weekly/annual, older.
-                ->sortBy(fn (Budget $budget) => match (true) {
-                    $budget->period === 'monthly' && $budget->month_year === $months[1] => 0,
-                    $budget->period === 'monthly' && $budget->month_year === $months[2] => 1,
-                    $budget->period === 'monthly' && $budget->month_year === $months[0] => 2,
-                    $budget->period !== 'monthly' => 3,
-                    default => 4,
-                })
-                ->values();
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            return collect();
-        }
-    }
-
-    private function budgetGroupLabel(Budget $budget): string
-    {
-        if ($budget->period === 'weekly') {
-            return 'Weekly budget';
-        }
-
-        if ($budget->period === 'annually') {
-            return 'Annual budget';
-        }
-
-        try {
-            return Carbon::createFromFormat('Y-m', (string) $budget->month_year)->format('F Y') . ' budget';
-        } catch (\Throwable) {
-            return 'Budget';
-        }
     }
 
     private function syncItems(Expense $expense, array $items): void
@@ -487,46 +361,12 @@ class ExpenseController extends CrudController
     /** Planned total of this month's monthly expense Budget items (0 when none). */
     private function monthBudgetTotal(Request $request): float
     {
-        try {
-            if (! Schema::hasTable('budgets')) {
-                return 0.0;
-            }
-
-            return (float) Budget::query()
-                ->where('user_id', $request->user()->id)
-                ->where('period', 'monthly')
-                ->where('month_year', now()->format('Y-m'))
-                ->when(Schema::hasColumn('budgets', 'is_archived'), fn ($q) => $q->where('is_archived', false))
-                ->when(Schema::hasColumn('budgets', 'application_type'), fn ($q) => $q->where(
-                    fn ($inner) => $inner->whereNull('application_type')->orWhere('application_type', 'expense')
-                ))
-                ->sum('amount');
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            return 0.0;
-        }
+        return $this->links()->monthBudgetTotal($request->user());
     }
 
     protected function nudge(Request $request): ?string
     {
-        $monthBudget = $this->monthBudgetTotal($request);
-        $spent = (float) Expense::query()
-            ->where('user_id', $request->user()->id)
-            ->whereBetween('spent_at', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
-            ->sum('amount');
-
-        if ($monthBudget <= 0) {
-            return $spent > 0
-                ? 'Tip: set a monthly budget to see how your spending compares.'
-                : 'No spending logged this month yet.';
-        }
-
-        $left = $monthBudget - $spent;
-
-        return $left >= 0
-            ? format_money($left) . ' left in this month\'s budget.'
-            : 'You are ' . format_money(abs($left)) . ' over this month\'s budget.';
+        return $this->links()->nudge($request->user());
     }
 
     protected function chart(Request $request): ?array

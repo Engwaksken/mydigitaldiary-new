@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Expense;
+use App\Services\ExpenseBudgetLinkService;
 use App\Services\ReceiptExtractionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use App\Services\OfflineConflictGuard;
 
@@ -39,7 +42,9 @@ class ExpenseController extends ApiCrudController
     public function index(Request $request): JsonResponse
     {
         $items = $this->filteredIndexQuery($request)
-            ->with('items')
+            ->with(Schema::hasColumn('expenses', 'budget_id')
+                ? ['items', 'budget:id,category,month_year,period']
+                : ['items'])
             ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
@@ -53,10 +58,11 @@ class ExpenseController extends ApiCrudController
             return $this->extractReceipt($request);
         }
 
+        $addNewToBudget = $this->normaliseBudgetChoice($request);
         $data = $request->validate($this->rulesFor($request));
         $data['user_id'] = $request->user()->id;
         $items = $data['items'] ?? [];
-        unset($data['items']);
+        unset($data['items'], $data['add_to_budget']);
 
         if (! empty($items)) {
             $data['amount'] = collect($items)->sum(fn ($i) => $i['quantity'] * $i['unit_price']);
@@ -70,7 +76,13 @@ class ExpenseController extends ApiCrudController
             $this->syncItems($expense, $items);
         }
 
-        return response()->json($expense->load('items'), 201);
+        if ($addNewToBudget && empty($expense->budget_id)) {
+            $this->links()->addToMonthBudget($expense);
+        }
+
+        $this->links()->refreshBudgets($expense, [$expense->budget_id]);
+
+        return response()->json($expense->fresh()->load('items'), 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -78,9 +90,11 @@ class ExpenseController extends ApiCrudController
         $expense = Expense::where('user_id', $request->user()->id)->findOrFail($id);
         if ($conflict = OfflineConflictGuard::check($request, $expense)) return $conflict;
 
+        $previousBudgetId = $expense->budget_id;
+        $addNewToBudget = $this->normaliseBudgetChoice($request);
         $data = $request->validate($this->rulesFor($request));
         $items = $data['items'] ?? [];
-        unset($data['items']);
+        unset($data['items'], $data['add_to_budget']);
 
         if (! empty($items)) {
             $data['amount'] = collect($items)->sum(fn ($i) => $i['quantity'] * $i['unit_price']);
@@ -98,7 +112,124 @@ class ExpenseController extends ApiCrudController
             $this->syncItems($expense, $items);
         }
 
+        if ($addNewToBudget && empty($expense->budget_id)) {
+            $this->links()->addToMonthBudget($expense);
+        }
+
+        $this->links()->refreshBudgets($expense, [$previousBudgetId, $expense->budget_id]);
+
         return response()->json($expense->fresh()->load('items'));
+    }
+
+    /**
+     * Budget items the Add Expense picker offers, grouped by budget, with
+     * planned and remaining amounts — same items and labels as the web
+     * form's picker. Pass ?include[]=<id> so an expense being edited keeps
+     * its (possibly older) linked item in the list.
+     */
+    public function budgetOptions(Request $request): JsonResponse
+    {
+        $include = array_values(array_filter(
+            array_map('intval', (array) $request->input('include', [])),
+            fn (int $id) => $id > 0
+        ));
+
+        $groups = [];
+        foreach ($this->links()->groupedOptions($request->user(), $include) as $label => $items) {
+            $groups[] = ['label' => $label, 'items' => $items];
+        }
+
+        return response()->json([
+            'data' => [
+                'groups' => $groups,
+                'current_month' => Carbon::now()->format('Y-m'),
+                'current_month_label' => Carbon::now()->format('F Y'),
+            ],
+        ]);
+    }
+
+    /**
+     * The compact summary strip and one-line nudge shown above the
+     * expense list (same figures and copy as the web list page).
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $base = Expense::query()->where('user_id', $user->id);
+
+        $monthStart = now()->startOfMonth()->toDateString();
+        $monthEnd = now()->endOfMonth()->toDateString();
+
+        $thisMonth = (float) (clone $base)
+            ->whereDate('spent_at', '>=', $monthStart)
+            ->whereDate('spent_at', '<=', $monthEnd)
+            ->sum('amount');
+
+        $thisYear = (float) (clone $base)
+            ->whereDate('spent_at', '>=', now()->startOfYear()->toDateString())
+            ->whereDate('spent_at', '<=', now()->endOfYear()->toDateString())
+            ->sum('amount');
+
+        $topCategory = (clone $base)
+            ->whereDate('spent_at', '>=', $monthStart)
+            ->whereDate('spent_at', '<=', $monthEnd)
+            ->selectRaw('category, SUM(amount) AS total')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->first();
+
+        $monthBudget = $this->links()->monthBudgetTotal($user);
+
+        return response()->json([
+            'data' => [
+                'stats' => [
+                    ['key' => 'month', 'label' => 'This month', 'value' => format_money($thisMonth)],
+                    [
+                        'key' => 'budget',
+                        'label' => 'Of budget',
+                        'value' => $monthBudget > 0
+                            ? round(($thisMonth / $monthBudget) * 100).'% of '.format_money($monthBudget)
+                            : 'No budget yet',
+                        'tone' => $monthBudget > 0 && $thisMonth > $monthBudget ? 'warning' : 'success',
+                    ],
+                    ['key' => 'top', 'label' => 'Top category', 'value' => $topCategory?->category ?? '—'],
+                    ['key' => 'year', 'label' => 'This year', 'value' => format_money($thisYear)],
+                ],
+                'nudge' => $this->links()->nudge($user),
+            ],
+        ]);
+    }
+
+    private function links(): ExpenseBudgetLinkService
+    {
+        return app(ExpenseBudgetLinkService::class);
+    }
+
+    /**
+     * budget_id is a Budget id, null/'' (no link) or 'new' ("+ Add new
+     * item", same as the web picker). 'new' means no link yet; returns
+     * whether the user also asked to add the new item to that month's
+     * budget (add_to_budget). Omitting budget_id leaves a link unchanged.
+     */
+    private function normaliseBudgetChoice(Request $request): bool
+    {
+        if (! $request->has('budget_id')) {
+            return false;
+        }
+
+        $choice = $request->input('budget_id');
+
+        if ($choice === ExpenseBudgetLinkService::NEW_BUDGET_ITEM) {
+            $request->merge(['budget_id' => null]);
+
+            return $request->boolean('add_to_budget');
+        }
+
+        if ($choice === '') {
+            $request->merge(['budget_id' => null]);
+        }
+
+        return false;
     }
 
     /**
@@ -110,6 +241,7 @@ class ExpenseController extends ApiCrudController
     {
         return [
             ...$this->rules,
+            'add_to_budget' => 'nullable|boolean',
             'budget_id' => [
                 'nullable',
                 'integer',

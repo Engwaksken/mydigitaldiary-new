@@ -137,6 +137,7 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::get('dashboard/today-insight', [DashboardController::class, 'todayInsight']);
     Route::get('dashboard/finance-summary', [DashboardController::class, 'financeSummaryData']);
     Route::get('dashboard/recent-activity', [DashboardController::class, 'recentActivityFull']);
+    Route::get('dashboard/today-hub', [DashboardController::class, 'todayHub'])->name('dashboard.today-hub');
     Route::get('savings', [SavingsOverviewController::class, 'index']);
     Route::post('debts/{debt}/reminders/send', [DebtReminderController::class, 'send']);
     Route::get('debts/{debt}/reminders/history', [DebtReminderController::class, 'history']);
@@ -270,6 +271,9 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::get('reminders/due-now', [\App\Http\Controllers\Api\ReminderController::class, 'dueNow']);
     Route::post('reminders/toggle-mute', [\App\Http\Controllers\Api\ReminderController::class, 'toggleMute']);
     Route::get('reminders/items-for-module', [\App\Http\Controllers\Api\ReminderController::class, 'itemsForModule']);
+    // Add Expense budget picker + list summary (before the expenses apiResource).
+    Route::get('expenses/budget-options', [ExpenseController::class, 'budgetOptions'])->name('expenses.budget-options');
+    Route::get('expenses/summary', [ExpenseController::class, 'summary'])->name('expenses.summary');
     // archive/unarchive routes are registered BEFORE each apiResource
     // for the same reason reminders/due-now had to be registered
     // before Route::apiResource('reminders', ...) earlier — a
