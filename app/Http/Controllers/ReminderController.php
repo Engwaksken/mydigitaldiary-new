@@ -31,12 +31,12 @@ class ReminderController extends CrudController
             'monthly' => 'Monthly',
             'annually' => 'Annually',
         ]],
-        ['name' => 'interval_minutes', 'label' => 'N (only used if "Every N Minutes")', 'type' => 'number'],
+        ['name' => 'interval_minutes', 'table' => 'hidden', 'label' => 'N (only used if "Every N Minutes")', 'type' => 'number'],
         ['name' => 'next_run_at', 'label' => 'Reminder Date & Time', 'type' => 'datetime-local', 'required' => true],
         ['name' => 'channel', 'label' => 'Send Via', 'type' => 'select', 'required' => true, 'options' => [
             'database' => 'In-App Only', 'mail' => 'In-App + Email',
         ]],
-        ['name' => 'alarm_enabled', 'label' => 'Also pop up an in-app alarm (with sound) when due', 'type' => 'checkbox', 'default' => true],
+        ['name' => 'alarm_enabled', 'table' => 'hidden', 'label' => 'Also pop up an in-app alarm (with sound) when due', 'type' => 'checkbox', 'default' => true],
         ['name' => 'message', 'label' => 'Message', 'type' => 'textarea'],
     ];
 
@@ -194,10 +194,12 @@ class ReminderController extends CrudController
                 'color' => 'sky',
             ],
             [
-                'label' => 'Weekly',
-                'value' => (string) (clone $base)->where('frequency', 'weekly')->count(),
-                'icon' => 'fa-solid fa-calendar-week',
-                'color' => 'violet',
+                'label' => 'Due today',
+                'value' => (string) (clone $base)->where('is_active', true)
+                    ->whereBetween('next_run_at', [now()->startOfDay(), now()->endOfDay()])
+                    ->count(),
+                'icon' => 'fa-solid fa-clock',
+                'color' => 'amber',
             ],
             [
                 'label' => 'Total',
@@ -206,6 +208,22 @@ class ReminderController extends CrudController
                 'color' => 'slate',
             ],
         ];
+    }
+
+    protected function nudge(Request $request): ?string
+    {
+        $next = Reminder::query()
+            ->where('user_id', $request->user()->id)
+            ->where('is_active', true)
+            ->where('next_run_at', '>=', now())
+            ->orderBy('next_run_at')
+            ->first(['title', 'next_run_at']);
+
+        if (! $next) {
+            return 'No upcoming reminders — add one so nothing important slips by.';
+        }
+
+        return 'Next up: ' . \Illuminate\Support\Str::limit((string) $next->title, 40) . ' · ' . $next->next_run_at->diffForHumans();
     }
 
     protected function chart(Request $request): ?array

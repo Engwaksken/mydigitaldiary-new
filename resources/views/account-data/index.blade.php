@@ -26,9 +26,29 @@
     @if($trash->isEmpty())
       <div class="apple-empty"><i class="fa-regular fa-circle-check"></i><strong>Your recycle bin is empty.</strong><span>Deleted supported records will appear here.</span></div>
     @else
-      <div class="apple-table-wrap"><table class="apple-table"><thead><tr><th>Item</th><th>Type</th><th>Deleted</th><th>Expires</th><th></th></tr></thead><tbody>
-      @foreach($trash as $item)<tr><td><strong>{{ $item->label ?: 'Untitled item' }}</strong></td><td>{{ class_basename($item->model_type) }}</td><td>{{ optional($item->deleted_at)->format('d M Y H:i') }}</td><td>{{ optional($item->expires_at)->diffForHumans() }}</td><td class="text-right"><div class="apple-actions"><form method="POST" action="{{ route('account-data.restore',$item) }}">@csrf<button class="apple-btn apple-btn-small"><i class="fa-solid fa-rotate-left"></i> Restore</button></form><form method="POST" action="{{ route('account-data.destroy',$item) }}" data-confirm="Permanently delete this item? This action cannot be undone." data-confirm-title="Delete permanently?" data-confirm-text="Delete">@csrf @method('DELETE')<button class="apple-btn apple-btn-small danger"><i class="fa-solid fa-trash"></i></button></form></div></td></tr>@endforeach
-      </tbody></table></div>{{ $trash->links() }}
+      <div class="pm-dt-wrap">
+        <table class="pm-dt">
+          <caption class="sr-only">Recently deleted items you can restore or delete permanently.</caption>
+          <thead><tr><th scope="col">Item</th><th scope="col">Expires</th><th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+          @foreach($trash as $item)
+            <tr>
+              <td class="pm-dt-main">
+                <span class="pm-dt-title" title="{{ $item->label ?: 'Untitled item' }}">{{ $item->label ?: 'Untitled item' }}</span>
+                <span class="pm-dt-sub"><span>{{ class_basename($item->model_type) }}</span>@if($item->deleted_at)<span>Deleted {{ $item->deleted_at->format('d M Y H:i') }}</span>@endif</span>
+              </td>
+              <td class="pm-dt-aux" data-label="Expires">{{ optional($item->expires_at)->diffForHumans() }}</td>
+              <td class="pm-dt-actions">
+                <div class="inline-flex items-center gap-1">
+                  <form method="POST" action="{{ route('account-data.restore',$item) }}">@csrf<button class="apple-btn apple-btn-small"><i class="fa-solid fa-rotate-left"></i> Restore</button></form>
+                  <form method="POST" action="{{ route('account-data.destroy',$item) }}" data-confirm="Permanently delete this item? This action cannot be undone." data-confirm-title="Delete permanently?" data-confirm-text="Delete">@csrf @method('DELETE')<button class="pm-dt-icon-btn text-rose-500" title="Delete permanently" aria-label="Delete {{ $item->label ?: 'item' }} permanently"><i class="fa-solid fa-trash text-xs" aria-hidden="true"></i></button></form>
+                </div>
+              </td>
+            </tr>
+          @endforeach
+          </tbody>
+        </table>
+      </div>{{ $trash->links() }}
     @endif
   </section>
 </div>

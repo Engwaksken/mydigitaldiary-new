@@ -3,6 +3,16 @@
 @section('title', 'Budgets')
 
 @section('content')
+<style>
+    /* The budget table sits inside the month card: no second border/shadow. */
+    .pm-dt-wrap.budget-dt-flat { border: 0; border-radius: 0 0 1rem 1rem; box-shadow: none; }
+    .pm-dt-wrap.budget-dt-flat .pm-dt thead th { border-radius: 0 !important; }
+    .budget-import-dt .pm-dt tbody td { vertical-align: top; }
+    @media (max-width: 767.98px) {
+        /* Import review rows: inputs share the second line evenly. */
+        .budget-import-dt .pm-dt tbody td.pm-dt-aux { flex: 1 1 40%; }
+    }
+</style>
 @php
     $tableExists = $tableExists ?? false;
     $columns = is_array($columns ?? null) ? $columns : [];
@@ -201,7 +211,8 @@
             </div>
         @endunless
 
-        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-5">
+        {{-- No overflow-hidden here: row action menus must not be clipped. --}}
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm mb-5">
             <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
                 <div class="flex items-center gap-2">
                     <a
@@ -252,80 +263,93 @@
                     message="Add one manually, duplicate a previous month, or upload/scan a budget."
                 />
             @else
-                <div class="overflow-x-auto">
-                    <table class="min-w-[760px] w-full text-sm">
-                        <thead class="bg-slate-50 text-slate-600">
+                <div class="pm-dt-wrap budget-dt-flat">
+                    <table class="pm-dt">
+                        <caption class="sr-only">Budget items for {{ $selectedMonth }}. Tick an item once it has been spent.</caption>
+                        <thead>
                             <tr>
-                                <th class="px-4 py-3 text-left w-20">Spent?</th>
-                                <th class="px-4 py-3 text-left">Category</th>
-                                <th class="px-4 py-3 text-right">Budgeted Amount</th>
-                                <th class="px-4 py-3 text-left">Notes</th>
-                                <th class="px-4 py-3 text-left">Status</th>
-                                <th class="px-4 py-3 text-right">Actions</th>
+                                <th scope="col" class="w-16">Spent?</th>
+                                <th scope="col">Budget item</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="pm-dt-num">Budgeted</th>
+                                <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @foreach($items as $item)
                                 @php
                                     $isExpensed = (bool) data_get($item, 'is_expensed', false);
+                                    $isDebtPayment = data_get($item, 'application_type') === 'debt_payment';
+                                    $budgetNotes = trim((string) $item->notes);
                                 @endphp
-                                <tr>
-                                    <td class="px-4 py-3">
+                                <tr class="has-check">
+                                    <td class="pm-dt-check">
                                         <input
                                             type="checkbox"
                                             class="rounded border-slate-300 text-emerald-600"
+                                            aria-label="Mark {{ $item->category }} as spent"
                                             @checked($isExpensed)
                                             @disabled(!$expenseLinkingReady)
                                             onchange="toggleBudgetExpense({{ $item->id }}, this)"
                                         >
                                     </td>
-                                    <td class="px-4 py-3 font-bold text-slate-800">
-                                        {{ $item->category }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-black text-slate-900">
-                                        {{ $money($item->amount) }}
-                                    </td>
-                                    <td class="px-4 py-3 text-slate-600 max-w-sm">
-                                        {{ \Illuminate\Support\Str::limit((string) $item->notes, 90) ?: '—' }}
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span
-                                            id="budget-status-{{ $item->id }}"
-                                            class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold {{ $isExpensed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' }}"
-                                        >
-                                            <i class="fa-solid {{ $isExpensed ? 'fa-circle-check' : 'fa-circle' }}"></i>
-                                            {{ $isExpensed
-    ? (data_get($item, 'application_type') === 'debt_payment' ? 'Debt Paid' : 'In Expenses')
-    : 'Not paid' }}
+                                    <td class="pm-dt-main">
+                                        <span class="pm-dt-title" title="{{ $item->category }}">{{ $item->category }}</span>
+                                        <span class="pm-dt-sub">
+                                            @if($isDebtPayment)
+                                                <span><i class="fa-solid fa-hand-holding-dollar text-[10px]" aria-hidden="true"></i> Debt payment</span>
+                                            @endif
+                                            @if(filled($item->period) && $item->period !== 'monthly')
+                                                <span>{{ ucfirst((string) $item->period) }}</span>
+                                            @endif
+                                            @if($budgetNotes !== '')
+                                                <span class="pm-dt-note" title="{{ $budgetNotes }}">{{ \Illuminate\Support\Str::limit($budgetNotes, 90) }}</span>
+                                            @elseif(! $isDebtPayment && (! filled($item->period) || $item->period === 'monthly'))
+                                                <span>Monthly</span>
+                                            @endif
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex justify-end gap-2">
-                                            <button
-                                                type="button"
-                                                data-budget-id="{{ $item->id }}"
-                                                data-budget-category="{{ e($item->category) }}"
-                                                data-budget-amount="{{ $item->amount }}"
-                                                data-budget-period="{{ $item->period }}"
-                                                data-budget-month="{{ $item->month_year }}"
-                                                data-budget-notes="{{ e((string) $item->notes) }}"
-                                                data-budget-expensed="{{ $isExpensed ? '1' : '0' }}"
-                                                data-budget-application="{{ data_get($item, 'application_type', 'expense') }}"
-                                                data-budget-debt-id="{{ data_get($item, 'debt_id') }}"
-                                                onclick="openBudgetFormFromButton(this)"
-                                                class="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold"
-                                            >
-                                                <i class="fa-solid fa-pen mr-1"></i>Edit
-                                            </button>
-
-                                            <form method="POST" action="{{ url('/budgets/'.data_get($item, 'id')) }}" data-confirm="Delete this budget item?" data-confirm-title="Delete budget item?" data-confirm-text="Delete">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="px-3 py-2 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold">
-                                                    <i class="fa-solid fa-trash mr-1"></i>Delete
+                                    <td class="pm-dt-aux">
+                                        <span
+                                            id="budget-status-{{ $item->id }}"
+                                            class="pm-dt-pill {{ $isExpensed ? 'is-green' : 'is-slate' }}"
+                                        >{{ $isExpensed ? ($isDebtPayment ? 'Debt Paid' : 'In Expenses') : 'Not paid' }}</span>
+                                    </td>
+                                    <td class="pm-dt-num">
+                                        {{ $money($item->amount) }}
+                                    </td>
+                                    <td class="pm-dt-actions">
+                                        <details class="pm-dt-menu">
+                                            <summary class="pm-dt-icon-btn" title="More actions" aria-label="More actions for {{ $item->category }}">
+                                                <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+                                            </summary>
+                                            <div class="pm-dt-menu-list">
+                                                <button
+                                                    type="button"
+                                                    data-budget-id="{{ $item->id }}"
+                                                    data-budget-category="{{ e($item->category) }}"
+                                                    data-budget-amount="{{ $item->amount }}"
+                                                    data-budget-period="{{ $item->period }}"
+                                                    data-budget-month="{{ $item->month_year }}"
+                                                    data-budget-notes="{{ e((string) $item->notes) }}"
+                                                    data-budget-expensed="{{ $isExpensed ? '1' : '0' }}"
+                                                    data-budget-application="{{ data_get($item, 'application_type', 'expense') }}"
+                                                    data-budget-debt-id="{{ data_get($item, 'debt_id') }}"
+                                                    onclick="openBudgetFormFromButton(this)"
+                                                    class="pm-dt-menu-item"
+                                                >
+                                                    <i class="fa-solid fa-pen" aria-hidden="true"></i>Edit
                                                 </button>
-                                            </form>
-                                        </div>
+
+                                                <form method="POST" action="{{ url('/budgets/'.data_get($item, 'id')) }}" data-confirm="Delete this budget item?" data-confirm-title="Delete budget item?" data-confirm-text="Delete">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="pm-dt-menu-item is-danger">
+                                                        <i class="fa-solid fa-trash" aria-hidden="true"></i>Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </details>
                                     </td>
                                 </tr>
                             @endforeach
@@ -506,16 +530,14 @@
                     </button>
                 </div>
 
-                <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table class="min-w-[780px] w-full text-sm">
-                        <thead class="bg-slate-50">
+                <div class="pm-dt-wrap budget-import-dt">
+                    <table class="pm-dt">
+                        <thead>
                             <tr>
-                                <th class="p-2 text-left">Category</th>
-                                <th class="p-2 text-left">Description</th>
-                                <th class="p-2 text-left">Amount</th>
-                                <th class="p-2 text-left">Period</th>
-                                <th class="p-2 text-left">Month</th>
-                                <th class="p-2"></th>
+                                <th scope="col">Item</th>
+                                <th scope="col" class="w-36">Amount</th>
+                                <th scope="col" class="w-40">Period</th>
+                                <th scope="col" class="pm-dt-actions"><span class="sr-only">Remove</span></th>
                             </tr>
                         </thead>
                         <tbody id="budget-import-lines"></tbody>
@@ -761,18 +783,12 @@
 
             if (status) {
                 status.className =
-                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ' +
-                    (wanted
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500');
+                    'pm-dt-pill ' + (wanted ? 'is-green' : 'is-slate');
 
                 const appliedType =
                     data?.data?.application_type || 'expense';
 
-                status.innerHTML =
-                    '<i class="fa-solid ' +
-                    (wanted ? 'fa-circle-check' : 'fa-circle') +
-                    '"></i> ' +
+                status.textContent =
                     (
                         wanted
                             ? (
@@ -833,31 +849,27 @@
 
         importItems.forEach(function (item, index) {
             const row = document.createElement('tr');
-            row.className = 'border-t border-slate-100';
-
+            // Control order (category, description, amount, period, month,
+            // remove) is relied on by the index-based handlers below.
             row.innerHTML = `
-                <td class="p-2">
-                    <input class="w-full rounded border-slate-300" value="${escapeHtml(item.category || 'General')}">
+                <td class="pm-dt-main">
+                    <input class="w-full rounded border-slate-300 text-sm" placeholder="Category" aria-label="Category" value="${escapeHtml(item.category || 'General')}">
+                    <input class="w-full rounded border-slate-300 text-sm mt-1.5" placeholder="Description (optional)" aria-label="Description" value="${escapeHtml(item.description || '')}">
                 </td>
-                <td class="p-2">
-                    <input class="w-full rounded border-slate-300" value="${escapeHtml(item.description || '')}">
+                <td class="pm-dt-aux">
+                    <input type="number" min="0" step="0.01" class="w-full rounded border-slate-300 text-sm text-right" placeholder="Amount" aria-label="Amount" value="${Number(item.planned_amount || 0)}">
                 </td>
-                <td class="p-2">
-                    <input type="number" min="0" step="0.01" class="w-full rounded border-slate-300" value="${Number(item.planned_amount || 0)}">
-                </td>
-                <td class="p-2">
-                    <select class="w-full rounded border-slate-300">
+                <td class="pm-dt-aux">
+                    <select class="w-full rounded border-slate-300 text-sm" aria-label="Period">
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
                         <option value="annually">Annually</option>
                     </select>
+                    <input type="month" class="w-full rounded border-slate-300 text-sm mt-1.5" aria-label="Month" value="${escapeHtml(item.month_year || selectedMonth)}">
                 </td>
-                <td class="p-2">
-                    <input type="month" class="w-full rounded border-slate-300" value="${escapeHtml(item.month_year || selectedMonth)}">
-                </td>
-                <td class="p-2 text-center">
-                    <button type="button" class="text-rose-600">
-                        <i class="fa-solid fa-trash"></i>
+                <td class="pm-dt-actions">
+                    <button type="button" class="pm-dt-icon-btn text-rose-600" aria-label="Remove item" title="Remove item">
+                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
                     </button>
                 </td>
             `;

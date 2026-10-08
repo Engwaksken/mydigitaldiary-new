@@ -18,7 +18,7 @@ class ProjectController extends CrudController
             'planned' => 'Planned', 'in_progress' => 'In Progress', 'on_hold' => 'On Hold', 'completed' => 'Completed',
         ]],
         ['name' => 'start_date', 'label' => 'Start Date', 'type' => 'date'],
-        ['name' => 'deadline', 'label' => 'Deadline', 'type' => 'date'],
+        ['name' => 'deadline', 'label' => 'Deadline', 'type' => 'date', 'table' => 'date'],
         ['name' => 'description', 'label' => 'Description', 'type' => 'textarea'],
     ];
 

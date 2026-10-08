@@ -17,13 +17,13 @@ class HealthCheckupController extends CrudController
 
     protected array $fields = [
         ['tab' => 'Checkup', 'name' => 'checkup_type', 'label' => 'Type (e.g. Dental, General, Eye)', 'type' => 'text', 'required' => true],
-        ['tab' => 'Checkup', 'name' => 'checkup_date', 'label' => 'Checkup Date & Time', 'type' => 'datetime-local', 'required' => true],
+        ['tab' => 'Checkup', 'table' => 'meta', 'name' => 'checkup_date', 'label' => 'Checkup Date & Time', 'type' => 'datetime-local', 'required' => true],
         ['tab' => 'Checkup', 'name' => 'doctor_name', 'label' => 'Doctor / Clinic', 'type' => 'text', 'placeholder' => 'e.g. Clinic or health professional'],
         ['tab' => 'Measurements', 'name' => 'weight_kg', 'label' => 'Weight (kg, optional)', 'type' => 'number'],
         ['tab' => 'Measurements', 'name' => 'blood_pressure_systolic', 'label' => 'Blood Pressure – Systolic (optional)', 'type' => 'number'],
         ['tab' => 'Measurements', 'name' => 'blood_pressure_diastolic', 'label' => 'Blood Pressure – Diastolic (optional)', 'type' => 'number'],
         ['tab' => 'Measurements', 'name' => 'heart_rate_bpm', 'label' => 'Heart Rate (bpm, optional)', 'type' => 'number'],
-        ['tab' => 'Checkup', 'name' => 'next_due_date', 'label' => 'Next Checkup Due (Date & Time)', 'type' => 'datetime-local'],
+        ['tab' => 'Checkup', 'table' => 'date', 'name' => 'next_due_date', 'label' => 'Next Checkup Due (Date & Time)', 'type' => 'datetime-local'],
         ['tab' => 'Findings', 'name' => 'findings', 'label' => 'Findings / Notes', 'type' => 'textarea'],
     ];
 

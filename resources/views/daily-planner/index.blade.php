@@ -90,6 +90,9 @@
         white-space: nowrap;
     }
     .dp-timeline-row td { vertical-align: top; }
+    /* Planner tables sit inside an existing card: no second border/shadow. */
+    .pm-dt-wrap.dp-dt-flat { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+    .pm-dt-wrap.dp-dt-flat .pm-dt thead th { border-radius: 0 !important; }
 
     .dp-tabs {
         display: flex;
@@ -474,7 +477,8 @@
         </div>
 
         <section id="dp-tab-tasks" class="dp-tab-panel {{ $activeTab === 'tasks' ? 'is-active' : '' }}" role="tabpanel">
-    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+    {{-- No overflow-hidden: task row menus must not be clipped. --}}
+    <div class="bg-white border border-slate-200 rounded-2xl">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h3 class="font-bold text-slate-900">
@@ -534,16 +538,19 @@
                 @method('DELETE')
                 <input type="hidden" name="occurrence_date" value="{{ $date->toDateString() }}">
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm min-w-[900px]">
-                        <thead class="bg-slate-50">
-                            <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
-                                <th class="px-4 py-3 w-10"><input type="checkbox" id="dailySelectAll" aria-label="Select all tasks"></th>
-                                <th class="px-3 py-3">Time</th>
-                                <th class="px-3 py-3">Task</th>
-                                <th class="px-3 py-3">Priority</th>
-                                <th class="px-3 py-3">Status</th>
-                                <th class="px-4 py-3 text-right">Actions</th>
+                <div class="pm-dt-wrap dp-dt-flat">
+                    <table class="pm-dt">
+                        <caption class="sr-only">Tasks for {{ $date->format('l, d M Y') }}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="pm-dt-check">
+                                    <input type="checkbox" id="dailySelectAll" aria-label="Select all tasks">
+                                    <span class="pm-dt-check-label" aria-hidden="true">Select all</span>
+                                </th>
+                                <th scope="col">Task</th>
+                                <th scope="col">Time</th>
+                                <th scope="col">Priority</th>
+                                <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -551,57 +558,51 @@
                                 @php
                                     $start = $formatTime($item->start_time);
                                     $end = $formatTime($item->end_time);
+                                    $priorityTone = match($item->priority) {
+                                        'high' => 'is-rose',
+                                        'low' => 'is-slate',
+                                        default => 'is-amber',
+                                    };
                                 @endphp
-                                <tr class="dp-timeline-row border-t border-slate-100 {{ $item->is_completed ? 'bg-slate-50/70' : '' }}">
-                                    <td class="px-4 py-4">
+                                <tr class="dp-timeline-row has-check {{ $item->is_completed ? 'bg-slate-50/70' : '' }}">
+                                    <td class="pm-dt-check">
                                         <input class="daily-row" type="checkbox" name="ids[]" value="{{ $item->id }}" data-pending="{{ $item->is_completed ? '0' : '1' }}" aria-label="Select {{ $item->title }}">
                                     </td>
-                                    <td class="px-3 py-4 w-40">
+                                    <td class="pm-dt-main">
+                                        <span class="pm-dt-title {{ $item->is_completed ? 'line-through text-slate-400' : '' }}" title="{{ $item->title }}">
+                                            @if($item->is_completed)
+                                                <i class="fa-solid fa-circle-check text-emerald-500 text-xs mr-1" aria-hidden="true"></i><span class="sr-only">Completed:</span>
+                                            @endif
+                                            {{ $item->title }}
+                                        </span>
+                                        <span class="pm-dt-sub">
+                                            <span>
+                                                <i class="fa-solid {{ $item->isRecurring() ? 'fa-repeat' : 'fa-clock' }} text-[10px]" aria-hidden="true"></i>
+                                                {{ $item->repeat_label ?? $item->repeatLabel() }}
+                                            </span>
+                                            @if($item->personalGoal)
+                                                <span class="text-emerald-700">
+                                                    <i class="fa-solid fa-bullseye text-[10px]" aria-hidden="true"></i>
+                                                    {{ \Illuminate\Support\Str::limit($item->personalGoal->title, 34) }}
+                                                </span>
+                                            @endif
+                                            @if($item->description)
+                                                <span class="pm-dt-note" title="{{ $item->description }}">{{ \Illuminate\Support\Str::limit($item->description, 90) }}</span>
+                                            @endif
+                                        </span>
+                                    </td>
+                                    <td class="pm-dt-aux">
                                         @if($start)
                                             <span class="dp-time-badge"><i class="fa-regular fa-clock"></i>{{ $start }}</span>
-                                            @if($end)<div class="text-xs text-slate-400 mt-1 pl-1">to {{ $end }}</div>@endif
+                                            @if($end)<span class="pm-dt-date-sub pl-1">to {{ $end }}</span>@endif
                                         @else
                                             <span class="text-xs text-slate-400 italic">Any time</span>
                                         @endif
                                     </td>
-                                    <td class="px-3 py-4">
-                                        <div class="font-semibold text-slate-800 {{ $item->is_completed ? 'line-through text-slate-400' : '' }}">
-                                            {{ $item->title }}
-                                        </div>
-                                        @if($item->description)
-                                            <div class="text-xs text-slate-500 mt-1 max-w-xl">{{ $item->description }}</div>
-                                        @endif
-                                        <div>
-                                            <span class="dp-repeat-badge">
-                                                <i class="fa-solid {{ $item->isRecurring() ? 'fa-repeat' : 'fa-clock' }}"></i>
-                                                {{ $item->repeat_label ?? $item->repeatLabel() }}
-                                            </span>
-                                            @if($item->personalGoal)
-                                                <span class="inline-flex items-center gap-1 mt-2 ml-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
-                                                    <i class="fa-solid fa-bullseye"></i>
-                                                    {{ \Illuminate\Support\Str::limit($item->personalGoal->title, 34) }}
-                                                </span>
-                                            @endif
-                                        </div>
+                                    <td class="pm-dt-aux">
+                                        <span class="pm-dt-pill {{ $priorityTone }}">{{ ucfirst($item->priority) }}</span>
                                     </td>
-                                    <td class="px-3 py-4">
-                                        @php
-                                            $priorityClass = match($item->priority) {
-                                                'high' => 'bg-rose-50 text-rose-700',
-                                                'low' => 'bg-slate-100 text-slate-600',
-                                                default => 'bg-amber-50 text-amber-700',
-                                            };
-                                        @endphp
-                                        <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $priorityClass }}">{{ ucfirst($item->priority) }}</span>
-                                    </td>
-                                    <td class="px-3 py-4">
-                                        @if($item->is_completed)
-                                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><i class="fa-solid fa-circle-check"></i> Completed</span>
-                                        @else
-                                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-slate-500"><i class="fa-regular fa-circle"></i> Pending</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-4 text-right whitespace-nowrap">
+                                    <td class="pm-dt-actions">
                                         @php
                                             $editTaskPayload = [
                                                 'id' => $item->id,
@@ -636,34 +637,45 @@
                                                 )
                                             );
                                         @endphp
-                                        <button type="button"
-                                                class="px-2.5 py-2 rounded-lg border border-slate-200 dp-primary-text bg-white"
-                                                title="Edit task"
-                                                data-task-encoded="{{ $editTaskPayloadEncoded }}">
-                                            <i class="fa-solid fa-pen"></i>
-                                        </button>
-
-                                        @if(!$item->is_completed && !$item->isRecurring())
-                                            <button type="button"
-                                                    onclick="openMoveTaskModal({{ $item->id }}, {{ \Illuminate\Support\Js::from($item->title) }}, {{ \Illuminate\Support\Js::from(route('daily-planner.items.move', $item)) }}, {{ \Illuminate\Support\Js::from($date->copy()->addDay()->toDateString()) }})"
-                                                    class="px-2.5 py-2 rounded-lg border border-amber-200 text-amber-700 bg-white"
-                                                    title="Move task to another date">
-                                                <i class="fa-solid fa-calendar-days"></i>
+                                        <div class="inline-flex items-center gap-1">
+                                            {{-- Completing a task is the everyday action, so it stays one tap away. --}}
+                                            <button type="submit" form="toggle-{{ $item->id }}"
+                                                    class="pm-dt-icon-btn {{ $item->is_completed ? '' : 'text-emerald-600' }}"
+                                                    title="{{ $item->is_completed ? 'Reopen task' : 'Mark complete' }}"
+                                                    aria-label="{{ $item->is_completed ? 'Reopen' : 'Mark complete' }}: {{ $item->title }}">
+                                                <i class="fa-solid {{ $item->is_completed ? 'fa-rotate-left' : 'fa-check' }}"></i>
                                             </button>
-                                        @endif
 
-                                        <button type="submit" form="toggle-{{ $item->id }}"
-                                                class="px-2.5 py-2 rounded-lg border border-slate-200 bg-white"
-                                                title="{{ $item->is_completed ? 'Reopen task' : 'Mark complete' }}">
-                                            <i class="fa-solid {{ $item->is_completed ? 'fa-rotate-left' : 'fa-check' }}"></i>
-                                        </button>
+                                            <details class="pm-dt-menu">
+                                                <summary class="pm-dt-icon-btn" title="More actions" aria-label="More actions for {{ $item->title }}">
+                                                    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+                                                </summary>
+                                                <div class="pm-dt-menu-list">
+                                                    <button type="button"
+                                                            class="pm-dt-menu-item"
+                                                            title="Edit task"
+                                                            data-task-encoded="{{ $editTaskPayloadEncoded }}">
+                                                        <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit
+                                                    </button>
 
-                                        <button type="submit" form="delete-{{ $item->id }}"
-                                                data-confirm-click="Delete this task? This action cannot be undone." data-confirm-title="Delete task?" data-confirm-text="Delete"
-                                                class="px-2.5 py-2 rounded-lg border border-rose-200 text-rose-700 bg-white"
-                                                title="Delete task">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                                    @if(!$item->is_completed && !$item->isRecurring())
+                                                        <button type="button"
+                                                                onclick="openMoveTaskModal({{ $item->id }}, {{ \Illuminate\Support\Js::from($item->title) }}, {{ \Illuminate\Support\Js::from(route('daily-planner.items.move', $item)) }}, {{ \Illuminate\Support\Js::from($date->copy()->addDay()->toDateString()) }})"
+                                                                class="pm-dt-menu-item"
+                                                                title="Move task to another date">
+                                                            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Move to another day
+                                                        </button>
+                                                    @endif
+
+                                                    <button type="submit" form="delete-{{ $item->id }}"
+                                                            data-confirm-click="Delete this task? This action cannot be undone." data-confirm-title="Delete task?" data-confirm-text="Delete"
+                                                            class="pm-dt-menu-item is-danger"
+                                                            title="Delete task">
+                                                        <i class="fa-solid fa-trash" aria-hidden="true"></i> Delete
+                                                    </button>
+                                                </div>
+                                            </details>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
@@ -883,17 +895,15 @@
                 </form>
 
                 @if($pastPlans->count())
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm min-w-[760px]">
-                            <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <div class="pm-dt-wrap dp-dt-flat">
+                        <table class="pm-dt">
+                            <caption class="sr-only">Past daily plans</caption>
+                            <thead>
                                 <tr>
-                                    <th class="px-5 py-3 text-left">Date</th>
-                                    <th class="px-3 py-3 text-left">Plan</th>
-                                    <th class="px-3 py-3 text-center">Tasks</th>
-                                    <th class="px-3 py-3 text-center">Completed</th>
-                                    <th class="px-3 py-3 text-center">Pending</th>
-                                    <th class="px-3 py-3 text-center">Progress</th>
-                                    <th class="px-5 py-3 text-right">Action</th>
+                                    <th scope="col">Day</th>
+                                    <th scope="col">Tasks</th>
+                                    <th scope="col" class="pm-dt-num">Progress</th>
+                                    <th scope="col" class="pm-dt-actions"><span class="sr-only">Action</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -903,31 +913,35 @@
                                         $pastCompleted = (int) ($past->completed ?? 0);
                                         $pastPending = (int) ($past->pending ?? max(0, $pastTotal - $pastCompleted));
                                         $pastPercent = (int) ($past->progress ?? ($pastTotal > 0 ? round(($pastCompleted / $pastTotal) * 100) : 0));
+                                        $pastUrl = route('daily-planner.index', ['date' => $past->plan_date->toDateString(), 'tab' => 'tasks']);
                                     @endphp
-                                    <tr class="border-t border-slate-100 hover:bg-slate-50/70">
-                                        <td class="px-5 py-3 font-medium text-slate-700 whitespace-nowrap">
-                                            {{ $past->plan_date->format('D, d M Y') }}
+                                    <tr>
+                                        <td class="pm-dt-main">
+                                            <a href="{{ $pastUrl }}" class="pm-dt-title">{{ $past->plan_date->format('D, d M Y') }}</a>
+                                            <span class="pm-dt-sub">
+                                                <span>{{ $past->title ?: 'My Daily Plan' }}</span>
+                                                @if($past->notes)
+                                                    <span class="pm-dt-note" title="{{ $past->notes }}">{{ \Illuminate\Support\Str::limit($past->notes, 80) }}</span>
+                                                @endif
+                                            </span>
                                         </td>
-                                        <td class="px-3 py-3">
-                                            <div class="font-medium text-slate-700">{{ $past->title ?: 'My Daily Plan' }}</div>
-                                            @if($past->notes)
-                                                <div class="text-xs text-slate-400 mt-1" title="{{ $past->notes }}">
-                                                    {{ \Illuminate\Support\Str::limit($past->notes, 80) }}
-                                                </div>
-                                            @endif
+                                        <td class="pm-dt-aux">
+                                            <span class="font-semibold text-slate-700">{{ $pastTotal }}</span> <span class="text-slate-400">tasks</span>
+                                            <span class="pm-dt-date-sub">
+                                                <span class="text-emerald-700 font-semibold">{{ $pastCompleted }} done</span>
+                                                &middot;
+                                                <span class="text-amber-600 font-semibold">{{ $pastPending }} pending</span>
+                                            </span>
                                         </td>
-                                        <td class="px-3 py-3 text-center font-semibold">{{ $pastTotal }}</td>
-                                        <td class="px-3 py-3 text-center text-emerald-700 font-semibold">{{ $pastCompleted }}</td>
-                                        <td class="px-3 py-3 text-center text-amber-600 font-semibold">{{ $pastPending }}</td>
-                                        <td class="px-3 py-3 text-center">
-                                            <span class="font-semibold dp-primary-text">{{ $pastPercent }}%</span>
+                                        <td class="pm-dt-num">
+                                            <span class="dp-primary-text">{{ $pastPercent }}%</span>
                                         </td>
-                                        <td class="px-5 py-3 text-right">
-                                            <a
-                                                href="{{ route('daily-planner.index', ['date' => $past->plan_date->toDateString(), 'tab' => 'tasks']) }}"
-                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border dp-primary-border dp-primary-text bg-white font-medium"
-                                            >
-                                                <i class="fa-regular fa-eye"></i> View Tasks
+                                        <td class="pm-dt-actions">
+                                            <a href="{{ $pastUrl }}"
+                                               class="pm-dt-icon-btn dp-primary-text"
+                                               title="View tasks"
+                                               aria-label="View tasks for {{ $past->plan_date->format('D, d M Y') }}">
+                                                <i class="fa-regular fa-eye" aria-hidden="true"></i>
                                             </a>
                                         </td>
                                     </tr>

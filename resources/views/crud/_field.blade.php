@@ -383,6 +383,8 @@
                 <i class="fa-solid fa-microphone" aria-hidden="true"></i>
             </button>
         </div>
+    @elseif ($field['type'] === 'budget-picker')
+        @include('crud._budget-picker')
     @elseif ($field['type'] === 'select')
         <select
             id="{{ $fieldId }}"

@@ -986,93 +986,90 @@
                 @endif
             </form>
 
-            <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-4 sm:p-6">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
+            <div>
+                <div class="pm-dt-wrap">
+                    <table class="pm-dt">
                         <caption class="sr-only">Your invoices, receipts and pending subscription payments.</caption>
-                        <thead class="text-left text-slate-500">
+                        <thead>
                             <tr>
-                                <th scope="col" class="py-2 pr-4">Plan</th>
-                                <th scope="col" class="py-2 pr-4">Method</th>
-                                <th scope="col" class="py-2 pr-4">Phone / Account</th>
-                                <th scope="col" class="py-2 pr-4">Amount</th>
-                                <th scope="col" class="py-2 pr-4">Gateway Txn ID</th>
-                                <th scope="col" class="py-2 pr-4">Status</th>
-                                <th scope="col" class="py-2 pr-4">Date</th>
-                                <th scope="col" class="py-2 pr-4">Documents</th>
-                                <th scope="col" class="py-2">Action</th>
+                                <th scope="col">Payment</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Date</th>
+                                <th scope="col" class="pm-dt-num">Amount</th>
+                                <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @forelse ($payments as $payment)
                                 @php
                                     $paymentPhone = $payment->paymentContactPhone() ?: $accountPhone;
-                                    $statusColor = match($payment->status) {
-                                        'completed' => 'text-emerald-700',
-                                        'pending' => 'text-amber-600',
-                                        default => 'text-rose-600',
+                                    $statusPill = match($payment->status) {
+                                        'completed' => 'is-green',
+                                        'pending' => 'is-amber',
+                                        default => 'is-rose',
                                     };
+                                    $paymentMethodLabel = $payment->gateway->display_name ?? $payment->gateway->name ?? ucfirst(str_replace('_', ' ', $payment->method));
+                                    $hasPaymentDocs = $payment->invoice || $payment->status === 'completed';
                                 @endphp
-                                <tr class="align-top">
-                                    <td class="py-3 pr-4 font-medium text-slate-800">{{ $payment->plan->name ?? '—' }}</td>
-                                    <td class="py-3 pr-4">{{ $payment->gateway->display_name ?? $payment->gateway->name ?? ucfirst(str_replace('_', ' ', $payment->method)) }}</td>
-                                    <td class="py-3 pr-4">
-                                        @if ($paymentPhone)
-                                            <div class="flex flex-col">
-                                                <a href="tel:{{ preg_replace('/\s+/', '', $paymentPhone) }}" class="text-[var(--brand-1)] hover:underline whitespace-nowrap font-medium">
-                                                    {{ $paymentPhone }}
-                                                </a>
-                                                <span class="text-[11px] text-slate-400">Mobile Money phone</span>
-                                            </div>
-                                        @elseif ($payment->method === 'bank' && filled($payment->reference))
-                                            <div class="flex flex-col">
-                                                <span class="font-mono text-slate-700 break-all">{{ $payment->reference }}</span>
-                                                <span class="text-[11px] text-slate-400">Bank reference</span>
-                                            </div>
-                                        @else
-                                            <span class="text-slate-400">—</span>
-                                        @endif
-                                    </td>
-                                     <td class="py-3 pr-4 whitespace-nowrap">{{ format_money_in($payment->amount, $payment->currency) }}</td>
-                                     <td class="py-3 pr-4 font-mono text-xs break-all max-w-[220px]">{{ $payment->gateway_transaction_id ?: '—' }}</td>
-                                     <td class="py-3 pr-4">
-                                        <span class="{{ $statusColor }} font-medium">{{ ucfirst($payment->status) }}</span>
-                                    </td>
-                                    <td class="py-3 pr-4 whitespace-nowrap">{{ $payment->created_at->format('Y-m-d') }}</td>
-                                    <td class="py-3 pr-4">
-                                        <div class="flex flex-col gap-1">
-                                            @if ($payment->invoice)
-                                                <a href="{{ route('subscription.invoice', $payment->invoice->id) }}" class="text-[var(--brand-1)] hover:underline whitespace-nowrap">
-                                                    <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Invoice
-                                                </a>
+                                <tr>
+                                    <td class="pm-dt-main">
+                                        <span class="pm-dt-title">{{ $payment->plan->name ?? '—' }}</span>
+                                        <span class="pm-dt-sub">
+                                            <span>{{ $paymentMethodLabel }}</span>
+                                            @if ($paymentPhone)
+                                                <span><a href="tel:{{ preg_replace('/\s+/', '', $paymentPhone) }}" class="text-[var(--brand-1)] hover:underline font-medium" title="Mobile Money phone">{{ $paymentPhone }}</a></span>
+                                            @elseif ($payment->method === 'bank' && filled($payment->reference))
+                                                <span class="font-mono" title="Bank reference">Ref {{ $payment->reference }}</span>
                                             @endif
-                                            @if ($payment->status === 'completed')
-                                                <a href="{{ route('subscription.receipt', $payment->id) }}" class="text-[var(--brand-1)] hover:underline whitespace-nowrap">
-                                                    <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Receipt
-                                                </a>
+                                            @if ($payment->gateway_transaction_id)
+                                                <span class="font-mono" title="Gateway transaction ID">Txn {{ $payment->gateway_transaction_id }}</span>
                                             @endif
-                                        </div>
+                                        </span>
                                     </td>
-                                    <td class="py-3">
-                                        @if ($payment->status === 'pending')
-                                            <div class="flex flex-wrap items-center gap-2 min-w-[150px]">
+                                    <td class="pm-dt-aux">
+                                        <span class="pm-dt-pill {{ $statusPill }}">{{ ucfirst($payment->status) }}</span>
+                                    </td>
+                                    <td class="pm-dt-aux">{{ $payment->created_at->format('d M Y') }}</td>
+                                    <td class="pm-dt-num">{{ format_money_in($payment->amount, $payment->currency) }}</td>
+                                    <td class="pm-dt-actions">
+                                        <div class="inline-flex items-center gap-1">
+                                            @if ($payment->status === 'pending')
                                                 <button type="button"
                                                         onclick="document.getElementById('pm-pending-payment-{{ $payment->id }}').showModal()"
-                                                        class="btn-primary text-white px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap">
+                                                        class="btn-primary text-white px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap">
                                                     <i class="fa-solid fa-wallet mr-1" aria-hidden="true"></i> Pay
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onclick="document.getElementById('pm-cancel-payment-{{ $payment->id }}').showModal()"
-                                                    class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100"
-                                                >
-                                                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        @else
-                                            <span class="text-slate-400">—</span>
-                                        @endif
+                                            @endif
+                                            @if ($hasPaymentDocs || $payment->status === 'pending')
+                                                <details class="pm-dt-menu">
+                                                    <summary class="pm-dt-icon-btn" aria-label="More actions for {{ $payment->plan->name ?? 'this payment' }}" title="More actions">
+                                                        <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+                                                    </summary>
+                                                    <div class="pm-dt-menu-list">
+                                                        @if ($payment->invoice)
+                                                            <a href="{{ route('subscription.invoice', $payment->invoice->id) }}" class="pm-dt-menu-item">
+                                                                <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> Invoice
+                                                            </a>
+                                                        @endif
+                                                        @if ($payment->status === 'completed')
+                                                            <a href="{{ route('subscription.receipt', $payment->id) }}" class="pm-dt-menu-item">
+                                                                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Receipt
+                                                            </a>
+                                                        @endif
+                                                        @if ($payment->status === 'pending')
+                                                            <button
+                                                                type="button"
+                                                                onclick="document.getElementById('pm-cancel-payment-{{ $payment->id }}').showModal()"
+                                                                class="pm-dt-menu-item is-danger"
+                                                            >
+                                                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                                                Cancel payment
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                </details>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
 
@@ -1234,8 +1231,8 @@
                                     </dialog>
                                 @endif
                             @empty
-                                <tr>
-                                     <td colspan="9" class="py-8 text-center text-slate-500">No invoices or payments yet.</td>
+                                <tr class="pm-dt-empty">
+                                     <td colspan="5">No invoices or payments yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -1243,7 +1240,7 @@
                 </div>
 
                 @if ($payments->total() > 0)
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5 pt-4 border-t border-slate-100">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
                         <p class="text-sm text-slate-500">
                             Showing {{ $payments->firstItem() }} to {{ $payments->lastItem() }} of {{ $payments->total() }} records
                         </p>

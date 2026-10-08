@@ -83,60 +83,63 @@
         </div>
     </form>
 
-    <div class="pm-card-bg rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-slate-50 border-b border-slate-100">
+    <div class="pm-dt-wrap">
+        <table class="pm-dt">
+            <caption class="sr-only">Your daily eating history, with an edit action for each day.</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Day</th>
+                    <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($history as $entry)
+                    @php $fullText = trim(strip_tags((string) $entry->daily_food_notes)); @endphp
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs uppercase tracking-wide text-slate-500">Date</th>
-                        <th class="px-4 py-3 text-left text-xs uppercase tracking-wide text-slate-500">Saved at</th>
-                        <th class="px-4 py-3 text-left text-xs uppercase tracking-wide text-slate-500">What you ate</th>
-                        <th class="px-4 py-3 text-right text-xs uppercase tracking-wide text-slate-500">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse ($history as $entry)
-                        @php $fullText = trim(strip_tags((string) $entry->daily_food_notes)); @endphp
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">
-                                {{ optional($entry->journal_date)->format('d M Y') }}
-                            </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-slate-500">
-                                {{ optional($entry->created_at)->format('g:i A') }}
-                            </td>
-                            <td class="px-4 py-3 text-slate-700 max-w-[720px]">
-                                <span class="cursor-help" title="{{ $fullText }}">
-                                    {{ \Illuminate\Support\Str::limit($fullText, 110) }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-right">
-                                <form method="POST" action="{{ route('daily-food-history.update-entry', $entry) }}" class="inline">
-                                    @csrf
-                                    @method('PUT')
-                                    <input type="hidden" name="journal_date" value="{{ optional($entry->journal_date)->format('Y-m-d') }}">
-                                    <button type="button"
-                                            class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-                                            onclick="document.getElementById('daily-food-inline-edit-{{ $entry->id }}').classList.toggle('hidden')">
-                                        <i class="fa-solid fa-pen"></i>Edit
-                                    </button>
-                                    <div id="daily-food-inline-edit-{{ $entry->id }}" class="hidden mt-2 min-w-[280px]">
-                                        <textarea name="daily_food_notes" class="pm-input" rows="5" maxlength="6000" required>{{ $entry->daily_food_notes }}</textarea>
-                                        <button type="submit" class="mt-2 rounded-lg btn-primary px-3 py-2 text-xs font-semibold text-white">Save changes</button>
+                        <td class="pm-dt-main">
+                            <span class="pm-dt-title">
+                                {{ optional($entry->journal_date)->format('D, d M Y') }}
+                            </span>
+                            <span class="pm-dt-sub" title="{{ $fullText }}">
+                                <span>Saved {{ optional($entry->created_at)->format('g:i A') }}</span>
+                                <span>{{ \Illuminate\Support\Str::limit($fullText, 140) }}</span>
+                            </span>
+                            <form method="POST" action="{{ route('daily-food-history.update-entry', $entry) }}">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="journal_date" value="{{ optional($entry->journal_date)->format('Y-m-d') }}">
+                                <div id="daily-food-inline-edit-{{ $entry->id }}" class="hidden mt-3">
+                                    <label for="daily-food-notes-{{ $entry->id }}" class="sr-only">What you ate</label>
+                                    <textarea id="daily-food-notes-{{ $entry->id }}" name="daily_food_notes" class="pm-input" rows="5" maxlength="6000" required>{{ $entry->daily_food_notes }}</textarea>
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <button type="submit" class="rounded-lg btn-primary px-3 py-2 text-xs font-semibold text-white">Save changes</button>
+                                        <button type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"
+                                                onclick="document.getElementById('daily-food-inline-edit-{{ $entry->id }}').classList.add('hidden')">Cancel</button>
                                     </div>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="px-4 py-12 text-center text-slate-400">
-                                <i class="fa-solid fa-bowl-food text-3xl block mb-3 opacity-30"></i>
-                                No daily eating history found for this period.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                                </div>
+                            </form>
+                        </td>
+                        <td class="pm-dt-actions">
+                            <button type="button"
+                                    class="pm-dt-icon-btn"
+                                    title="Edit this day"
+                                    aria-controls="daily-food-inline-edit-{{ $entry->id }}"
+                                    onclick="document.getElementById('daily-food-inline-edit-{{ $entry->id }}').classList.toggle('hidden')">
+                                <i class="fa-solid fa-pen text-xs" aria-hidden="true"></i>
+                                <span class="sr-only">Edit {{ optional($entry->journal_date)->format('d M Y') }}</span>
+                            </button>
+                        </td>
+                    </tr>
+                @empty
+                    <tr class="pm-dt-empty">
+                        <td colspan="2">
+                            <i class="fa-solid fa-bowl-food text-3xl block mb-3 opacity-30" aria-hidden="true"></i>
+                            No daily eating history found for this period.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
     @if ($history->hasPages())

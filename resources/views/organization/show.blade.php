@@ -96,7 +96,11 @@
             </div>
         </div>
 
-        <section class="apple-surface rounded-2xl overflow-hidden">
+        <section class="apple-surface rounded-2xl pm-org-members">
+            <style>
+                .pm-org-members .pm-dt thead th { border-radius: 0; }
+                .pm-org-members .pm-org-role { width: auto; min-width: 0; padding-top: .35rem; padding-bottom: .35rem; font-size: .8125rem; }
+            </style>
             <div class="border-b border-slate-100 px-4 py-3 sm:px-5">
                 <h2 class="font-black text-slate-900">
                     {{ $organization->name }}
@@ -106,78 +110,85 @@
                 </p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[860px] text-sm">
-                    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <table class="pm-dt">
+                <caption class="sr-only">Organization members, with their role, status and actions.</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Member</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($members as $member)
+                        @php
+                            $status = strtolower((string) $member->status);
+                            $memberEmail = $member->user?->email ?? $member->invited_email;
+                            $memberName = $member->user?->name ?? 'Pending invitation';
+                        @endphp
                         <tr>
-                            <th class="px-4 py-3">Member</th>
-                            <th class="px-4 py-3">Email</th>
-                            <th class="px-4 py-3">Role</th>
-                            <th class="px-4 py-3">Status</th>
-                            <th class="px-4 py-3 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white">
-                        @forelse($members as $member)
-                            <tr>
-                                <td class="px-4 py-3 font-black text-slate-900">
-                                    {{ $member->user?->name ?? 'Pending invitation' }}
-                                </td>
-                                <td class="px-4 py-3 text-slate-600">
-                                    {{ $member->user?->email ?? $member->invited_email }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    <form
-                                        method="POST"
-                                        action="{{ route('organization.members.role', $member) }}"
-                                        class="flex items-center gap-2"
-                                    >
-                                        @csrf
-                                        @method('PUT')
-                                        <select name="role" class="pm-input min-w-[150px]" onchange="this.form.submit()">
-                                            @foreach($roles as $value => $label)
-                                                <option value="{{ $value }}" @selected($member->role === $value)>
-                                                    {{ $label }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </form>
-                                </td>
-                                <td class="px-4 py-3">
-                                    @php
-                                        $status = strtolower((string) $member->status);
-                                    @endphp
-                                    <span class="rounded-full px-2.5 py-1 text-[11px] font-bold
-                                        {{ $status === 'active' ? 'bg-emerald-50 text-emerald-700' : ($status === 'invited' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600') }}">
-                                        {{ ucfirst($status) }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <div class="inline-flex items-center gap-1">
+                            <td class="pm-dt-main">
+                                <span class="pm-dt-title">{{ $memberName }}</span>
+                                @if (filled($memberEmail))
+                                    <span class="pm-dt-sub" title="{{ $memberEmail }}"><span>{{ $memberEmail }}</span></span>
+                                @endif
+                            </td>
+                            <td class="pm-dt-aux">
+                                <form
+                                    method="POST"
+                                    action="{{ route('organization.members.role', $member) }}"
+                                    class="flex items-center gap-2"
+                                >
+                                    @csrf
+                                    @method('PUT')
+                                    <label for="pm-org-role-{{ $member->id }}" class="sr-only">Role for {{ $memberName }}</label>
+                                    <select id="pm-org-role-{{ $member->id }}" name="role" class="pm-input pm-org-role" onchange="this.form.submit()">
+                                        @foreach($roles as $value => $label)
+                                            <option value="{{ $value }}" @selected($member->role === $value)>
+                                                {{ $label }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                            </td>
+                            <td class="pm-dt-aux">
+                                <span class="pm-dt-pill {{ $status === 'active' ? 'is-green' : ($status === 'invited' ? 'is-amber' : 'is-slate') }}">
+                                    {{ ucfirst($status) }}
+                                </span>
+                            </td>
+                            <td class="pm-dt-actions">
+                                <details class="pm-dt-menu">
+                                    <summary class="pm-dt-icon-btn" aria-label="Actions for {{ $memberName }}" title="Actions">
+                                        <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+                                    </summary>
+                                    <div class="pm-dt-menu-list">
                                         <button
                                             type="button"
-                                            class="rounded-lg px-3 py-2 text-xs font-bold text-teal-700 hover:bg-teal-50"
+                                            class="pm-dt-menu-item"
                                             data-edit-org-member
                                             data-id="{{ $member->id }}"
                                             data-email="{{ e((string) ($member->user?->email ?? $member->invited_email ?? '')) }}"
                                             data-role="{{ $member->role }}"
                                             data-status="{{ $member->status }}"
                                         >
-                                            <i class="fa-solid fa-pen-to-square mr-1"></i>
+                                            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                                             Edit
                                         </button>
 
                                         @if($status === 'inactive')
                                             <form method="POST" action="{{ route('organization.members.activate', $member) }}">
                                                 @csrf
-                                                <button class="rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50">
+                                                <button class="pm-dt-menu-item">
+                                                    <i class="fa-solid fa-user-check" aria-hidden="true"></i>
                                                     Reactivate
                                                 </button>
                                             </form>
                                         @elseif($status === 'active')
                                             <form method="POST" action="{{ route('organization.members.deactivate', $member) }}">
                                                 @csrf
-                                                <button class="rounded-lg px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50">
+                                                <button class="pm-dt-menu-item">
+                                                    <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
                                                     Suspend
                                                 </button>
                                             </form>
@@ -190,23 +201,24 @@
                                         >
                                             @csrf
                                             @method('DELETE')
-                                            <button class="rounded-lg px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">
+                                            <button class="pm-dt-menu-item is-danger">
+                                                <i class="fa-solid fa-user-minus" aria-hidden="true"></i>
                                                 Remove
                                             </button>
                                         </form>
                                     </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="px-4 py-10 text-center text-sm text-slate-400">
-                                    No members yet. Use Add Member to invite your first member.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                                </details>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr class="pm-dt-empty">
+                            <td colspan="4">
+                                No members yet. Use Add Member to invite your first member.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
 
             @if(method_exists($members, 'links'))
                 <div class="border-t border-slate-100 px-4 py-3">

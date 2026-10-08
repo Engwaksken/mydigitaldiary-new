@@ -218,61 +218,62 @@
                 @endforeach
             </div>
 
-            <div class="pm-ai-desktop-table pm-card-bg shadow-sm border border-slate-100 rounded-xl overflow-x-auto" role="region" aria-label="AI plans table" tabindex="0">
-                <table class="min-w-[760px] w-full text-sm">
+            <div class="pm-ai-desktop-table pm-dt-wrap" role="region" aria-label="AI plans table">
+                <table class="pm-dt">
                     <caption class="sr-only">Your generated AI plans, with view, download, and delete actions for each.</caption>
-                    <thead class="bg-slate-50 text-left border-b border-slate-100">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3 w-10">
+                            <th scope="col" class="pm-dt-check">
                                 <input type="checkbox" id="ai-plan-select-all" onchange="pmToggleAllAiPlans(this)" class="rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-2)]" aria-label="Select all AI plans">
                             </th>
-                            <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Date</th>
-                            <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Provider</th>
-                            <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Preview</th>
-                            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                            <th scope="col">Plan</th>
+                            <th scope="col">Created</th>
+                            <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($plans as $plan)
-                            <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="px-4 py-3 align-top">
+                            @php
+                                $aiPlanProviderName = \App\Models\AiProvider::where('key', $plan->provider)->value('name') ?? ($plan->provider ?? '—');
+                            @endphp
+                            <tr class="has-check">
+                                <td class="pm-dt-check">
                                     <input type="checkbox" name="ids[]" value="{{ $plan->id }}" form="ai-plan-bulk-form" onchange="pmUpdateAiPlanBulkBar(this)" class="ai-plan-row-checkbox rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-2)]" aria-label="Select AI plan from {{ $plan->created_at->format('Y-m-d H:i') }}">
                                 </td>
-                                <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ $plan->created_at->format('Y-m-d H:i') }}</td>
-                                <td class="px-4 py-3 text-slate-600">
-                                    {{ \App\Models\AiProvider::where('key', $plan->provider)->value('name') ?? ($plan->provider ?? '—') }}
+                                <td class="pm-dt-main">
+                                    <button type="button"
+                                            class="pm-dt-title"
+                                            onclick="pmOpenAiPlanViewModal({{ json_encode($plan->created_at->format('Y-m-d H:i')) }}, {{ json_encode($plan->cleanContent()) }}, {{ json_encode(route('ai-plans.pdf', $plan->id)) }}, {{ json_encode(route('ai-plans.pdf', $plan->id)) }})"
+                                            title="View plan">
+                                        {{ \Illuminate\Support\Str::limit(str_replace(["\n", "\r"], ' ', $plan->cleanContent()), 90) }}
+                                    </button>
+                                    <span class="pm-dt-sub"><span>{{ $aiPlanProviderName }}</span></span>
                                 </td>
-                                <td class="px-4 py-3 text-slate-700 max-w-md">
-                                    {{ \Illuminate\Support\Str::limit(str_replace(["\n", "\r"], ' ', $plan->cleanContent()), 90) }}
-                                </td>
-                                <td class="px-4 py-3 align-top">
-                                    <div class="flex flex-wrap justify-end gap-2 min-w-[330px]">
-                                        <button type="button"
-                                                onclick="pmOpenAiPlanViewModal({{ json_encode($plan->created_at->format('Y-m-d H:i')) }}, {{ json_encode($plan->cleanContent()) }}, {{ json_encode(route('ai-plans.pdf', $plan->id)) }}, {{ json_encode(route('ai-plans.pdf', $plan->id)) }})"
-                                                class="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-100 transition-colors">
-                                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                                            View Plan
-                                        </button>
-
-                                        <a href="{{ route('ai-plans.pdf', $plan->id) }}" target="_blank" rel="noopener"
-                                           class="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-colors">
-                                            <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
-                                            View PDF
-                                        </a>
-
-                                        <a href="{{ route('ai-plans.pdf', $plan->id) }}"
-                                           class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                                            <i class="fa-solid fa-download" aria-hidden="true"></i>
-                                            Download
-                                        </a>
-
-                                        <button type="button"
-                                                onclick="pmOpenAiPlanDeleteModal({{ json_encode(route('ai-plans.destroy', $plan->id)) }}, {{ json_encode($plan->created_at->format('Y-m-d H:i')) }})"
-                                                class="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors">
-                                            <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-                                            Delete
-                                        </button>
-                                    </div>
+                                <td class="pm-dt-aux">{{ $plan->created_at->format('d M Y, g:i A') }}</td>
+                                <td class="pm-dt-actions">
+                                    <button type="button"
+                                            onclick="pmOpenAiPlanViewModal({{ json_encode($plan->created_at->format('Y-m-d H:i')) }}, {{ json_encode($plan->cleanContent()) }}, {{ json_encode(route('ai-plans.pdf', $plan->id)) }}, {{ json_encode(route('ai-plans.pdf', $plan->id)) }})"
+                                            class="pm-dt-icon-btn" title="View plan" aria-label="View plan">
+                                        <i class="fa-solid fa-eye text-xs" aria-hidden="true"></i>
+                                    </button>
+                                    <details class="pm-dt-menu">
+                                        <summary class="pm-dt-icon-btn" aria-label="More actions" title="More actions">
+                                            <i class="fa-solid fa-ellipsis-vertical text-xs" aria-hidden="true"></i>
+                                        </summary>
+                                        <div class="pm-dt-menu-list">
+                                            <a href="{{ route('ai-plans.pdf', $plan->id) }}" target="_blank" rel="noopener" class="pm-dt-menu-item">
+                                                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> View PDF
+                                            </a>
+                                            <a href="{{ route('ai-plans.pdf', $plan->id) }}" class="pm-dt-menu-item">
+                                                <i class="fa-solid fa-download" aria-hidden="true"></i> Download
+                                            </a>
+                                            <button type="button"
+                                                    onclick="pmOpenAiPlanDeleteModal({{ json_encode(route('ai-plans.destroy', $plan->id)) }}, {{ json_encode($plan->created_at->format('Y-m-d H:i')) }})"
+                                                    class="pm-dt-menu-item is-danger">
+                                                <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Delete
+                                            </button>
+                                        </div>
+                                    </details>
                                 </td>
                             </tr>
                         @endforeach
@@ -346,8 +347,6 @@
             display: block;
             width: 100%;
             max-width: 100%;
-            overflow-x: auto !important;
-            -webkit-overflow-scrolling: touch;
         }
 
         .pm-ai-dialog {

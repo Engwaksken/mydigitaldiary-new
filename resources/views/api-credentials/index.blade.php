@@ -44,49 +44,55 @@
         </x-alert>
     @endif
 
-    <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl overflow-x-auto" role="region" aria-label="API keys table" tabindex="0">
-        <table class="min-w-full text-sm">
+    <div class="pm-dt-wrap" role="region" aria-label="API keys table">
+        <table class="pm-dt">
             <caption class="sr-only">Your saved AI provider API keys, with activate and delete actions for each.</caption>
-            <thead class="bg-slate-50 text-left border-b border-slate-100">
+            <thead>
                 <tr>
-                    <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Label</th>
-                    <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Provider</th>
-                    <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Key</th>
-                    <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Status</th>
-                    <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+                    <th scope="col">Key</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($credentials as $credential)
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-4 py-3">{{ $credential->label }}</td>
-                        <td class="px-4 py-3">{{ $providers->firstWhere('key', $credential->provider)?->name ?? $credential->provider }}</td>
-                        <td class="px-4 py-3 font-mono text-xs text-slate-500">•••• {{ substr($credential->api_key, -4) }}</td>
-                        <td class="px-4 py-3">
+                    <tr>
+                        <td class="pm-dt-main">
+                            <span class="pm-dt-title" title="{{ $credential->label }}">{{ $credential->label }}</span>
+                            <span class="pm-dt-sub">
+                                <span>{{ $providers->firstWhere('key', $credential->provider)?->name ?? $credential->provider }}</span>
+                                <span class="font-mono">•••• {{ substr($credential->api_key, -4) }}</span>
+                            </span>
+                        </td>
+                        <td class="pm-dt-aux">
                             @if ($credential->is_active)
-                                <span class="text-emerald-700 font-medium">Active</span>
+                                <span class="pm-dt-pill is-green">Active</span>
                             @else
-                                <span class="text-slate-400">Inactive</span>
+                                <span class="pm-dt-pill is-slate">Inactive</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            @unless ($credential->is_active)
-                                <form action="{{ route('api-credentials.activate', $credential->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="text-[var(--brand-1)] hover:underline mr-3">
-                                        Activate<span class="sr-only"> {{ $credential->label }}</span>
-                                    </button>
-                                </form>
-                            @endunless
-                            <button type="button"
-                                    onclick="pmOpenApiCredentialDeleteModal({{ json_encode(route('api-credentials.destroy', $credential->id)) }}, {{ json_encode($credential->label) }})"
-                                    class="text-rose-600 hover:underline">
-                                Delete<span class="sr-only"> {{ $credential->label }}</span>
-                            </button>
+                        <td class="pm-dt-actions">
+                            <div class="inline-flex items-center gap-1">
+                                @unless ($credential->is_active)
+                                    <form action="{{ route('api-credentials.activate', $credential->id) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="pm-dt-icon-btn text-[var(--brand-1)]" title="Activate">
+                                            <i class="fa-solid fa-power-off text-xs" aria-hidden="true"></i>
+                                            <span class="sr-only">Activate {{ $credential->label }}</span>
+                                        </button>
+                                    </form>
+                                @endunless
+                                <button type="button"
+                                        onclick="pmOpenApiCredentialDeleteModal({{ json_encode(route('api-credentials.destroy', $credential->id)) }}, {{ json_encode($credential->label) }})"
+                                        class="pm-dt-icon-btn text-rose-500" title="Delete">
+                                    <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
+                                    <span class="sr-only">Delete {{ $credential->label }}</span>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5"><x-empty-state icon="fa-solid fa-key" title="No API keys yet" message="Add one to enable the AI Planner." /></td></tr>
+                    <tr class="pm-dt-empty"><td colspan="3"><x-empty-state icon="fa-solid fa-key" title="No API keys yet" message="Add one to enable the AI Planner." /></td></tr>
                 @endforelse
             </tbody>
         </table>

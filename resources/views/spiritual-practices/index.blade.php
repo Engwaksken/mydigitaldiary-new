@@ -3,6 +3,11 @@
 @section('title', 'Spiritual Growth')
 
 @section('content')
+<style>
+    /* The entries table sits inside the list card: no second border/shadow. */
+    .pm-dt-wrap.sp-dt-flat { border: 0; border-radius: 0; box-shadow: none; }
+    .pm-dt-wrap.sp-dt-flat .pm-dt thead th, .pm-dt-wrap.sp-dt-flat .pm-dt tbody td { border-radius: 0 !important; }
+</style>
 @php
     $has = fn (string $column) => in_array($column, $columns ?? [], true);
 
@@ -127,7 +132,7 @@
             </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="p-4 border-b border-slate-100">
                 <form method="GET" action="{{ route('spiritual-practices.index') }}" class="grid grid-cols-1 md:grid-cols-[1fr_180px_auto] gap-2">
                     <div class="relative">
@@ -163,91 +168,90 @@
                     </p>
                 </div>
             @else
-                <div class="overflow-x-auto">
-                    <table class="min-w-[920px] w-full text-sm">
-                        <thead class="bg-slate-50 text-slate-600">
+                <div class="pm-dt-wrap sp-dt-flat">
+                    <table class="pm-dt">
+                        <caption class="sr-only">Spiritual growth entries</caption>
+                        <thead>
                             <tr>
-                                <th class="px-4 py-3 text-left">Date</th>
-                                <th class="px-4 py-3 text-left">Practice</th>
-                                <th class="px-4 py-3 text-left">Faith / Path</th>
-                                <th class="px-4 py-3 text-left">Reflection</th>
-                                <th class="px-4 py-3 text-left">Repeat</th>
-                                <th class="px-4 py-3 text-right">Actions</th>
+                                <th scope="col">Practice</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Repeat</th>
+                                <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
 
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody>
                             @foreach($items as $item)
                                 @php
                                     $repeat = data_get($item, 'recurrence_frequency');
+                                    $spReflection = trim((string) data_get($item, 'reflection'));
+                                    $spTitle = $displayTitle($item);
                                 @endphp
 
                                 <tr>
-                                    <td class="px-4 py-3 whitespace-nowrap font-semibold text-slate-700">
+                                    <td class="pm-dt-main">
+                                        <span class="pm-dt-title" title="{{ $spTitle }}">{{ $spTitle }}</span>
+                                        <span class="pm-dt-sub">
+                                            <span>{{ ucfirst(str_replace('_', ' ', (string) data_get($item, 'practice_type', 'reflection'))) }}</span>
+                                            <span>{{ data_get($item, 'faith_path') ?: 'Prefer not to specify' }}</span>
+                                            @if($spReflection !== '')
+                                                <span class="pm-dt-note" title="{{ $spReflection }}">{{ \Illuminate\Support\Str::limit($spReflection, 100) }}</span>
+                                            @endif
+                                        </span>
+                                    </td>
+
+                                    <td class="pm-dt-aux">
                                         {{ $displayDate($item) }}
                                     </td>
 
-                                    <td class="px-4 py-3">
-                                        <div class="font-black text-slate-900">{{ $displayTitle($item) }}</div>
-                                        <div class="text-xs text-slate-500 mt-0.5">
-                                            {{ ucfirst(str_replace('_', ' ', (string) data_get($item, 'practice_type', 'reflection'))) }}
-                                        </div>
-                                    </td>
-
-                                    <td class="px-4 py-3 text-slate-600">
-                                        {{ data_get($item, 'faith_path') ?: 'Prefer not to specify' }}
-                                    </td>
-
-                                    <td class="px-4 py-3 text-slate-600 max-w-sm">
-                                        {{ \Illuminate\Support\Str::limit((string) data_get($item, 'reflection'), 100) ?: '—' }}
-                                    </td>
-
-                                    <td class="px-4 py-3">
+                                    <td class="pm-dt-aux">
                                         @if($repeat)
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 text-violet-700 px-2.5 py-1 text-xs font-bold">
-                                                <i class="fa-solid fa-repeat"></i>
-                                                {{ ucfirst($repeat) }}
-                                            </span>
+                                            <span class="pm-dt-pill is-violet">{{ ucfirst($repeat) }}</span>
                                         @else
                                             <span class="text-slate-400 text-xs">Does not repeat</span>
                                         @endif
                                     </td>
 
-                                    <td class="px-4 py-3">
-                                        <div class="flex justify-end gap-2">
-                                            <button
-                                                type="button"
-                                                data-id="{{ $item->id }}"
-                                                data-faith-path="{{ e((string) data_get($item, 'faith_path')) }}"
-                                                data-custom-faith="{{ e((string) data_get($item, 'custom_faith_path')) }}"
-                                                data-practice-type="{{ e((string) data_get($item, 'practice_type')) }}"
-                                                data-practice-title="{{ e((string) (data_get($item, 'practice_title') ?: data_get($item, 'title'))) }}"
-                                                data-theme-topic="{{ e((string) data_get($item, 'theme_topic')) }}"
-                                                data-practiced-at="{{ e((string) data_get($item, 'practiced_at')) }}"
-                                                data-duration="{{ e((string) data_get($item, 'duration_minutes')) }}"
-                                                data-inspirational="{{ e((string) (data_get($item, 'inspirational_text') ?: data_get($item, 'scriptures'))) }}"
-                                                data-source-tradition="{{ e((string) data_get($item, 'source_tradition')) }}"
-                                                data-reflection="{{ e((string) data_get($item, 'reflection')) }}"
-                                                data-gratitude="{{ e((string) data_get($item, 'gratitude')) }}"
-                                                data-intention="{{ e((string) data_get($item, 'intention')) }}"
-                                                data-community-place="{{ e((string) data_get($item, 'community_place')) }}"
-                                                data-recurrence="{{ e((string) data_get($item, 'recurrence_frequency')) }}"
-                                                data-recurrence-end="{{ e((string) data_get($item, 'recurrence_ends_at')) }}"
-                                                data-notes="{{ e((string) data_get($item, 'notes')) }}"
-                                                onclick="openSpiritualFormFromButton(this)"
-                                                class="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold"
-                                            >
-                                                <i class="fa-solid fa-pen mr-1"></i>Edit
-                                            </button>
-
-                                            <form method="POST" action="{{ route('spiritual-practices.destroy', $item->id) }}" onsubmit="return confirm('Delete this spiritual growth entry?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="px-3 py-2 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold">
-                                                    <i class="fa-solid fa-trash mr-1"></i>Delete
+                                    <td class="pm-dt-actions">
+                                        <details class="pm-dt-menu">
+                                            <summary class="pm-dt-icon-btn" title="More actions" aria-label="More actions for {{ $spTitle }}">
+                                                <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i>
+                                            </summary>
+                                            <div class="pm-dt-menu-list">
+                                                <button
+                                                    type="button"
+                                                    data-id="{{ $item->id }}"
+                                                    data-faith-path="{{ e((string) data_get($item, 'faith_path')) }}"
+                                                    data-custom-faith="{{ e((string) data_get($item, 'custom_faith_path')) }}"
+                                                    data-practice-type="{{ e((string) data_get($item, 'practice_type')) }}"
+                                                    data-practice-title="{{ e((string) (data_get($item, 'practice_title') ?: data_get($item, 'title'))) }}"
+                                                    data-theme-topic="{{ e((string) data_get($item, 'theme_topic')) }}"
+                                                    data-practiced-at="{{ e((string) data_get($item, 'practiced_at')) }}"
+                                                    data-duration="{{ e((string) data_get($item, 'duration_minutes')) }}"
+                                                    data-inspirational="{{ e((string) (data_get($item, 'inspirational_text') ?: data_get($item, 'scriptures'))) }}"
+                                                    data-source-tradition="{{ e((string) data_get($item, 'source_tradition')) }}"
+                                                    data-reflection="{{ e((string) data_get($item, 'reflection')) }}"
+                                                    data-gratitude="{{ e((string) data_get($item, 'gratitude')) }}"
+                                                    data-intention="{{ e((string) data_get($item, 'intention')) }}"
+                                                    data-community-place="{{ e((string) data_get($item, 'community_place')) }}"
+                                                    data-recurrence="{{ e((string) data_get($item, 'recurrence_frequency')) }}"
+                                                    data-recurrence-end="{{ e((string) data_get($item, 'recurrence_ends_at')) }}"
+                                                    data-notes="{{ e((string) data_get($item, 'notes')) }}"
+                                                    onclick="openSpiritualFormFromButton(this)"
+                                                    class="pm-dt-menu-item"
+                                                >
+                                                    <i class="fa-solid fa-pen" aria-hidden="true"></i>Edit
                                                 </button>
-                                            </form>
-                                        </div>
+
+                                                <form method="POST" action="{{ route('spiritual-practices.destroy', $item->id) }}" onsubmit="return confirm('Delete this spiritual growth entry?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="pm-dt-menu-item is-danger">
+                                                        <i class="fa-solid fa-trash" aria-hidden="true"></i>Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </details>
                                     </td>
                                 </tr>
                             @endforeach

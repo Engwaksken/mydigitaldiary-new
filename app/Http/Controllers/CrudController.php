@@ -45,6 +45,90 @@ abstract class CrudController extends Controller
     protected array $tableColumns = [];
 
     /**
+     * How many secondary fields are folded into the muted line under each
+     * row's title. Everything else stays reachable from the View modal.
+     */
+    protected int $tableMetaLimit = 3;
+
+    /**
+     * Works out which field fills each slot of the compact list table so
+     * no module needs a page-specific template and nothing scrolls
+     * sideways. A field may pin its slot with a 'table' key:
+     *   primary – bold title of the row
+     *   meta    – folded into the muted line under the title
+     *   note    – one short preview line (long text)
+     *   status  – coloured pill column
+     *   date    – date column (with countdown where configured)
+     *   amount  – right-aligned money column
+     *   hidden  – only shown in the View modal
+     * Unpinned fields are placed automatically: first text field = primary,
+     * first money field = amount, "status" = status, this module's
+     * $dateField (else the first date) = date, the first textarea = note,
+     * the next few short fields = meta.
+     */
+    protected function tableLayout(array $columns): array
+    {
+        $layout = ['primary' => null, 'meta' => [], 'note' => null, 'status' => null, 'date' => null, 'amount' => null];
+        $used = [];
+
+        $pick = function (string $slot, ?callable $auto = null) use (&$layout, &$used, $columns) {
+            $match = collect($columns)->first(fn ($f) => ($f['table'] ?? null) === $slot && ! in_array($f['name'], $used, true));
+            if (! $match && $auto) {
+                $match = collect($columns)->first(fn ($f) => ! isset($f['table']) && ! in_array($f['name'], $used, true) && $auto($f));
+            }
+            if ($match) {
+                $layout[$slot] = $match['name'];
+                $used[] = $match['name'];
+            }
+        };
+
+        $isDate = fn ($f) => in_array($f['type'], ['date', 'datetime-local', 'datetime-native'], true);
+
+        $pick('primary', fn ($f) => $f['type'] === 'text');
+        if (! $layout['primary']) {
+            // No free-text field (e.g. Sleep, Savings contributions): the
+            // first field becomes the title instead.
+            $pick('primary', fn ($f) => ! in_array($f['type'], ['textarea', 'readonly', 'sleep-range'], true));
+        }
+        $pick('amount', fn ($f) => ! empty($f['money']));
+        $pick('status', fn ($f) => $f['name'] === 'status' && ! empty($f['options']));
+        if (! $layout['date']) {
+            $pick('date', fn ($f) => $f['name'] === $this->dateField && $isDate($f));
+        }
+        if (! $layout['date']) {
+            $pick('date', fn ($f) => $isDate($f));
+        }
+        $pick('note', fn ($f) => $f['type'] === 'textarea');
+
+        $explicitMeta = collect($columns)->filter(fn ($f) => ($f['table'] ?? null) === 'meta')->pluck('name')->all();
+        $autoMeta = collect($columns)
+            ->filter(fn ($f) => ! isset($f['table'])
+                && ! in_array($f['name'], $used, true)
+                && ! in_array($f['type'], ['textarea', 'readonly', 'sleep-range'], true))
+            ->pluck('name')
+            ->all();
+        $layout['meta'] = array_slice(array_values(array_unique(array_merge($explicitMeta, $autoMeta))), 0, max(count($explicitMeta), $this->tableMetaLimit));
+
+        return $layout;
+    }
+
+    /**
+     * One friendly line under the page title. Cheap by design: a single
+     * count query. Modules override this for something more specific.
+     */
+    protected function nudge(Request $request): ?string
+    {
+        $plural = \Illuminate\Support\Str::lower($this->title) . 's';
+        $thisWeek = $this->model::where('user_id', $request->user()->id)
+            ->where('created_at', '>=', now()->startOfWeek())
+            ->count();
+
+        return $thisWeek > 0
+            ? "Nice work — {$thisWeek} " . ($thisWeek === 1 ? \Illuminate\Support\Str::lower($this->title) : $plural) . ' added this week.'
+            : "Nothing added this week yet — a quick entry keeps your {$plural} up to date.";
+    }
+
+    /**
      * Fields as shown to users: "(optional)" never appears in a label
      * (forms show it in the placeholder instead), so it is stripped here
      * for the form, table headers and the details view alike.
@@ -164,10 +248,21 @@ abstract class CrudController extends Controller
             ];
         }
 
+        $tableColumns = $this->viewFields($this->tableColumns ?: $this->fields);
+
+        try {
+            $nudge = $this->nudge($request);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $nudge = null;
+        }
+
         return view('crud.index', array_merge([
             'items' => $items,
             'fields' => $this->viewFields($this->fields),
-            'tableColumns' => $this->viewFields($this->tableColumns ?: $this->fields),
+            'tableColumns' => $tableColumns,
+            'tableLayout' => $this->tableLayout($tableColumns),
+            'nudge' => $nudge,
             'title' => $this->title,
             'routeName' => $this->routeName,
             'stats' => $this->stats($request),

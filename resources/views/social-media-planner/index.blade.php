@@ -17,163 +17,54 @@
         min-width: 0;
     }
 
+    /* The posts list uses the shared pm-dt table (public/css/data-table.css):
+       a fitted table on desktop, stacked cards on phones, no sideways scroll. */
     #social-media-planner .smp-table-card {
         width: 100%;
         max-width: 100%;
         min-width: 0;
-        overflow: hidden;
+        overflow: visible !important;
+        --dt-ink: #0f172a;
+        --dt-muted: #64748b;
+        --dt-line: #e7ecf3;
+        --dt-soft: #f6f8fb;
     }
 
-    #social-media-planner .smp-table-scroll {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow-x: auto !important;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-        scrollbar-width: thin;
-    }
+    #social-media-planner .smp-table-card .pm-dt thead th { border-radius: 0; }
+    #social-media-planner .smp-table-card .pm-dt th.smp-col-check,
+    #social-media-planner .smp-table-card .pm-dt td.pm-dt-check { width: 2.75rem; }
 
-    #social-media-planner .smp-table {
-        width: 100% !important;
-        min-width: 940px !important;
-        border-collapse: collapse !important;
-        border-spacing: 0 !important;
-        table-layout: auto !important;
-    }
-
-    /*
-     * Override any global mobile CSS that changes table elements
-     * into block/grid/card layouts.
-     */
-    #social-media-planner .smp-table thead {
-        display: table-header-group !important;
-    }
-
-    #social-media-planner .smp-table tbody {
-        display: table-row-group !important;
-    }
-
-    #social-media-planner .smp-table tr {
-        display: table-row !important;
-        width: auto !important;
-    }
-
-    #social-media-planner .smp-table th,
-    #social-media-planner .smp-table td {
-        display: table-cell !important;
-        float: none !important;
-        width: auto !important;
-        max-width: none !important;
-        box-sizing: border-box;
-        vertical-align: top;
-        word-break: normal !important;
-        overflow-wrap: normal !important;
-        hyphens: none !important;
-    }
-
-    /* Checkbox */
-    #social-media-planner .smp-table th:nth-child(1),
-    #social-media-planner .smp-table td:nth-child(1) {
-        width: 52px !important;
-        min-width: 52px !important;
-        text-align: center;
-    }
-
-    /* Post */
-    #social-media-planner .smp-table th:nth-child(2),
-    #social-media-planner .smp-table td:nth-child(2) {
-        width: 300px !important;
-        min-width: 300px !important;
-    }
-
-    /* Platforms */
-    #social-media-planner .smp-table th:nth-child(3),
-    #social-media-planner .smp-table td:nth-child(3) {
-        width: 190px !important;
-        min-width: 190px !important;
-    }
-
-    /* Schedule */
-    #social-media-planner .smp-table th:nth-child(4),
-    #social-media-planner .smp-table td:nth-child(4) {
-        width: 180px !important;
-        min-width: 180px !important;
-        white-space: nowrap !important;
-    }
-
-    /* Status */
-    #social-media-planner .smp-table th:nth-child(5),
-    #social-media-planner .smp-table td:nth-child(5) {
-        width: 145px !important;
-        min-width: 145px !important;
-        white-space: nowrap !important;
-    }
-
-    /* Actions */
-    #social-media-planner .smp-table th:nth-child(6),
-    #social-media-planner .smp-table td:nth-child(6) {
-        width: 210px !important;
-        min-width: 210px !important;
-    }
-
-    #social-media-planner .smp-table th {
-        white-space: nowrap !important;
-        line-height: 1.25;
-    }
-
-    #social-media-planner .smp-table td {
-        line-height: 1.45;
-    }
-
-    #social-media-planner .smp-post-title,
-    #social-media-planner .smp-post-caption {
+    #social-media-planner .smp-post-title {
         word-break: normal !important;
         overflow-wrap: anywhere !important;
-        white-space: normal !important;
     }
 
     #social-media-planner .smp-platforms {
-        display: flex !important;
-        flex-wrap: wrap !important;
+        display: inline-flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: .25rem;
         min-width: 0;
     }
 
     #social-media-planner .smp-platform-badge {
-        display: inline-flex !important;
+        display: inline-flex;
         align-items: center;
-        width: auto !important;
-        max-width: 100%;
-        white-space: nowrap !important;
-        word-break: keep-all !important;
-    }
-
-    #social-media-planner .smp-actions {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: flex-end;
-        align-items: center;
-        gap: .5rem;
         white-space: nowrap;
     }
 
-    #social-media-planner .smp-actions button,
-    #social-media-planner .smp-actions form,
-    #social-media-planner .smp-actions form button {
-        width: auto !important;
-        min-width: 0 !important;
-        display: inline-flex !important;
-        align-items: center;
-        white-space: nowrap !important;
-    }
+    #social-media-planner .pm-dt-sub .smp-platforms::before,
+    #social-media-planner .pm-dt-sub .smp-platforms > *::before { content: none; }
 
-    #social-media-planner .smp-scroll-hint {
-        display: none;
-    }
+    #social-media-planner .smp-schedule-date { display: block; font-weight: 700; color: rgb(51 65 85); font-size: .8125rem; }
+    #social-media-planner .smp-schedule-time { display: block; font-size: 11px; color: rgb(100 116 139); }
 
+    @media (max-width: 767.98px) {
+        #social-media-planner .smp-table-card .pm-dt td.pm-dt-check { width: auto; }
+        #social-media-planner .smp-schedule-date,
+        #social-media-planner .smp-schedule-time { display: inline; margin-right: .3rem; }
+        #social-media-planner .smp-due-badge { margin-bottom: 0 !important; }
+    }
 
     /* Single schedule field - prevents global time enhancer duplication */
     #social-media-planner .smp-schedule-trigger { position: relative; }
@@ -251,33 +142,6 @@
         #social-media-planner .smp-table-toolbar label,
         #social-media-planner .smp-table-toolbar button {
             white-space: nowrap;
-        }
-
-        #social-media-planner .smp-scroll-hint {
-            display: flex;
-            align-items: center;
-            gap: .4rem;
-            padding: .55rem .8rem;
-            border-bottom: 1px solid rgb(226 232 240);
-            background: rgb(248 250 252);
-            color: rgb(100 116 139);
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        #social-media-planner .smp-table {
-            /* Intentionally wider than the phone viewport. */
-            width: 940px !important;
-            min-width: 940px !important;
-        }
-
-        #social-media-planner .smp-table th,
-        #social-media-planner .smp-table td {
-            padding: .75rem !important;
-        }
-
-        #social-media-planner .smp-actions {
-            justify-content: flex-start;
         }
 
         #social-media-planner .pm-dialog {
@@ -426,25 +290,19 @@
                 </button>
             </div>
 
-            <div class="smp-scroll-hint">
-                <i class="fa-solid fa-arrows-left-right"></i>
-                Swipe left or right to view all table columns.
-            </div>
+            <table class="smp-table pm-dt">
+                <caption class="sr-only">Your social media posts, with schedule, status and actions.</caption>
+                <thead>
+                    <tr>
+                        <th scope="col" class="smp-col-check"><span class="sr-only">Select</span></th>
+                        <th scope="col">Post</th>
+                        <th scope="col">Schedule</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
 
-            <div class="smp-table-scroll">
-                <table class="smp-table text-sm">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-4 py-3"></th>
-                            <th class="px-4 py-3 text-left">Post</th>
-                            <th class="px-4 py-3 text-left">Platforms</th>
-                            <th class="px-4 py-3 text-left">Due / Schedule</th>
-                            <th class="px-4 py-3 text-left">Status</th>
-                            <th class="px-4 py-3 text-right">Actions</th>
-                        </tr>
-                    </thead>
-
-                    <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @forelse($posts as $post)
                         @php
                             $editPayload = [
@@ -518,69 +376,73 @@
                             }
                         @endphp
 
-                        <tr class="{{ $isDueToday ? 'smp-row-due-today' : '' }}"
+                        @php
+                            $statusPill = match ($status) {
+                                'published' => 'is-green',
+                                'ready_to_share' => 'is-sky',
+                                'scheduled' => 'is-amber',
+                                default => 'is-slate',
+                            };
+                        @endphp
+
+                        <tr class="has-check {{ $isDueToday ? 'smp-row-due-today' : '' }}"
                             data-schedule="{{ $scheduledLocal ? $scheduledLocal->format('Y-m-d\TH:i') : '' }}"
                             data-due-today="{{ $isDueToday ? '1' : '0' }}">
-                            <td class="px-4 py-3 align-top">
+                            <td class="pm-dt-check">
                                 <input type="checkbox"
                                        class="post-checkbox"
                                        form="bulk-delete-form"
                                        name="ids[]"
-                                       value="{{ $post->id }}">
+                                       value="{{ $post->id }}"
+                                       aria-label="Select {{ $post->title }}">
                             </td>
 
-                            <td class="px-4 py-3 align-top">
-                                <div class="smp-post-title font-bold text-slate-800">{{ $post->title }}</div>
-                                <div class="smp-post-caption mt-1 max-w-xl text-xs text-slate-500 line-clamp-2">
-                                    {{ $post->caption }}
-                                </div>
-                                @if($post->media_path || $post->attachedLink())
-                                    <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
-                                        @if($post->media_path)
-                                            <a href="{{ $post->publicMediaUrl() }}" target="_blank" rel="noopener" class="font-bold text-sky-700">
-                                                <i class="fa-solid {{ $post->media_type === 'video' ? 'fa-video' : 'fa-image' }} mr-1"></i>{{ ucfirst($post->media_type) }}
-                                            </a>
-                                        @endif
-                                        @if($post->attachedLink())
-                                            <a href="{{ $post->attachedLink() }}" target="_blank" rel="noopener" class="font-bold text-indigo-700">
-                                                <i class="fa-solid fa-link mr-1"></i>Attached link
-                                            </a>
-                                        @endif
-                                    </div>
-                                @endif
-
-                            </td>
-
-                            <td class="px-4 py-3 align-top">
-                                <div class="smp-platforms">
-                                @foreach((array) $post->platforms as $platform)
-                                    <span class="smp-platform-badge rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
-                                        @if($platform === 'x')
-                                            <i class="fa-brands fa-x-twitter mr-1" aria-hidden="true"></i>X (Twitter)
-                                        @else
-                                            {{ ucwords(str_replace('_', ' ', $platform)) }}
-                                        @endif
-                                    </span>
-                                @endforeach
-                                </div>
-                            </td>
-
-                            <td class="px-4 py-3 align-top text-xs text-slate-600 whitespace-nowrap">
-                                @if($scheduledLocal)
-                                    <div>
-                                        <span class="smp-due-badge {{ $dueClass }}">
-                                            @if($isDueToday)
-                                                <i class="fa-solid fa-circle-dot"></i>
-                                            @elseif($dueLabel === 'Overdue')
-                                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                            @else
-                                                <i class="fa-regular fa-calendar"></i>
-                                            @endif
-                                            {{ $dueLabel }}
+                            <td class="pm-dt-main">
+                                <span class="pm-dt-title smp-post-title" title="{{ $post->title }}">{{ $post->title }}</span>
+                                <span class="pm-dt-sub smp-post-caption" title="{{ $post->caption }}">
+                                    @if(count((array) $post->platforms))
+                                        <span class="smp-platforms">
+                                            @foreach((array) $post->platforms as $platform)
+                                                <span class="smp-platform-badge pm-dt-chip">
+                                                    @if($platform === 'x')
+                                                        <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>X (Twitter)
+                                                    @else
+                                                        {{ ucwords(str_replace('_', ' ', $platform)) }}
+                                                    @endif
+                                                </span>
+                                            @endforeach
                                         </span>
-                                    </div>
-                                    <div class="font-bold text-slate-700">{{ $scheduledLocal->format('d M Y') }}</div>
-                                    <div class="mt-0.5 text-[11px] text-slate-500">{{ $scheduledLocal->format('g:i A') }}</div>
+                                    @endif
+                                    @if($post->media_path)
+                                        <a href="{{ $post->publicMediaUrl() }}" target="_blank" rel="noopener" class="font-bold text-sky-700">
+                                            <i class="fa-solid {{ $post->media_type === 'video' ? 'fa-video' : 'fa-image' }} mr-1"></i>{{ ucfirst($post->media_type) }}
+                                        </a>
+                                    @endif
+                                    @if($post->attachedLink())
+                                        <a href="{{ $post->attachedLink() }}" target="_blank" rel="noopener" class="font-bold text-indigo-700">
+                                            <i class="fa-solid fa-link mr-1"></i>Attached link
+                                        </a>
+                                    @endif
+                                    @if(filled($post->caption))
+                                        <span>{{ \Illuminate\Support\Str::limit((string) $post->caption, 120) }}</span>
+                                    @endif
+                                </span>
+                            </td>
+
+                            <td class="pm-dt-aux">
+                                @if($scheduledLocal)
+                                    <span class="smp-due-badge {{ $dueClass }}">
+                                        @if($isDueToday)
+                                            <i class="fa-solid fa-circle-dot"></i>
+                                        @elseif($dueLabel === 'Overdue')
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                        @else
+                                            <i class="fa-regular fa-calendar"></i>
+                                        @endif
+                                        {{ $dueLabel }}
+                                    </span>
+                                    <span class="smp-schedule-date">{{ $scheduledLocal->format('d M Y') }}</span>
+                                    <span class="smp-schedule-time">{{ $scheduledLocal->format('g:i A') }}</span>
                                 @else
                                     <span class="smp-due-badge smp-due-upcoming">
                                         <i class="fa-regular fa-pen-to-square"></i> Draft
@@ -588,52 +450,56 @@
                                 @endif
                             </td>
 
-                            <td class="px-4 py-3 align-top">
-                                <span class="inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase {{ $statusClass }}">
-                                    {{ $status === 'ready_to_share' ? 'Ready to Post' : str_replace('_', ' ', $status) }}
+                            <td class="pm-dt-aux">
+                                <span class="pm-dt-pill {{ $statusPill }}">
+                                    {{ $status === 'ready_to_share' ? 'Ready to Post' : ucfirst(str_replace('_', ' ', $status)) }}
                                 </span>
                             </td>
 
-                            <td class="px-4 py-3 align-top">
-                                <div class="smp-actions">
-                                    <button type="button"
-                                            class="js-edit-social-post text-xs font-bold text-sky-700"
-                                            data-post="{{ $encodedEditPayload }}">
-                                        <i class="fa-solid fa-pen-to-square mr-1"></i>Edit
-                                    </button>
+                            <td class="pm-dt-actions">
+                                <button type="button"
+                                        class="js-edit-social-post pm-dt-icon-btn"
+                                        data-post="{{ $encodedEditPayload }}"
+                                        title="Edit post"
+                                        aria-label="Edit {{ $post->title }}">
+                                    <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
+                                </button>
 
-                                    @if($status !== 'published')
-                                        <button type="button"
-                                                class="js-post-now text-xs font-bold text-teal-700"
-                                                data-post="{{ $sharePayload }}"
-                                                data-url="{{ route('social-media-planner.post-now', $post) }}">
-                                            <i class="fa-solid fa-paper-plane mr-1"></i>Post now
-                                        </button>
-
-                                        <form method="POST"
-                                              action="{{ route('social-media-planner.mark-published', $post) }}"
-                                              class="inline">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit"
-                                                    class="text-xs font-bold text-emerald-700">
-                                                <i class="fa-solid fa-circle-check mr-1"></i>Mark posted
+                                @if($status !== 'published')
+                                    <details class="pm-dt-menu">
+                                        <summary class="pm-dt-icon-btn" title="More actions" aria-label="More actions for {{ $post->title }}">
+                                            <i class="fa-solid fa-ellipsis-vertical text-xs" aria-hidden="true"></i>
+                                        </summary>
+                                        <div class="pm-dt-menu-list">
+                                            <button type="button"
+                                                    class="js-post-now pm-dt-menu-item"
+                                                    data-post="{{ $sharePayload }}"
+                                                    data-url="{{ route('social-media-planner.post-now', $post) }}">
+                                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>Post now
                                             </button>
-                                        </form>
-                                    @endif
-                                </div>
+
+                                            <form method="POST"
+                                                  action="{{ route('social-media-planner.mark-published', $post) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="pm-dt-menu-item">
+                                                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>Mark posted
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </details>
+                                @endif
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="6" class="px-4 py-10 text-center text-sm text-slate-400">
+                        <tr class="pm-dt-empty">
+                            <td colspan="5">
                                 No social media posts yet.
                             </td>
                         </tr>
                     @endforelse
                     </tbody>
                 </table>
-            </div>
 
         <div class="border-t border-slate-100 p-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

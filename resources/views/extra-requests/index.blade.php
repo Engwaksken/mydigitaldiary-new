@@ -20,8 +20,8 @@
         </div>
     @endif
 
-    <div class="bg-white shadow rounded-lg overflow-hidden border border-slate-200">
-        <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+    <div class="pm-dt-wrap pm-er-card">
+        <div class="p-4 border-b border-slate-100 flex flex-wrap gap-2 justify-between items-center">
             <span class="text-sm font-semibold text-slate-700">Your Current Quota: {{ auth()->user()->extra_recording_quota_minutes ?? 0 }} minutes</span>
             @if(auth()->user()->extra_quota_expires_at)
                 <span class="text-xs text-slate-500">Expires: {{ auth()->user()->extra_quota_expires_at->format('M d, Y H:i') }}</span>
@@ -33,48 +33,55 @@
                 <p>No extra quota requests found.</p>
             </div>
         @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
-                            <th class="p-4">ID</th>
-                            <th class="p-4">Description</th>
-                            <th class="p-4">Minutes</th>
-                            <th class="p-4">Amount</th>
-                            <th class="p-4">Status</th>
-                            <th class="p-4">Date</th>
-                            <th class="p-4 text-right">Actions</th>
+            <table class="pm-dt">
+                <caption class="sr-only">Your extra recording quota requests.</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Request</th>
+                        <th scope="col">Minutes</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="pm-dt-num">Amount</th>
+                        <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($requests as $req)
+                        @php
+                            $erPill = match ($req->status) {
+                                'applied' => 'is-green',
+                                'approved' => 'is-sky',
+                                'rejected' => 'is-rose',
+                                default => 'is-amber',
+                            };
+                        @endphp
+                        <tr>
+                            <td class="pm-dt-main">
+                                <a href="{{ route('extra-requests.show', $req) }}" class="pm-dt-title hover:text-[var(--brand-1)]" title="{{ $req->description }}">{{ $req->description ?: 'Request #' . $req->id }}</a>
+                                <span class="pm-dt-sub"><span>#{{ $req->id }}</span><span>{{ $req->created_at->format('M d, Y') }}</span></span>
+                            </td>
+                            <td class="pm-dt-aux font-semibold text-[var(--brand-1)]">+{{ $req->quota_amount }} min</td>
+                            <td class="pm-dt-aux">
+                                <span class="pm-dt-pill {{ $erPill }}">{{ ucfirst($req->status) }}</span>
+                            </td>
+                            <td class="pm-dt-num">{{ number_format($req->amount, 2) }} {{ $req->currency }}</td>
+                            <td class="pm-dt-actions">
+                                <a href="{{ route('extra-requests.show', $req) }}" class="pm-dt-icon-btn" title="View request" aria-label="View request #{{ $req->id }}">
+                                    <i class="fa-solid fa-eye text-xs" aria-hidden="true"></i>
+                                </a>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 text-sm">
-                        @foreach($requests as $req)
-                            <tr>
-                                <td class="p-4 font-medium">#{{ $req->id }}</td>
-                                <td class="p-4">{{ $req->description }}</td>
-                                <td class="p-4 font-semibold text-[var(--brand-1)]">+{{ $req->quota_amount }} min</td>
-                                <td class="p-4">{{ number_format($req->amount, 2) }} {{ $req->currency }}</td>
-                                <td class="p-4">
-                                    <span class="px-2.5 py-1 text-xs rounded-full font-medium
-                                        @if($req->status === 'applied') bg-emerald-100 text-emerald-800
-                                        @elseif($req->status === 'approved') bg-blue-100 text-blue-800
-                                        @elseif($req->status === 'rejected') bg-red-100 text-red-800
-                                        @else bg-amber-100 text-amber-800 @endif">
-                                        {{ ucfirst($req->status) }}
-                                    </span>
-                                </td>
-                                <td class="p-4 text-slate-500 text-xs">{{ $req->created_at->format('M d, Y') }}</td>
-                                <td class="p-4 text-right">
-                                    <a href="{{ route('extra-requests.show', $req) }}" class="text-[var(--brand-1)] hover:underline font-medium text-xs">View</a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <div class="p-4 border-t border-slate-200">
+                    @endforeach
+                </tbody>
+            </table>
+            <div class="p-4 border-t border-slate-100">
                 {{ $requests->links() }}
             </div>
         @endif
     </div>
 </div>
+<style>
+    /* The table sits under the quota bar, so its header has square corners. */
+    .pm-er-card .pm-dt thead th { border-radius: 0; }
+    .pm-er-card .pm-dt tbody tr:last-child td { border-radius: 0; }
+</style>
 @endsection

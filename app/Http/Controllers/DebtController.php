@@ -16,15 +16,15 @@ class DebtController extends CrudController
     protected string $accent = 'amber';
 
     protected array $fields = [
-        ['tab'=>'Details','name'=>'type','label'=>'Type','type'=>'select','required'=>true,'options'=>[
+        ['tab'=>'Details','table'=>'meta','name'=>'type','label'=>'Type','type'=>'select','required'=>true,'options'=>[
             'borrowed'=>'Borrowed (I owe them)','lent'=>'Lent (they owe me)',
         ]],
         ['tab'=>'Details','name'=>'person_name','label'=>'Borrower / Lender','type'=>'text','required'=>true],
         ['tab'=>'Contact & Notes','name'=>'contact_email','label'=>'Email','type'=>'text'],
         ['tab'=>'Contact & Notes','name'=>'contact_phone','label'=>'Phone / SMS number','type'=>'text'],
         ['tab'=>'Details','name'=>'amount','label'=>'Outstanding Amount','type'=>'number','required'=>true,'money'=>true],
-        ['tab'=>'Details','name'=>'date','label'=>'Date','type'=>'date','required'=>true],
-        ['tab'=>'Details','name'=>'due_date','label'=>'Due Date','type'=>'date'],
+        ['tab'=>'Details','table'=>'meta','name'=>'date','label'=>'Date','type'=>'date','required'=>true],
+        ['tab'=>'Details','table'=>'date','name'=>'due_date','label'=>'Due Date','type'=>'date'],
         ['tab'=>'Details','name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>[
             'outstanding'=>'Outstanding','overdue'=>'Overdue','paid'=>'Paid',
         ]],

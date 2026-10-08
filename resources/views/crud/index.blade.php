@@ -8,7 +8,12 @@
             <div class="w-12 h-12 rounded-xl bg-{{ $accent }}-100 text-{{ $accent }}-600 flex items-center justify-center shadow-sm shrink-0">
                 <i class="{{ $icon }} text-xl" aria-hidden="true"></i>
             </div>
-            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">{{ $title }}s</h1>
+            <div class="min-w-0">
+                <h1 class="text-2xl font-bold text-slate-800 tracking-tight">{{ $title }}s</h1>
+                @if (!empty($nudge))
+                    <p class="pm-nudge"><i class="fa-solid fa-star" aria-hidden="true"></i><span>{{ $nudge }}</span></p>
+                @endif
+            </div>
         </div>
         <div class="flex items-center gap-2">
             @if (view()->exists('crud.extras.' . $routeName . '-header'))
@@ -67,11 +72,14 @@
         </div>
     @endif
 
-    {{-- Stats cards are always visible — not tabbed — so they read like
-         the at-a-glance summary they're meant to be, with the Chart/Table
-         tabs underneath for the more detailed views. --}}
+    {{-- Compact summary strip: a few glanceable numbers, always visible
+         above the Chart/Table/Calendar tabs. --}}
     @if (!empty($stats))
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        @php
+            $pmStatCount = count($stats);
+            $pmStatCols = $pmStatCount <= 5 ? $pmStatCount : ($pmStatCount % 3 === 0 ? 3 : 4);
+        @endphp
+        <div class="pm-summary mb-6" style="--pm-summary-cols: {{ $pmStatCols }}" aria-label="{{ $title }} summary">
             @foreach ($stats as $stat)
                 @php
                     $statColor = $stat['color'] ?? $accent;
@@ -79,28 +87,20 @@
                     $statRoute = $stat['route'] ?? ($stat['url'] ?? ($stat['link'] ?? null));
                 @endphp
                 @if ($statRoute)
-                    <a href="{{ $statRoute }}" class="pm-card-bg rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-{{ $statColor }}-400 p-4 hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-1)]">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-{{ $statColor }}-50 text-{{ $statColor }}-600 flex items-center justify-center shrink-0">
-                            <i class="{{ $statIcon }} text-sm" aria-hidden="true"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-xs text-slate-500 uppercase tracking-wide truncate">{{ $stat['label'] }}</p>
-                            <p class="text-xl font-bold text-slate-800 truncate">{{ $stat['value'] }}</p>
-                        </div>
-                    </div>
+                    <a href="{{ $statRoute }}" class="pm-summary-cell">
+                @else
+                    <div class="pm-summary-cell">
+                @endif
+                        <span class="pm-summary-icon bg-{{ $statColor }}-50 text-{{ $statColor }}-600">
+                            <i class="{{ $statIcon }}" aria-hidden="true"></i>
+                        </span>
+                        <span class="min-w-0">
+                            <span class="pm-summary-label" title="{{ $stat['label'] }}">{{ $stat['label'] }}</span>
+                            <span class="pm-summary-value" title="{{ $stat['value'] }}">{{ $stat['value'] }}</span>
+                        </span>
+                @if ($statRoute)
                     </a>
                 @else
-                    <div class="pm-card-bg rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-{{ $statColor }}-400 p-4 hover:shadow-md transition-shadow">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-lg bg-{{ $statColor }}-50 text-{{ $statColor }}-600 flex items-center justify-center shrink-0">
-                                <i class="{{ $statIcon }} text-sm" aria-hidden="true"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs text-slate-500 uppercase tracking-wide truncate">{{ $stat['label'] }}</p>
-                                <p class="text-xl font-bold text-slate-800 truncate">{{ $stat['value'] }}</p>
-                            </div>
-                        </div>
                     </div>
                 @endif
             @endforeach
@@ -346,13 +346,6 @@
         </div>
     @endif
 
-    @if ($routeName === 'personal-goals')
-        <div class="pm-table-swipe-hint md:hidden mb-2 text-[11px] font-medium text-slate-400">
-            <i class="fa-solid fa-arrows-left-right mr-1"></i>
-            Swipe the table sideways to view all goal columns.
-        </div>
-    @endif
-
     @if ($routeName === 'savings-goals')
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             @forelse ($items as $item)
@@ -486,34 +479,76 @@
             @endforelse
         </div>
     @else
-    <div class="pm-card-bg rounded-xl shadow-sm border border-slate-100 overflow-x-auto pm-horizontal-table-wrap"
-         role="region"
-         aria-label="{{ $title }}s table"
-         tabindex="0">
-        <table class="min-w-full text-sm pm-horizontal-data-table {{ $routeName === 'personal-goals' ? 'pm-goals-horizontal-table' : '' }}">
-            <caption class="sr-only">List of your {{ strtolower($title) }}s, with edit and delete actions for each.</caption>
-            <thead class="bg-slate-50 text-left border-b border-slate-100">
+    @php
+        // Compact layout: title (+ folded details) | status | date | amount | actions.
+        // Slots come from CrudController::tableLayout(); every field is
+        // still shown in full in the View modal.
+        $pmColumnsByName = collect($fields)->keyBy('name')->merge(collect($tableColumns)->keyBy('name'));
+        $pmPrimaryField = $tableLayout['primary'] ? $pmColumnsByName->get($tableLayout['primary']) : null;
+        $pmStatusField = $tableLayout['status'] ? $pmColumnsByName->get($tableLayout['status']) : null;
+        $pmDateField = $tableLayout['date'] ? $pmColumnsByName->get($tableLayout['date']) : null;
+        $pmAmountField = $tableLayout['amount'] ? $pmColumnsByName->get($tableLayout['amount']) : null;
+        $pmNoteField = $tableLayout['note'] ? $pmColumnsByName->get($tableLayout['note']) : null;
+        $pmMetaFields = collect($tableLayout['meta'])->map(fn ($name) => $pmColumnsByName->get($name))->filter()->values();
+        // Short column/meta labels: drop hints like "(e.g. …)" and "Date & Time".
+        $pmShortLabel = fn (string $label) => trim(preg_replace(['/\s*\(.*?\)/', '/\s*Date\s*&\s*Time\b/i'], '', $label)) ?: $label;
+        $pmTableColspan =2 + ($pmHasBulkDelete ? 1 : 0) + ($pmStatusField ? 1 : 0) + ($pmDateField ? 1 : 0) + ($pmAmountField ? 1 : 0);
+
+        $pmStatusTone = function ($value): string {
+            $key = strtolower((string) $value);
+            return match (true) {
+                in_array($key, ['completed', 'complete', 'paid', 'done', 'active', 'received', 'achieved', 'great', 'good', 'resolved', 'closed'], true) => 'is-green',
+                in_array($key, ['in_progress', 'pending', 'outstanding', 'paused', 'on_hold', 'medium', 'okay'], true) => 'is-amber',
+                in_array($key, ['overdue', 'cancelled', 'canceled', 'failed', 'missed', 'high', 'low_mood', 'rejected'], true) => 'is-rose',
+                in_array($key, ['scheduled', 'not_started', 'planned', 'open', 'new', 'upcoming'], true) => 'is-sky',
+                default => 'is-slate',
+            };
+        };
+
+        $pmRenderCell = function ($field, $item, $rowValues, bool $withCountdown = false) use ($routeName, $countdownField) {
+            return trim(view('crud._cell', [
+                'field' => $field,
+                'item' => $item,
+                'rowValues' => $rowValues,
+                'routeName' => $routeName,
+                'countdownField' => $countdownField,
+                'withCountdown' => $withCountdown,
+            ])->render());
+        };
+    @endphp
+    <div class="pm-dt-wrap" role="region" aria-label="{{ $title }}s table">
+        <table class="pm-dt">
+            <caption class="sr-only">List of your {{ strtolower($title) }}s. Select a title to view all details.</caption>
+            <thead>
                 <tr>
                     @if ($pmHasBulkDelete)
-                        <th scope="col" class="px-4 py-3 w-10">
+                        <th scope="col" class="pm-dt-check">
                             <input type="checkbox" id="pm-crud-select-all" onchange="pmToggleAllCrudRows(this)" class="rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-2)]" aria-label="Select all {{ strtolower($title) }} records">
+                            <label for="pm-crud-select-all" class="pm-dt-check-label">Select all</label>
                         </th>
                     @endif
-                    @foreach ($tableColumns as $field)
-                        <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">{{ $field['label'] }}</th>
-                    @endforeach
-                    @if ($routeName === 'expenses')
-                        <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Items</th>
+                    <th scope="col">{{ $pmPrimaryField ? $pmShortLabel($pmPrimaryField['label']) : $title }}</th>
+                    @if ($pmStatusField)
+                        <th scope="col">{{ $pmShortLabel($pmStatusField['label']) }}</th>
                     @endif
-                    <th scope="col" class="px-4 py-3">
-                        <span class="sr-only">Actions</span>
-                    </th>
+                    @if ($pmDateField)
+                        <th scope="col">{{ $pmShortLabel($pmDateField['label']) }}</th>
+                    @endif
+                    @if ($pmAmountField)
+                        <th scope="col" class="pm-dt-num">{{ $pmShortLabel($pmAmountField['label']) }}</th>
+                    @endif
+                    <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @forelse ($items as $item)
                     @php
-                        $rowLabel = $item->{$fields[0]['name']} ?? null;
+                        $rowLabel = $item->{$tableLayout['primary'] ?? $fields[0]['name']} ?? null;
+                        if (is_object($rowLabel) && method_exists($rowLabel, 'format')) {
+                            $rowLabel = $rowLabel->format('d M Y');
+                        } elseif ($pmPrimaryField && isset($pmPrimaryField['options']) && is_scalar($rowLabel) && array_key_exists($rowLabel, $pmPrimaryField['options'])) {
+                            $rowLabel = $pmPrimaryField['options'][$rowLabel];
+                        }
                         $rowLabel = is_string($rowLabel) || is_numeric($rowLabel) ? (string) $rowLabel : ('#' . $item->id);
 
                         // Formatted values for THIS row, used by the JS modal
@@ -536,252 +571,154 @@
                             }
                             $rowValues[$f['name']] = $v;
                         }
+
+                        $pmIsOwner = ($item->user_id ?? null) == auth()->id();
+                        $pmPrimaryHtml = $pmPrimaryField ? $pmRenderCell($pmPrimaryField, $item, $rowValues) : '';
+                        if ($pmPrimaryHtml === '') {
+                            $pmPrimaryHtml = e($rowLabel !== '' ? $rowLabel : ('#' . $item->id));
+                        }
+
+                        // Muted second line: short secondary fields, then a note preview.
+                        $pmSubParts = [];
+                        if ($routeName === 'expenses') {
+                            if ($item->relationLoaded('budget') && $item->budget) {
+                                $pmSubParts[] = '<span class="pm-dt-chip"><i class="fa-solid fa-wallet text-[10px]" aria-hidden="true"></i>' . e(\Illuminate\Support\Str::limit((string) $item->budget->category, 28)) . '</span>';
+                            }
+                            $pmExpenseItemNames = $item->items->pluck('description')->filter(fn ($d) => filled($d))->map(fn ($d) => trim((string) $d))->values();
+                            if ($pmExpenseItemNames->isNotEmpty()) {
+                                $pmSubParts[] = '<span title="' . e($pmExpenseItemNames->implode(', ')) . '">' . e($pmExpenseItemNames->count() . ' ' . ($pmExpenseItemNames->count() === 1 ? 'item' : 'items') . ': ' . \Illuminate\Support\Str::limit($pmExpenseItemNames->implode(', '), 48)) . '</span>';
+                            }
+                        }
+                        foreach ($pmMetaFields as $metaField) {
+                            if ($metaField['type'] === 'checkbox') {
+                                if ($item->{$metaField['name']}) {
+                                    $pmSubParts[] = '<span><i class="fa-solid fa-check text-[10px] text-emerald-500" aria-hidden="true"></i> ' . e($metaField['label']) . '</span>';
+                                }
+                                continue;
+                            }
+                            $metaHtml = $pmRenderCell($metaField, $item, $rowValues);
+                            if ($metaHtml === '') {
+                                continue;
+                            }
+                            $needsLabel = (in_array($metaField['type'], ['number', 'date', 'datetime-local', 'datetime-native', 'time'], true) || str_ends_with($metaField['name'], '_time')) && empty($metaField['money']);
+                            $pmSubParts[] = '<span>' . ($needsLabel ? '<span class="pm-dt-sub-label">' . e(\Illuminate\Support\Str::limit($pmShortLabel($metaField['label']), 22, '')) . '</span> ' : '') . $metaHtml . '</span>';
+                        }
+                        if ($pmNoteField) {
+                            $noteHtml = $pmRenderCell($pmNoteField, $item, $rowValues);
+                            if ($noteHtml !== '') {
+                                $pmSubParts[] = '<span class="pm-dt-note">' . $noteHtml . '</span>';
+                            }
+                        }
+
+                        $pmStatusValue = $pmStatusField ? $item->{$pmStatusField['name']} : null;
+                        $pmStatusLabel = $pmStatusField && $pmStatusValue !== null && $pmStatusValue !== ''
+                            ? ($pmStatusField['options'][$pmStatusValue] ?? ucfirst(str_replace('_', ' ', (string) $pmStatusValue)))
+                            : null;
                     @endphp
-                    <tr class="hover:bg-slate-50 transition-colors">
+                    <tr class="{{ $pmHasBulkDelete ? 'has-check' : '' }}">
                         @if ($pmHasBulkDelete)
-                            <td class="px-4 py-3 align-top">
-                                @if (($item->user_id ?? null) == auth()->id())
+                            <td class="pm-dt-check">
+                                @if ($pmIsOwner)
                                     <input type="checkbox" name="ids[]" value="{{ $item->id }}" form="pm-crud-bulk-delete-form" onchange="pmUpdateCrudBulkBar()" class="pm-crud-row-checkbox rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-2)]" aria-label="Select {{ $rowLabel }}">
                                 @endif
                             </td>
                         @endif
-                        @foreach ($tableColumns as $field)
-                            <td class="px-4 py-3 align-top text-slate-700 {{ $routeName === 'personal-goals' && in_array($field['name'], ['description', 'notes'], true) ? 'pm-table-wrap-text' : '' }}">
-                                @php
-                                    $value = $item->{$field['name']};
-                                    $meetingFieldName = strtolower((string) ($field['name'] ?? ''));
-                                    $isMeetingLinkField = $routeName === 'meetings' && in_array($meetingFieldName, ['location', 'meeting_link', 'video_link', 'join_url', 'url'], true);
-                                    $isMeetingAttendeesField = $routeName === 'meetings' && in_array($meetingFieldName, ['attendees', 'attendee', 'participants'], true);
-                                    $isMeetingNotesField = $routeName === 'meetings' && in_array($meetingFieldName, ['notes', 'agenda', 'notes_agenda', 'description'], true);
-                                @endphp
-                                @if ($isMeetingLinkField)
-                                    @php
-                                        $meetingLinkValue = trim((string) ($value ?? ''));
-                                        $meetingSafeExternalUrl = $item->safe_external_url;
-                                    @endphp
-                                    @if ($meetingLinkValue === '')
-                                        <span class="text-slate-400"></span>
-                                    @elseif ($meetingSafeExternalUrl && $item->canBeJoinedBy(auth()->user()))
-                                        <a href="{{ $item->diary_join_url }}"
-                                            class="inline-flex items-center gap-1 text-[var(--brand-1)] hover:underline font-medium"
-                                           title="Join meeting">
-                                            <i class="fa-solid fa-arrow-right-to-bracket text-[10px]" aria-hidden="true"></i>
-                                            Join meeting
-                                        </a>
-                                    @elseif ($meetingSafeExternalUrl)
-                                        {{-- A link the diary can't join through (e.g. a calendar-synced
-                                             Zoom/Meet URL) shows as "View", opening the meeting details;
-                                             the UI never links straight to an external meeting URL. --}}
-                                        <button type="button"
-                                                onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, {{ (($item->user_id ?? null) == auth()->id()) ? "true" : "false" }})'
-                                                class="inline-flex items-center gap-1 text-[var(--brand-1)] hover:underline font-medium"
-                                                title="View meeting link">
-                                            <i class="fa-solid fa-eye text-[10px]" aria-hidden="true"></i>
-                                            View
-                                        </button>
-                                    @else
-                                        <span title="{{ $meetingLinkValue }}">{{ \Illuminate\Support\Str::limit($meetingLinkValue, 34) }}</span>
-                                    @endif
-                                @elseif ($isMeetingAttendeesField)
-                                    @php
-                                        $meetingAttendeeParts = collect();
-                                        if (is_array($value) || $value instanceof \Illuminate\Support\Collection) {
-                                            $meetingAttendeeParts = collect($value)->map(function ($entry) {
-                                                if (is_scalar($entry)) return trim((string) $entry);
-                                                if (is_array($entry)) return trim((string) ($entry['email'] ?? $entry['name'] ?? $entry['value'] ?? ''));
-                                                if (is_object($entry)) return trim((string) ($entry->email ?? $entry->name ?? $entry->value ?? ''));
-                                                return '';
-                                            });
-                                        } else {
-                                            $rawAttendees = trim((string) ($value ?? ''));
-                                            if ($rawAttendees !== '') {
-                                                $meetingAttendeeParts = collect(preg_split('/[,;\n]+/', $rawAttendees));
-                                            }
-                                        }
-                                        $meetingAttendeeParts = $meetingAttendeeParts->map(fn ($part) => trim((string) $part))->filter()->unique()->values();
-                                        $meetingAttendeeCount = $meetingAttendeeParts->count();
-                                        $meetingAttendeeTitle = $meetingAttendeeParts->implode(', ');
-                                    @endphp
-                                    @if ($meetingAttendeeCount > 0)
-                                        <span class="inline-flex items-center gap-1.5 font-medium text-slate-700" title="{{ $meetingAttendeeTitle }}">
-                                            <i class="fa-solid fa-users text-slate-400 text-xs" aria-hidden="true"></i>
-                                            {{ $meetingAttendeeCount }}
-                                        </span>
-                                    @else
-                                        <span class="text-slate-400"></span>
-                                    @endif
-                                @elseif ($isMeetingNotesField)
-                                    @php $meetingNotesText = trim(strip_tags((string) ($value ?? ''))); @endphp
-                                    @if ($meetingNotesText !== '')
-                                        <span class="cursor-help" title="{{ $meetingNotesText }}">{{ \Illuminate\Support\Str::limit($meetingNotesText, 42) }}</span>
-                                    @else
-                                        <span class="text-slate-400"></span>
-                                    @endif
-                                @elseif ($field['name'] === 'notes')
-                                    @php
-                                        $notesPreviewFull = trim(strip_tags((string) ($value ?? '')));
-                                    @endphp
-                                    @if ($notesPreviewFull !== '')
-                                        <span class="cursor-help whitespace-normal"
-                                              title="{{ $notesPreviewFull }}">
-                                            {{ \Illuminate\Support\Str::limit($notesPreviewFull, 48) }}
-                                        </span>
-                                    @else
-                                        <span class="text-slate-400"></span>
-                                    @endif
-                                @elseif ($field['name'] === 'project_id' && isset($item->project))
-                                    {{ $item->project->name }}
-                                @elseif ($field['name'] === 'savings_goal_id' && isset($item->goal))
-                                    {{ $item->goal->name }}
-                                @elseif ($field['money'] ?? false)
-                                    {{ $value !== null ? format_money($value) : '' }}
-                                @elseif ($field['type'] === 'checkbox')
-                                    @if ($value)
-                                        <i class="fa-solid fa-circle-check text-emerald-500" aria-hidden="true"></i>
-                                        <span class="sr-only">Yes</span>
-                                    @else
-                                        <i class="fa-solid fa-circle-xmark text-slate-300" aria-hidden="true"></i>
-                                        <span class="sr-only">No</span>
-                                    @endif
-                                @elseif ($field['type'] === 'time' && $value)
-                                    @php
-                                        try {
-                                            $displayTime = \Illuminate\Support\Carbon::parse((string) $value)->format('g:i A');
-                                        } catch (\Throwable $e) {
-                                            $displayTime = (string) $value;
-                                        }
-                                    @endphp
-                                    {{ $displayTime }}
-                                @elseif (is_object($value) && method_exists($value, 'format'))
-                                    <span class="block">{{ in_array($field['type'], ['datetime-local', 'datetime-native'], true) ? $value->format('d M Y, g:i A') : $value->format('Y-m-d') }}</span>
-                                    @if ($field['name'] === $countdownField && !($routeName === 'debts' && $item->status === 'paid'))
-                                        <x-countdown :date="$value" :status="$item->status ?? null" />
-                                    @endif
-                                @elseif (is_array($value) || $value instanceof \Illuminate\Support\Collection)
-                                    @php
-                                        $arrayValue = $value instanceof \Illuminate\Support\Collection ? $value->all() : $value;
-                                        $displayParts = collect($arrayValue)
-                                            ->map(function ($entry) {
-                                                if (is_null($entry)) {
-                                                    return null;
-                                                }
-                                                if (is_scalar($entry)) {
-                                                    return trim((string) $entry);
-                                                }
-                                                if (is_array($entry)) {
-                                                    foreach (['name', 'title', 'email', 'label', 'value'] as $key) {
-                                                        if (isset($entry[$key]) && is_scalar($entry[$key])) {
-                                                            return trim((string) $entry[$key]);
-                                                        }
-                                                    }
-                                                    return collect($entry)
-                                                        ->filter(fn ($part) => is_scalar($part) && trim((string) $part) !== '')
-                                                        ->map(fn ($part) => trim((string) $part))
-                                                        ->implode(' - ');
-                                                }
-                                                if (is_object($entry)) {
-                                                    foreach (['name', 'title', 'email', 'label', 'value'] as $key) {
-                                                        if (isset($entry->{$key}) && is_scalar($entry->{$key})) {
-                                                            return trim((string) $entry->{$key});
-                                                        }
-                                                    }
-                                                    if (method_exists($entry, '__toString')) {
-                                                        return trim((string) $entry);
-                                                    }
-                                                }
-                                                return null;
-                                            })
-                                            ->filter(fn ($part) => filled($part))
-                                            ->values()
-                                            ->implode(', ');
-                                    @endphp
-                                    {{ $displayParts !== '' ? \Illuminate\Support\Str::limit($displayParts, 120) : '' }}
-                                @elseif (isset($field['options']) && $value !== null && !is_array($value) && array_key_exists($value, $field['options']))
-                                    {{ $field['options'][$value] }}
-                                @else
-                                    {{ $value !== null ? \Illuminate\Support\Str::limit((string) $value, 60) : '' }}
-                                @endif
-                            </td>
-                        @endforeach
-                        @if ($routeName === 'expenses')
-                            @php
-                                $expenseItemNames = $item->items
-                                    ->pluck('description')
-                                    ->filter(fn ($description) => filled($description))
-                                    ->map(fn ($description) => trim((string) $description))
-                                    ->values();
-                                $expenseItemsText = $expenseItemNames->implode(', ');
-                            @endphp
-                            <td class="px-4 py-3 align-top text-slate-700 min-w-[220px] max-w-[420px]">
-                                @if ($expenseItemsText !== '')
-                                    <span class="whitespace-normal break-words" title="{{ $expenseItemsText }}">{{ $expenseItemsText }}</span>
-                                @else
-                                    <span class="text-slate-400"></span>
+                        <td class="pm-dt-main">
+                            <button type="button"
+                                    onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, {{ $pmIsOwner ? "true" : "false" }})'
+                                    class="pm-dt-title"
+                                    title="View {{ $rowLabel }}">{!! $pmPrimaryHtml !!}</button>
+                            @if (!empty($pmSubParts))
+                                <span class="pm-dt-sub">{!! implode('', $pmSubParts) !!}</span>
+                            @endif
+                        </td>
+                        @if ($pmStatusField)
+                            <td class="pm-dt-aux">
+                                @if ($pmStatusLabel)
+                                    <span class="pm-dt-pill {{ $pmStatusTone($pmStatusValue) }}">{{ $pmStatusLabel }}</span>
                                 @endif
                             </td>
                         @endif
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <button type="button"
-                                    onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, {{ (($item->user_id ?? null) == auth()->id()) ? "true" : "false" }})'
-                                    class="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 mr-3 transition-colors"
-                                    title="View {{ $rowLabel }}">
-                                <i class="fa-solid fa-eye text-xs" aria-hidden="true"></i>
-                                <span class="sr-only">View {{ $rowLabel }}</span>
-                            </button>
-                            @if ($routeName === 'meetings' && ($item->user_id ?? null) == auth()->id())
-                                <a href="{{ route('meetings.notes', $item->id) }}#record-meeting"
-                                   class="inline-flex items-center gap-1 text-rose-500 hover:text-rose-700 mr-3 transition-colors"
-                                   title="Record meeting">
-                                    <i class="fa-solid fa-microphone text-xs" aria-hidden="true"></i>
-                                    <span class="sr-only">Record {{ $rowLabel }}</span>
-                                </a>
+                        @if ($pmDateField)
+                            <td class="pm-dt-aux">{!! $pmRenderCell($pmDateField, $item, $rowValues, true) !!}</td>
+                        @endif
+                        @if ($pmAmountField)
+                            <td class="pm-dt-num">{!! $pmRenderCell($pmAmountField, $item, $rowValues) !!}</td>
+                        @endif
+                        <td class="pm-dt-actions">
+                            @if ($pmIsOwner && auth()->user()->hasActiveAccess())
+                                <button type="button"
+                                        onclick='openCrudEditModal({{ json_encode(route($routeName . '.update', $item->id)) }}, {{ json_encode($rowValues) }})'
+                                        class="pm-dt-icon-btn pm-dt-desktop-only"
+                                        title="Edit {{ $rowLabel }}">
+                                    <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
+                                    <span class="sr-only">Edit {{ $rowLabel }}</span>
+                                </button>
                             @endif
-                            @if (($item->user_id ?? null) == auth()->id())
-                                @if (auth()->user()->hasActiveAccess())
-                                    <button type="button"
-                                            onclick='openCrudEditModal({{ json_encode(route($routeName . '.update', $item->id)) }}, {{ json_encode($rowValues) }})'
-                                            class="inline-flex items-center gap-1 text-{{ $accent }}-600 hover:text-{{ $accent }}-800 mr-3 transition-colors">
-                                        <i class="fa-solid fa-pen-to-square text-xs" aria-hidden="true"></i>
-                                        <span class="sr-only">Edit {{ $rowLabel }}</span>
-                                    </button>
-                                    <button type="button"
-                                            onclick='openCrudDeleteModal({{ json_encode(route($routeName . '.destroy', $item->id)) }}, {{ json_encode($rowLabel) }})'
-                                            class="inline-flex items-center gap-1 text-rose-500 hover:text-rose-700 transition-colors">
-                                        <i class="fa-solid fa-trash-can text-xs" aria-hidden="true"></i>
-                                        <span class="sr-only">Delete {{ $rowLabel }}</span>
-                                    </button>
-                                @else
-                                    <span class="text-xs text-slate-400" title="Renew your subscription to edit or delete">
-                                        <i class="fa-solid fa-lock text-xs" aria-hidden="true"></i>
-                                    </span>
-                                @endif
-                            @else
-                                {{-- Visible because it's shared with this user (e.g. a Meeting they're
-                                     an attendee on), but not theirs to edit or delete. --}}
-                                @if ($routeName === 'meetings')
-                                    <form method="POST" action="{{ route('meetings.add-to-calendar', $item->id) }}" class="inline">
-                                        @csrf
-                                        <button type="submit" class="inline-flex items-center gap-1 text-amber-600 hover:text-amber-800 text-xs font-semibold" title="Add to your Meetings calendar">
-                                            <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add to my calendar
+                            @if ($pmIsOwner || $routeName === 'meetings')
+                                <details class="pm-dt-menu">
+                                    <summary class="pm-dt-icon-btn" title="More actions">
+                                        <i class="fa-solid fa-ellipsis-vertical text-sm" aria-hidden="true"></i>
+                                        <span class="sr-only">Actions for {{ $rowLabel }}</span>
+                                    </summary>
+                                    <div class="pm-dt-menu-list">
+                                        <button type="button"
+                                                onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, {{ $pmIsOwner ? "true" : "false" }})'
+                                                class="pm-dt-menu-item">
+                                            <i class="fa-solid fa-eye" aria-hidden="true"></i> View details
                                         </button>
-                                    </form>
-                                @else
-                                    <span class="text-xs text-slate-400 italic inline-flex items-center gap-1">
-                                        <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
-                                        Shared with you
-                                    </span>
-                                @endif
+                                        @if ($routeName === 'meetings' && $pmIsOwner)
+                                            <a href="{{ route('meetings.notes', $item->id) }}#record-meeting"
+                                               class="pm-dt-menu-item"
+                                               title="Record meeting">
+                                                <i class="fa-solid fa-microphone" aria-hidden="true"></i> Record meeting
+                                            </a>
+                                        @endif
+                                        @if ($pmIsOwner)
+                                            @if (auth()->user()->hasActiveAccess())
+                                                <button type="button"
+                                                        onclick='openCrudEditModal({{ json_encode(route($routeName . '.update', $item->id)) }}, {{ json_encode($rowValues) }})'
+                                                        class="pm-dt-menu-item">
+                                                    <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Edit
+                                                </button>
+                                                <button type="button"
+                                                        onclick='openCrudDeleteModal({{ json_encode(route($routeName . '.destroy', $item->id)) }}, {{ json_encode($rowLabel) }})'
+                                                        class="pm-dt-menu-item is-danger">
+                                                    <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Delete
+                                                </button>
+                                            @else
+                                                <span class="pm-dt-menu-item text-slate-400" title="Renew your subscription to edit or delete">
+                                                    <i class="fa-solid fa-lock" aria-hidden="true"></i> Renew to edit
+                                                </span>
+                                            @endif
+                                        @else
+                                            {{-- Shared with this user (an attendee), not theirs to edit or delete. --}}
+                                            <form method="POST" action="{{ route('meetings.add-to-calendar', $item->id) }}">
+                                                @csrf
+                                                <button type="submit" class="pm-dt-menu-item" title="Add to your Meetings calendar">
+                                                    <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add to my calendar
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </details>
+                            @else
+                                <span class="text-xs text-slate-400 italic inline-flex items-center gap-1" title="Shared with you">
+                                    <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+                                    <span class="sr-only md:not-sr-only">Shared</span>
+                                </span>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="{{ count($tableColumns) + 1 + ($routeName === 'expenses' ? 1 : 0) + ($pmHasBulkDelete ? 1 : 0) }}" class="px-4 py-10 text-center text-slate-400">
+                    <tr class="pm-dt-empty">
+                        <td colspan="{{ $pmTableColspan }}">
                             <i class="{{ $icon }} text-3xl mb-2 block opacity-30" aria-hidden="true"></i>
                             @if (request()->filled('q') || request()->filled('period') || request()->filled('module'))
-                                No matching {{ strtolower($title) }}s.
+                                No matching {{ strtolower($title) }}s. Try a different search or period.
                             @else
-                                <span class="block text-slate-500 font-medium">No {{ strtolower($title) }}s yet.</span>
+                                <span class="block text-slate-600 font-semibold">No {{ strtolower($title) }}s yet.</span>
+                                <span class="block text-xs mt-1">Your first entry takes less than a minute.</span>
                                 @if (auth()->user()->hasActiveAccess())
                                     <button type="button" onclick="openCrudCreateModal()"
                                             class="mt-3 inline-flex items-center gap-2 btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm">

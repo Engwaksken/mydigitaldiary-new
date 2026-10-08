@@ -54,6 +54,9 @@
     {{-- Global professional 12-hour time controls --}}
     <link rel="stylesheet" href="{{ asset('css/time-12h.css') }}">
 
+    {{-- Shared list tables (no sideways scrolling) + compact summary strip --}}
+    <link rel="stylesheet" href="{{ asset('css/data-table.css') }}?v={{ filemtime(public_path('css/data-table.css')) }}">
+
     {{-- PWA install metadata (manifest link, theme colour, iOS icons) --}}
     @include('partials.pwa-head')
     @stack('styles')
@@ -791,6 +794,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 {{-- 12-hour time controls --}}
 <script src="{{ asset('js/time-12h.js') }}" defer></script>
+<script src="{{ asset('js/data-table.js') }}?v={{ filemtime(public_path('js/data-table.js')) }}" defer></script>
 @stack('scripts')
 
 {{-- Modal viewport sync runtime --}}

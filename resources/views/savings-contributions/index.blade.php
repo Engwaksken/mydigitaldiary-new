@@ -59,34 +59,6 @@
         border-radius:1.25rem;
         box-shadow:0 24px 70px rgba(15,23,42,.25);
     }
-    .sc-table-wrap{
-        overflow-x:auto;
-        border:1px solid #e2e8f0;
-        border-radius:1rem;
-        background:#fff;
-    }
-    .sc-table{
-        width:100%;
-        min-width:850px;
-        border-collapse:collapse;
-    }
-    .sc-table th{
-        background:#f8fafc;
-        color:#64748b;
-        text-transform:uppercase;
-        letter-spacing:.04em;
-        font-size:.69rem;
-        text-align:left;
-        padding:.8rem;
-        border-bottom:1px solid #e2e8f0;
-    }
-    .sc-table td{
-        padding:.85rem .8rem;
-        border-bottom:1px solid #f1f5f9;
-        vertical-align:middle;
-        font-size:.875rem;
-    }
-    .sc-table tr:last-child td{border-bottom:0}
 </style>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
@@ -292,49 +264,56 @@
                 @csrf
                 @method('DELETE')
 
-                <div class="sc-table-wrap">
-                    <table class="sc-table">
+                <div class="pm-dt-wrap">
+                    <table class="pm-dt">
+                        <caption class="sr-only">Savings contribution history</caption>
                         <thead>
                             <tr>
-                                <th style="width:45px">
-                                    <input type="checkbox" id="selectAllContributions">
+                                <th scope="col" class="pm-dt-check">
+                                    <input type="checkbox" id="selectAllContributions" aria-label="Select all contributions">
+                                    <span class="pm-dt-check-label" aria-hidden="true">Select all</span>
                                 </th>
-                                <th>Savings Goal</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                <th>Notes</th>
-                                <th style="width:110px">Actions</th>
+                                <th scope="col">Savings goal</th>
+                                <th scope="col">Date</th>
+                                <th scope="col" class="pm-dt-num">Amount</th>
+                                <th scope="col" class="pm-dt-actions"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($contributions as $contribution)
-                                <tr>
-                                    <td>
+                                @php
+                                    $contributionGoalName = $contribution->goal?->name ?? 'Deleted goal';
+                                    $contributionNotes = trim((string) ($contribution->notes ?? ''));
+                                @endphp
+                                <tr class="has-check">
+                                    <td class="pm-dt-check">
                                         <input class="contribution-check"
                                                type="checkbox"
                                                name="ids[]"
-                                               value="{{ $contribution->id }}">
+                                               value="{{ $contribution->id }}"
+                                               aria-label="Select contribution to {{ $contributionGoalName }}">
                                     </td>
 
-                                    <td>
-                                        <div class="font-bold text-slate-800">
-                                            {{ $contribution->goal?->name ?? 'Deleted goal' }}
-                                        </div>
+                                    <td class="pm-dt-main">
+                                        <span class="pm-dt-title" title="{{ $contributionGoalName }}">{{ $contributionGoalName }}</span>
+                                        <span class="pm-dt-sub">
+                                            @if($contributionNotes !== '')
+                                                <span class="pm-dt-note" title="{{ $contributionNotes }}">{{ \Illuminate\Support\Str::limit($contributionNotes, 80) }}</span>
+                                            @else
+                                                <span>Contribution</span>
+                                            @endif
+                                        </span>
                                     </td>
 
-                                    <td class="font-black text-emerald-700">
-                                        {{ $money($contribution->amount) }}
-                                    </td>
-
-                                    <td>
+                                    <td class="pm-dt-aux">
                                         {{ $contribution->contributed_at?->format('d M Y') ?? '—' }}
                                     </td>
 
-                                    <td class="text-slate-500">
-                                        {{ \Illuminate\Support\Str::limit($contribution->notes ?: '—', 80) }}
+                                    <td class="pm-dt-num text-emerald-700">
+                                        {{ $money($contribution->amount) }}
                                     </td>
 
-                                    <td>
+                                    <td class="pm-dt-actions">
                                         @php
                                             $editContributionPayload = [
                                                 'id' => (int) $contribution->id,
@@ -356,13 +335,14 @@
                                             ) ?: '{}';
                                         @endphp
 
-                                        <div class="flex gap-2">
+                                        <div class="inline-flex items-center gap-1">
                                             <button type="button"
-                                                    class="w-9 h-9 rounded-lg border text-blue-700"
+                                                    class="pm-dt-icon-btn text-blue-700"
                                                     data-contribution="{{ e($editContributionJson) }}"
                                                     onclick="editContributionFromButton(this)"
-                                                    title="Edit">
-                                                <i class="fa-solid fa-pen"></i>
+                                                    title="Edit"
+                                                    aria-label="Edit contribution to {{ $contributionGoalName }}">
+                                                <i class="fa-solid fa-pen" aria-hidden="true"></i>
                                             </button>
 
                                             <button type="submit"
@@ -370,9 +350,10 @@
                                                     data-confirm-click="Delete this contribution?"
                                                     data-confirm-title="Delete contribution?"
                                                     data-confirm-text="Delete"
-                                                    class="w-9 h-9 rounded-lg border text-rose-700"
-                                                    title="Delete">
-                                                <i class="fa-solid fa-trash"></i>
+                                                    class="pm-dt-icon-btn text-rose-700"
+                                                    title="Delete"
+                                                    aria-label="Delete contribution to {{ $contributionGoalName }}">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
                                             </button>
                                         </div>
                                     </td>

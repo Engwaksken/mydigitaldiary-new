@@ -261,8 +261,9 @@ class MeetingJoinLinkTest extends TestCase
 
         $this->assertStringContainsString(route('meetings.join', $meeting), $calendar);
         $this->assertStringNotContainsString('href="https://meet.example.test/room"', $calendar);
-        $this->assertStringContainsString('href="{{ $item->diary_join_url }}"', file_get_contents(resource_path('views/crud/index.blade.php')));
-        $this->assertStringNotContainsString('href="{{ $meetingSafeExternalUrl }}"', file_get_contents(resource_path('views/crud/index.blade.php')));
+        // The table cell markup lives in crud/_cell.blade.php (included by crud/index).
+        $this->assertStringContainsString('href="{{ $item->diary_join_url }}"', file_get_contents(resource_path('views/crud/_cell.blade.php')));
+        $this->assertStringNotContainsString('href="{{ $meetingSafeExternalUrl }}"', file_get_contents(resource_path('views/crud/_cell.blade.php')));
     }
 
     public function test_join_feature_does_not_expose_recording_stream_to_invitees(): void
