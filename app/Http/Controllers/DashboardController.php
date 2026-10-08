@@ -95,6 +95,30 @@ class DashboardController extends Controller
         // Get-started checklist: "set a reminder" is done once any exists.
         $hasAnyReminder = Reminder::where('user_id', $userId)->exists();
 
+        // Daily phone reminders: the one-tap "Turn on daily reminders" step
+        // replaces "Turn on a reminder" when browser push is configured.
+        $dailyReminders = ['push_available' => false, 'on' => false];
+
+        try {
+            $reminderPrefs = app(\App\Services\DailyReminderService::class)->preferences($request->user());
+            $dailyReminders = [
+                'push_available' => \App\Services\FcmService::webConfig() !== null,
+                'on' => ($reminderPrefs['morning_enabled'] || $reminderPrefs['evening_enabled'])
+                    && $request->user()->deviceTokens()->exists(),
+            ];
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
+        // "On this day" memories. Optional: never let it break the page.
+        $onThisDay = ['items' => [], 'comparison' => null, 'more_url' => null];
+
+        try {
+            $onThisDay = app(\App\Services\OnThisDayService::class)->forUser($request->user());
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
         // --- Finance tab: charts ----------------------------------------------
 
         $expensesByCategory = Expense::where('user_id', $userId)
@@ -452,6 +476,8 @@ class DashboardController extends Controller
             'endDaySummary',
             'stepData',
             'hasAnyReminder',
+            'dailyReminders',
+            'onThisDay',
             'todayTaskStats',
             'recentActiveDays'
         ));

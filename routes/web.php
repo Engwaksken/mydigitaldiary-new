@@ -245,6 +245,13 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme');
     Route::put('/profile/personalisation', [ProfileController::class, 'updatePersonalisation'])->name('profile.personalisation');
 
+    // Daily "Plan your day" / "Close your day" reminders and browser push.
+    // Outside the subscription gate so an expired user can still turn
+    // reminders off.
+    Route::put('/profile/daily-reminders', [\App\Http\Controllers\DailyReminderController::class, 'update'])->name('profile.daily-reminders');
+    Route::post('/push/web-token', [\App\Http\Controllers\DailyReminderController::class, 'storeWebToken'])->middleware('throttle:20,1')->name('push.web-token.store');
+    Route::delete('/push/web-token', [\App\Http\Controllers\DailyReminderController::class, 'destroyWebToken'])->name('push.web-token.destroy');
+
     // Social media settings belong to the user's profile and remain available
     // even if the subscription has expired.
     Route::get('/profile/social-media', [SocialMediaAccountController::class, 'index'])

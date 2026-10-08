@@ -2,15 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Debt;
-use App\Models\EducationPlan;
-use App\Models\HealthCheckup;
-use App\Models\Plan;
-use App\Models\Project;
-use App\Models\ProjectTask;
-use App\Models\Reminder;
-use App\Models\SavingsGoal;
 use App\Models\User;
+use App\Services\DailyReminderService;
 use App\Services\FcmService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -35,12 +28,16 @@ class SendDailyDueItemsPush extends Command
 
     protected $description = 'Send each user with a registered device a push notification summarizing everything due today';
 
-    public function handle(FcmService $fcm): int
+    public function handle(FcmService $fcm, DailyReminderService $reminders): int
     {
         $users = User::has('deviceTokens')->get();
 
         foreach ($users as $user) {
             if (! $user->hasActiveAccess()) { continue; }
+            // People with the morning "Plan your day" reminder on already get
+            // today's due count in that push (digest:daily-top-tasks); a
+            // second morning notification would just be noise.
+            if ($reminders->preferences($user)['morning_enabled']) { continue; }
             $tz = $user->timezone ?: 'Africa/Kampala';
             $localNow = now($tz);
             if ((int) $localNow->format('G') !== 8 || (int) $localNow->format('i') >= 30) { continue; }
@@ -48,7 +45,7 @@ class SendDailyDueItemsPush extends Command
             $cacheKey = "daily-due-push:{$user->id}:{$date}";
             if (Cache::has($cacheKey)) { continue; }
 
-            $items = $this->dueTodayFor($user, $date);
+            $items = $reminders->dueTodayFor($user, $date);
 
             if (empty($items)) {
                 continue; // nothing due today — skip rather than sending an empty nudge
@@ -60,69 +57,11 @@ class SendDailyDueItemsPush extends Command
                 $body .= ' • +' . (count($items) - 3) . ' more';
             }
 
-            $fcm->sendToUser($user, $title, $body, ['type'=>'start_of_day','date'=>$date]);
+            $fcm->sendToUser($user, $title, $body, ['type'=>'start_of_day','date'=>$date,'link'=>route('dashboard')]);
             Cache::put($cacheKey, true, now()->addDays(2));
             $this->info("Sent daily due-items push to {$user->email}");
         }
 
         return self::SUCCESS;
-    }
-
-    /**
-     * @return array<int, array{label: string}>
-     */
-    private function dueTodayFor(User $user, string $date): array
-    {
-        $userId = $user->id;
-        $items = collect();
-
-        Reminder::where('user_id', $userId)
-            ->where('is_active', true)
-            ->whereDate('next_run_at', $date)
-            ->get(['title'])
-            ->each(fn ($r) => $items->push(['label' => "Reminder: {$r->title}"]));
-
-        Plan::where('user_id', $userId)->where('is_archived', false)
-            ->where('status', '!=', 'completed')
-            ->whereDate('target_date', $date)
-            ->get(['title'])
-            ->each(fn ($p) => $items->push(['label' => "Plan: {$p->title}"]));
-
-        Debt::where('user_id', $userId)->where('is_archived', false)
-            ->where('status', '!=', 'paid')
-            ->whereDate('due_date', $date)
-            ->get(['person_name'])
-            ->each(fn ($d) => $items->push(['label' => "Debt due: {$d->person_name}"]));
-
-        HealthCheckup::where('user_id', $userId)->where('is_archived', false)
-            ->whereDate('next_due_date', $date)
-            ->get(['checkup_type'])
-            ->each(fn ($h) => $items->push(['label' => "Checkup: {$h->checkup_type}"]));
-
-        EducationPlan::where('user_id', $userId)->where('is_archived', false)
-            ->where('status', '!=', 'completed')
-            ->whereDate('target_completion_date', $date)
-            ->get(['title'])
-            ->each(fn ($e) => $items->push(['label' => "Education: {$e->title}"]));
-
-        Project::where('user_id', $userId)->where('is_archived', false)
-            ->where('status', '!=', 'completed')
-            ->whereDate('deadline', $date)
-            ->get(['name'])
-            ->each(fn ($p) => $items->push(['label' => "Project deadline: {$p->name}"]));
-
-        ProjectTask::where('user_id', $userId)->where('is_archived', false)
-            ->where('status', '!=', 'done')
-            ->whereDate('due_date', $date)
-            ->get(['title'])
-            ->each(fn ($t) => $items->push(['label' => "Task: {$t->title}"]));
-
-        SavingsGoal::where('user_id', $userId)->where('is_archived', false)
-            ->where('status', '!=', 'completed')
-            ->whereDate('target_date', $date)
-            ->get(['name'])
-            ->each(fn ($s) => $items->push(['label' => "Savings goal target: {$s->name}"]));
-
-        return $items->all();
     }
 }

@@ -244,8 +244,17 @@
         ['key' => 'plan', 'label' => 'Add your first task', 'icon' => 'fa-calendar-check', 'done' => $tdStepDone('plan') || $tdTaskTotal > 0, 'url' => route('daily-planner.index', ['new' => 1])],
         ['key' => 'goal', 'label' => 'Set a goal', 'icon' => 'fa-bullseye', 'done' => $tdStepDone('goal'), 'url' => route('personal-goals.index', ['new' => 1])],
         ['key' => 'money', 'label' => 'Record money', 'icon' => 'fa-wallet', 'done' => $tdStepDone('money'), 'url' => route('expenses.index', ['new' => 1])],
-        ['key' => 'reminder', 'label' => 'Turn on a reminder', 'icon' => 'fa-bell', 'done' => (bool) ($hasAnyReminder ?? false), 'url' => route('reminders.index', ['new' => 1])],
+        ($dailyReminders['push_available'] ?? false)
+            // One tap: asks for notification permission and registers this
+            // device for the morning / evening reminders (see js/push.js).
+            ? ['key' => 'daily-reminders', 'label' => 'Turn on daily reminders', 'icon' => 'fa-bell', 'done' => (bool) ($dailyReminders['on'] ?? false), 'url' => null]
+            : ['key' => 'reminder', 'label' => 'Turn on a reminder', 'icon' => 'fa-bell', 'done' => (bool) ($hasAnyReminder ?? false), 'url' => route('reminders.index', ['new' => 1])],
     ];
+
+    // "On this day" memories (controller-provided; hidden when empty).
+    $tdMemories = collect(data_get($onThisDay ?? [], 'items', []))->take(3);
+    $tdMemoryComparison = data_get($onThisDay ?? [], 'comparison');
+    $tdMemoryMore = data_get($onThisDay ?? [], 'more_url');
     $tdGetStartedDone = collect($tdGetStarted)->where('done', true)->count();
 
     // App launcher — every module stays one tap away, without shouting.
@@ -368,6 +377,19 @@
     .td-step.done{background:#f0fdf4;border-color:#bbf7d0;color:#15803d!important}
     .td-step.done i.td-step-ic{background:#dcfce7;color:#15803d}
     .td-step.done span{text-decoration:line-through;text-decoration-color:#86efac}
+    .td-step[aria-busy="true"]{opacity:.7;cursor:progress}
+    .td-start-msg{margin:10px 2px 0;font-size:12px;font-weight:600;color:#475569}
+    .td-start-msg a,.td-start-msg button{color:var(--td-brand)!important;font-weight:700;background:none;border:0;padding:0;cursor:pointer}
+
+    /* Memories card */
+    .td-memory{padding:14px 16px;border-radius:18px;border:1px solid #fde7c7;background:linear-gradient(160deg,#fffaf2 0%,#fff 70%)}
+    .td-memory-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
+    .td-memory-item{display:flex;align-items:flex-start;gap:10px;padding:7px 4px;border-radius:12px;color:#334155!important}
+    a.td-memory-item:hover{background:#fff4e2}
+    .td-memory-ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;font-size:12px}
+    .td-memory-when{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#b45309}
+    .td-memory-text{display:block;font-size:13px;font-weight:600;line-height:1.35;color:#1e293b;overflow-wrap:anywhere}
+    .td-memory-note{font-size:12px;color:#64748b;margin-top:8px}
 
     /* Two-column today grid */
     .td-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
@@ -661,16 +683,24 @@
         <div class="td-start-bar"><span id="td-start-bar" style="width:0%"></span></div>
         <div class="td-start-list">
             @foreach ($tdGetStarted as $step)
-                <a href="{{ $step['url'] }}" class="td-step {{ $step['done'] ? 'done' : '' }}" data-step="{{ $step['key'] }}" data-done="{{ $step['done'] ? '1' : '0' }}">
-                    <i class="fa-solid {{ $step['done'] ? 'fa-check' : $step['icon'] }} td-step-ic"></i>
-                    <span>{{ $step['label'] }}</span>
-                </a>
+                @if ($step['url'])
+                    <a href="{{ $step['url'] }}" class="td-step {{ $step['done'] ? 'done' : '' }}" data-step="{{ $step['key'] }}" data-done="{{ $step['done'] ? '1' : '0' }}">
+                        <i class="fa-solid {{ $step['done'] ? 'fa-check' : $step['icon'] }} td-step-ic"></i>
+                        <span>{{ $step['label'] }}</span>
+                    </a>
+                @else
+                    <button type="button" class="td-step {{ $step['done'] ? 'done' : '' }}" data-step="{{ $step['key'] }}" data-done="{{ $step['done'] ? '1' : '0' }}" id="td-step-{{ $step['key'] }}">
+                        <i class="fa-solid {{ $step['done'] ? 'fa-check' : $step['icon'] }} td-step-ic"></i>
+                        <span>{{ $step['label'] }}</span>
+                    </button>
+                @endif
             @endforeach
             <button type="button" class="td-step" data-step="install" data-done="0" id="td-step-install">
                 <i class="fa-solid fa-mobile-screen td-step-ic"></i>
                 <span>Install the app</span>
             </button>
         </div>
+        <p class="td-start-msg" id="td-start-msg" role="status" hidden></p>
     </section>
 
     {{-- 3. Today: tasks + coming up --}}
@@ -785,6 +815,42 @@
                     </div>
                 </div>
             </section>
+
+            @if ($tdMemories->isNotEmpty())
+                <section class="td-memory" aria-labelledby="td-memory-title">
+                    <div class="td-head" style="margin-bottom:0">
+                        <h2 class="td-h2" id="td-memory-title"><i class="fa-solid fa-clock-rotate-left" style="color:#d97706"></i> On this day</h2>
+                        @if ($tdMemoryMore)
+                            <a href="{{ $tdMemoryMore }}" class="td-link">See more</a>
+                        @endif
+                    </div>
+                    <ul class="td-memory-list">
+                        @foreach ($tdMemories as $memory)
+                            @php $tone = $toneMap[$memory['tone']] ?? $toneMap['slate']; @endphp
+                            <li>
+                                @if (! empty($memory['url']))
+                                    <a href="{{ $memory['url'] }}" class="td-memory-item">
+                                @else
+                                    <div class="td-memory-item">
+                                @endif
+                                    <span class="td-memory-ic" style="background:{{ $tone['bg'] }};color:{{ $tone['fg'] }}"><i class="fa-solid {{ $memory['icon'] }}"></i></span>
+                                    <span class="min-w-0">
+                                        <span class="td-memory-when">{{ $memory['when'] }}</span>
+                                        <span class="td-memory-text">{{ $memory['text'] }}</span>
+                                    </span>
+                                @if (! empty($memory['url']))
+                                    </a>
+                                @else
+                                    </div>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                    @if ($tdMemoryComparison)
+                        <p class="td-memory-note">{{ $tdMemoryComparison }}</p>
+                    @endif
+                </section>
+            @endif
         </div>
     </div>
 
@@ -1411,6 +1477,18 @@
 
     close?.addEventListener('click', () => modal.close());
 
+    // Deep link from the morning / evening phone reminder:
+    // /dashboard?routine=start (Plan your day) or ?routine=close (Close your day).
+    try {
+        const url = new URL(window.location.href);
+        const routine = url.searchParams.get('routine');
+        if (routine === 'start' || routine === 'close') {
+            url.searchParams.delete('routine');
+            window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+            openStats(routine === 'start' ? 'start' : 'end');
+        }
+    } catch (_) {}
+
     checkin.addEventListener('click', () => {
         if (checkin.disabled) return;
         modal.close();
@@ -1541,6 +1619,50 @@
         }
 
         window.location.href = @json(Route::has('tips') ? route('tips') : route('help.show'));
+    });
+
+    /* ---- Daily reminders: one tap ------------------------------------- */
+    const remindersStep = document.getElementById('td-step-daily-reminders');
+    const startMsg = document.getElementById('td-start-msg');
+    const say = text => {
+        if (!startMsg) return;
+        startMsg.textContent = text || '';
+        startMsg.hidden = !text;
+    };
+    const markRemindersDone = () => {
+        if (!remindersStep) return;
+        remindersStep.dataset.done = '1';
+        remindersStep.classList.add('done');
+        const icon = remindersStep.querySelector('.td-step-ic');
+        if (icon) icon.className = 'fa-solid fa-check td-step-ic';
+    };
+
+    remindersStep?.addEventListener('click', async () => {
+        const api = window.pmPush;
+        if (!api || remindersStep.getAttribute('aria-busy') === 'true') return;
+
+        let current = {};
+        try { current = api.state(); } catch (_) {}
+        if (current.enabled) {
+            markRemindersDone();
+            say('Daily reminders are already on for this device.');
+            return;
+        }
+
+        remindersStep.setAttribute('aria-busy', 'true');
+        const result = await api.enable();
+        remindersStep.removeAttribute('aria-busy');
+
+        if (result.ok) {
+            markRemindersDone();
+            say('Daily reminders are on. See you in the morning.');
+            // Let the confirmation be read before a finished checklist hides.
+            setTimeout(renderStart, 3000);
+            return;
+        }
+
+        say(api.message(result.reason));
+        if (result.reason === 'ios-install') api.showInstallHelp();
     });
 
     renderStart();

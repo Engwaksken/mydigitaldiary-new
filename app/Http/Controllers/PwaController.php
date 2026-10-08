@@ -55,7 +55,7 @@ class PwaController extends Controller
      * Public so the test that recomputes the cache key can read it instead of
      * copying the number, which would rot the first time it was bumped.
      */
-    public const SCHEMA_VERSION = 2;
+    public const SCHEMA_VERSION = 3;
 
     /** Default brand teal, matching the fallback in layouts/app.blade.php. */
     private const THEME_COLOR = '#00897B';
@@ -351,6 +351,65 @@ class PwaController extends Controller
             if (event.data && event.data.type === 'SKIP_WAITING') {
                 self.skipWaiting();
             }
+        });
+
+        /*
+         * Daily reminders (FCM web push). The page registers this worker's
+         * push subscription through the Firebase SDK; FCM then delivers a
+         * plain Web Push message whose JSON carries `notification` and
+         * `data`. Handled here directly, so the worker needs no Firebase
+         * script of its own. A reminder is never cached — it only shows.
+         */
+        self.addEventListener('push', (event) => {
+            let payload = {};
+
+            try {
+                payload = event.data ? event.data.json() : {};
+            } catch (error) {
+                payload = { notification: { body: event.data ? event.data.text() : '' } };
+            }
+
+            const notification = payload.notification || {};
+            const data = payload.data || {};
+            const title = notification.title || data.title || 'My Digital Diary';
+            const link = data.link || (payload.fcmOptions && payload.fcmOptions.link) || '/dashboard';
+
+            event.waitUntil(self.registration.showNotification(title, {
+                body: notification.body || data.body || '',
+                icon: notification.icon || notification.image || undefined,
+                tag: data.type || notification.tag || 'mdd-reminder',
+                renotify: true,
+                data: { link: link },
+            }));
+        });
+
+        /* Tapping a reminder focuses an open app window, or opens one. */
+        self.addEventListener('notificationclick', (event) => {
+            event.notification.close();
+
+            const target = new URL((event.notification.data && event.notification.data.link) || '/dashboard', self.location.origin);
+
+            if (target.origin !== self.location.origin) {
+                return;
+            }
+
+            event.waitUntil((async () => {
+                const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+                for (const client of windows) {
+                    if (new URL(client.url).origin === target.origin && 'focus' in client) {
+                        await client.focus();
+
+                        if ('navigate' in client) {
+                            return client.navigate(target.href);
+                        }
+
+                        return;
+                    }
+                }
+
+                return self.clients.openWindow(target.href);
+            })());
         });
 
         function isShellAsset(pathname) {

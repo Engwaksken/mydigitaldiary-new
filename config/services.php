@@ -50,5 +50,17 @@ return [
 'firebase' => [
         'project_id' => env('FIREBASE_PROJECT_ID'),
         'credentials_path' => env('FIREBASE_CREDENTIALS_PATH'),
-   ],  ];
+
+        // Browser / installed-web-app push (Firebase Console -> Project
+        // settings -> General -> "Your apps" -> Web app, and Cloud Messaging
+        // -> Web Push certificates). These are public client identifiers,
+        // not secrets; push for the web stays hidden until all are set.
+        'web' => [
+            'api_key' => env('FIREBASE_WEB_API_KEY'),
+            'app_id' => env('FIREBASE_WEB_APP_ID'),
+            'messaging_sender_id' => env('FIREBASE_MESSAGING_SENDER_ID'),
+            'vapid_key' => env('FIREBASE_WEB_VAPID_KEY'),
+        ],
+    ],
+];
 

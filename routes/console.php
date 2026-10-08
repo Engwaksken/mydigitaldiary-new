@@ -69,9 +69,14 @@ Schedule::command('spiritual-growth:generate-recurring')
 | These commands may run frequently. Each command decides whether an
 | individual user actually needs a notification.
 |
+| digest:daily-top-tasks is the morning "Plan your day" reminder and
+| digest:end-of-day the evening "Close your day" reminder. Both run every
+| 15 minutes and fire inside each user's own local morning/evening time
+| (communication_preferences, defaults 07:00 / 20:00), once per day.
+|
 */
 Schedule::command('digest:daily-top-tasks')
-    ->everyThirtyMinutes()
+    ->everyFifteenMinutes()
     ->withoutOverlapping();
 
 Schedule::command('push:daily-due-items')
@@ -150,7 +155,7 @@ Schedule::command('currency:refresh-rates')
 |
 */
 Schedule::command('digest:end-of-day')
-    ->everyThirtyMinutes()
+    ->everyFifteenMinutes()
     ->withoutOverlapping();
 
 /*

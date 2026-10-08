@@ -8,6 +8,7 @@ use App\Services\UserDataVaultService;
 use App\Models\LoginActivity;
 use App\Models\SiteSetting;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -115,6 +116,30 @@ class AppServiceProvider extends ServiceProvider
         | Record only completed authentication events. Logging must never
         | prevent a user from signing in if the table is unavailable.
         */
+        /*
+        |------------------------------------------------------------------
+        | Browser push follows the signed-in person
+        |------------------------------------------------------------------
+        | A diary's morning reminder names today's tasks. When someone signs
+        | out of the web app, this browser's push token is dropped so the
+        | next person holding the device does not see them. (The session
+        | still exists while Logout fires; it is invalidated afterwards.)
+        */
+        Event::listen(Logout::class, function (Logout $event): void {
+            try {
+                $deviceId = request()->hasSession() ? request()->session()->get('pm_push_device_id') : null;
+
+                if ($event->user && $deviceId) {
+                    \App\Models\DeviceToken::where('user_id', $event->user->getAuthIdentifier())
+                        ->where('device_id', $deviceId)
+                        ->where('platform', 'web')
+                        ->delete();
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
+
         Event::listen(Login::class, function (Login $event): void {
             if (! Schema::hasTable('login_activities')) {
                 return;

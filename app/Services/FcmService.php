@@ -49,6 +49,7 @@ class FcmService
         }
 
         $projectId = config('services.firebase.project_id');
+        $webpush = $this->webpushOptions($title, $body, $data);
 
         foreach ($user->deviceTokens as $device) {
             $response = Http::withToken($accessToken)
@@ -60,6 +61,9 @@ class FcmService
                             'body' => $body,
                         ],
                         'data' => array_map('strval', $data), // FCM data payloads must be string => string
+                        // Browser / installed web app tokens (platform 'web').
+                        // Ignored by FCM for Android/iOS tokens and vice versa.
+                        'webpush' => $webpush,
                         'android' => [
                             'priority' => 'high',
                             'notification' => [
@@ -84,10 +88,11 @@ class FcmService
                     ],
                 ]);
 
-            if ($response->status() === 404 || $response->status() === 400) {
-                // UNREGISTERED / invalid-argument typically means the
-                // token is dead (app uninstalled, token rotated and the
-                // app hasn't re-registered yet) — clean it up rather than
+            if ($this->isDeadToken($response)) {
+                // UNREGISTERED, or a token FCM says is not a valid
+                // registration token, means the app was uninstalled, the
+                // browser revoked permission, or the token rotated and the
+                // device hasn't re-registered yet — clean it up rather than
                 // retrying it forever on every future reminder.
                 $device->delete();
             } elseif ($response->failed()) {
@@ -99,6 +104,92 @@ class FcmService
                 ]);
             }
         }
+    }
+
+    /**
+     * Public Firebase web-app identifiers for browser push, or null when any
+     * is missing — the UI then hides the "Turn on daily reminders" control
+     * instead of offering a button that can never work.
+     *
+     * @return array{apiKey:string,appId:string,messagingSenderId:string,projectId:string,vapidKey:string}|null
+     */
+    public static function webConfig(): ?array
+    {
+        $web = (array) config('services.firebase.web', []);
+        $config = [
+            'apiKey' => (string) ($web['api_key'] ?? ''),
+            'appId' => (string) ($web['app_id'] ?? ''),
+            'messagingSenderId' => (string) ($web['messaging_sender_id'] ?? ''),
+            'projectId' => (string) config('services.firebase.project_id', ''),
+            'vapidKey' => (string) ($web['vapid_key'] ?? ''),
+        ];
+
+        foreach ($config as $value) {
+            if (trim($value) === '') {
+                return null;
+            }
+        }
+
+        return $config;
+    }
+
+    /**
+     * 404 is always UNREGISTERED. A 400 only means a dead token when FCM says
+     * so (INVALID_ARGUMENT about the registration token, or an UNREGISTERED
+     * detail) — any other 400 is a payload problem on our side, and deleting
+     * a healthy device token for it would silently stop all future pushes.
+     */
+    private function isDeadToken(\Illuminate\Http\Client\Response $response): bool
+    {
+        if ($response->status() === 404) {
+            return true;
+        }
+
+        if ($response->status() !== 400) {
+            return false;
+        }
+
+        $error = (array) $response->json('error', []);
+        $codes = collect($error['details'] ?? [])->pluck('errorCode')->filter()->all();
+
+        if (in_array('UNREGISTERED', $codes, true)) {
+            return true;
+        }
+
+        return str_contains(strtolower((string) ($error['message'] ?? '')), 'registration token');
+    }
+
+    /**
+     * Web push options: urgent delivery, the app icon, and a click-through to
+     * the deep link. FCM rejects a non-HTTPS fcm_options.link, so it is only
+     * set on HTTPS deployments; the service worker also reads data.link.
+     */
+    private function webpushOptions(string $title, string $body, array $data): array
+    {
+        $notification = ['title' => $title, 'body' => $body];
+
+        try {
+            $notification['icon'] = url(app(PwaIconService::class)->url('icon-192'));
+        } catch (\Throwable) {
+            // No icon is fine; the browser shows its default.
+        }
+
+        if (! empty($data['type'])) {
+            // Same tag replaces an older unread reminder instead of stacking.
+            $notification['tag'] = (string) $data['type'];
+        }
+
+        $options = [
+            'headers' => ['Urgency' => 'high'],
+            'notification' => $notification,
+        ];
+
+        $link = (string) ($data['link'] ?? '');
+        if (str_starts_with($link, 'https://')) {
+            $options['fcm_options'] = ['link' => $link];
+        }
+
+        return $options;
     }
 
     /**

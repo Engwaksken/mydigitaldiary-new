@@ -45,6 +45,10 @@
             $activeTab = 'colors';
         } elseif (session('profile_status') === 'personalisation-updated' || $errors->hasAny(['ai_data_permissions','onboarding_focuses'])) {
             $activeTab = 'personalisation';
+        } elseif (session('profile_status') === 'daily-reminders-updated' || $errors->hasAny(['morning_time','evening_time','morning_enabled','evening_enabled'])) {
+            $activeTab = 'reminders';
+        } elseif (in_array(request()->query('tab'), ['photo','info','password','colors','personalisation','reminders','data'], true)) {
+            $activeTab = request()->query('tab');
         }
 
         $tabs = [
@@ -53,6 +57,7 @@
             'password' => ['label' => 'Password', 'icon' => 'fa-solid fa-lock'],
             'colors' => ['label' => 'Colors', 'icon' => 'fa-solid fa-palette'],
             'personalisation' => ['label' => 'Personalisation & AI', 'icon' => 'fa-solid fa-sliders'],
+            'reminders' => ['label' => 'Daily reminders', 'icon' => 'fa-solid fa-bell'],
             'data' => ['label' => 'Backup & Usage', 'icon' => 'fa-solid fa-database'],
         ];
 
@@ -101,6 +106,8 @@
             <div role="status" class="rounded-md bg-emerald-100 text-emerald-800 px-4 py-3 text-sm mb-4">Accent colour updated.</div>
         @elseif (session('profile_status') === 'personalisation-updated')
             <div role="status" class="rounded-md bg-emerald-100 text-emerald-800 px-4 py-3 text-sm mb-4">Your personalisation and AI privacy choices were saved.</div>
+        @elseif (session('profile_status') === 'daily-reminders-updated')
+            <div role="status" class="rounded-md bg-emerald-100 text-emerald-800 px-4 py-3 text-sm mb-4">Your daily reminder times were saved.</div>
         @endif
 
         {{-- Tab list --}}
@@ -438,6 +445,77 @@
                 </div>
 
                 <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold">Save personalisation</button>
+            </form>
+        </section>
+
+        <section id="panel-reminders" role="tabpanel" aria-labelledby="tab-reminders" tabindex="0" data-panel="reminders" class="pm-profile-panel" @if ($activeTab !== 'reminders') hidden @endif>
+            @php
+                $reminderPrefs = ['morning_enabled' => true, 'morning_time' => '07:00', 'evening_enabled' => true, 'evening_time' => '20:00'];
+                $reminderPushAvailable = false;
+                try {
+                    $reminderPrefs = app(\App\Services\DailyReminderService::class)->preferences($user);
+                    $reminderPushAvailable = \App\Services\FcmService::webConfig() !== null;
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+                $reminderSlots = [
+                    'morning' => ['Morning: Plan your day', 'fa-sun', 'text-amber-500'],
+                    'evening' => ['Evening: Close your day', 'fa-moon', 'text-indigo-500'],
+                ];
+            @endphp
+
+            <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-4 sm:p-6">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-mobile-screen"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <h2 class="font-bold text-slate-900">Reminders on this device</h2>
+                        <div id="pm-reminders-device" data-available="{{ $reminderPushAvailable ? '1' : '0' }}">
+                            <p id="pm-reminders-status" class="text-sm text-slate-600 mt-1" role="status">
+                                {{ $reminderPushAvailable ? 'Checking this device…' : 'Phone reminders aren’t available yet.' }}
+                            </p>
+                            @if ($reminderPushAvailable)
+                                <div class="flex flex-wrap items-center gap-3 mt-3">
+                                    <button type="button" id="pm-reminders-enable" class="btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium" hidden>
+                                        <i class="fa-solid fa-bell mr-1"></i> Turn on daily reminders
+                                    </button>
+                                    <button type="button" id="pm-reminders-disable" class="text-sm text-slate-500 hover:underline" hidden>
+                                        Turn off on this device
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('profile.daily-reminders') }}" class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-4 sm:p-6 mt-4 space-y-4">
+                @csrf
+                @method('PUT')
+                <h2 class="font-bold text-slate-900">When should we nudge you?</h2>
+                @foreach ($reminderSlots as $slot => [$slotLabel, $slotIcon, $slotTone])
+                    <div class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 p-3">
+                        <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-[12rem]">
+                            <input type="hidden" name="{{ $slot }}_enabled" value="0">
+                            <input type="checkbox" name="{{ $slot }}_enabled" value="1" class="rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-1)]" @checked((bool) old($slot.'_enabled', $reminderPrefs[$slot.'_enabled']))>
+                            <i class="fa-solid {{ $slotIcon }} {{ $slotTone }} w-5 text-center" aria-hidden="true"></i>
+                            <span class="text-sm font-semibold text-slate-700">{{ $slotLabel }}</span>
+                        </label>
+                        <div>
+                            <label for="{{ $slot }}_time" class="sr-only">{{ $slotLabel }} time</label>
+                            <input type="time" id="{{ $slot }}_time" name="{{ $slot }}_time" step="900"
+                                   value="{{ old($slot.'_time', $reminderPrefs[$slot.'_time']) }}"
+                                   placeholder="{{ $slot === 'morning' ? '07:00' : '20:00' }}"
+                                   @error($slot.'_time') aria-invalid="true" aria-describedby="{{ $slot }}_time-error" @enderror
+                                   class="pm-input w-36">
+                            @error($slot.'_time')
+                                <p id="{{ $slot }}_time-error" role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                @endforeach
+                <button type="submit" class="btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all">
+                    Save reminder times
+                </button>
             </form>
         </section>
 
@@ -907,4 +985,75 @@
         })();
     </script>
 </div>
+
+<script id="pm-reminders-device-runtime">
+(function () {
+    var root = document.getElementById('pm-reminders-device');
+    if (!root || root.dataset.available !== '1') return;
+
+    var status = document.getElementById('pm-reminders-status');
+    var enable = document.getElementById('pm-reminders-enable');
+    var disable = document.getElementById('pm-reminders-disable');
+
+    function render(note) {
+        var api = window.pmPush;
+        var state = api ? api.state() : null;
+
+        if (!state) {
+            status.textContent = 'Phone reminders aren’t available yet.';
+            enable.hidden = true;
+            disable.hidden = true;
+            return;
+        }
+
+        enable.hidden = state.enabled;
+        disable.hidden = !state.enabled;
+        enable.disabled = state.busy;
+        disable.disabled = state.busy;
+
+        if (note) {
+            status.textContent = note;
+        } else if (state.enabled) {
+            status.textContent = 'On. This device gets your morning and evening reminders.';
+        } else if (state.needsInstall) {
+            status.textContent = api.message('ios-install');
+        } else if (!state.supported) {
+            status.textContent = api.message('unsupported');
+            enable.hidden = true;
+        } else if (state.permission === 'denied') {
+            status.textContent = api.message('denied');
+        } else {
+            status.textContent = 'Off on this device.';
+        }
+    }
+
+    enable.addEventListener('click', function () {
+        var api = window.pmPush;
+        if (!api) return;
+        api.enable().then(function (result) {
+            if (result.ok) {
+                render('Daily reminders are on. See you in the morning.');
+                return;
+            }
+            render(api.message(result.reason));
+            if (result.reason === 'ios-install') api.showInstallHelp();
+        });
+    });
+
+    disable.addEventListener('click', function () {
+        var api = window.pmPush;
+        if (!api) return;
+        api.disable().then(function (result) {
+            render(result.ok ? 'Off on this device.' : api.message('error'));
+        });
+    });
+
+    function bind() {
+        render();
+        if (window.pmPush) window.pmPush.onChange(function () { render(); });
+    }
+
+    document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', bind, { once: true }) : bind();
+})();
+</script>
 @endsection

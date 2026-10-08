@@ -859,6 +859,32 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 </script>
 
+{{-- Daily reminders (browser push). The config is only emitted when the
+     Firebase web keys are set, so the UI hides itself when they are not. --}}
+@auth
+    @php
+        $pmPushConfig = null;
+        try {
+            $pmPushWeb = \App\Services\FcmService::webConfig();
+            if ($pmPushWeb) {
+                $pmPushConfig = [
+                    'firebase' => \Illuminate\Support\Arr::except($pmPushWeb, ['vapidKey']),
+                    'vapidKey' => $pmPushWeb['vapidKey'],
+                    'userId' => auth()->id(),
+                    'storeUrl' => route('push.web-token.store'),
+                    'destroyUrl' => route('push.web-token.destroy'),
+                ];
+            }
+        } catch (\Throwable $e) {
+            $pmPushConfig = null;
+        }
+    @endphp
+    @if ($pmPushConfig)
+        <script>window.pmPushConfig = @json($pmPushConfig);</script>
+    @endif
+    <script src="{{ asset('js/push.js') }}?v={{ @filemtime(public_path('js/push.js')) }}" defer></script>
+@endauth
+
 {{-- Install / update prompt for the installable web app --}}
 @include('partials.pwa-install')
 
