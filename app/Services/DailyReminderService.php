@@ -232,7 +232,7 @@ class DailyReminderService
 
         if ($streak >= 2) {
             $body .= $activeToday
-                ? ' 🔥 '.$streak.'-day streak'
+                ? ' · '.$streak.'-day streak'
                 : ' Keep your '.$streak.'-day streak alive';
         }
 

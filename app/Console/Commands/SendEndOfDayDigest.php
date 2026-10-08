@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
  * idempotent per local day.
  *
  *  - The in-app end-of-day summary notification is always recorded.
- *  - The push is the short, personal "You did 2 of 3 today 🔥 5-day streak —
+ *  - The push is the short, personal "You did 2 of 3 today · 5-day streak —
  *    close your day?", only when the evening reminder is on and the person
  *    has not already closed the day.
  */

@@ -238,7 +238,7 @@ class DailyRemindersTest extends TestCase
         $pushes = $this->sentTo($user);
         $this->assertCount(1, $pushes);
         $this->assertSame('Close your day', $pushes[0]['title']);
-        $this->assertSame('You did 2 of 3 today 🔥 5-day streak — close your day?', $pushes[0]['body']);
+        $this->assertSame('You did 2 of 3 today · 5-day streak — close your day?', $pushes[0]['body']);
         $this->assertStringContainsString('routine=close', $pushes[0]['data']['link']);
 
         $this->assertSame([], $this->sentTo($closed));
