@@ -67,7 +67,7 @@ class AdminUserSubscriptionUpdateTest extends TestCase
             ])->assertRedirect(route('admin.users.show', $user))->assertSessionHasErrors('subscription_status')
             ->assertSessionHasInput('_managed_user_id', (string) $user->id)
             ->assertSessionHasInput('subscription_started_at', '2026-10-06');
-        $this->assertSame('trialing', $user->fresh()->subscription_status);
+        $this->assertSame('trial', $user->fresh()->subscription_status);
     }
 
     public function test_successful_subscription_edit_does_not_persist_managed_user_marker(): void
@@ -267,7 +267,7 @@ class AdminUserSubscriptionUpdateTest extends TestCase
         $this->actingAs(User::factory()->create())->postJson(route('admin.users.bulk'), [
             'ids' => [$user->id], 'action' => 'subscription', 'subscription_status' => 'active',
         ])->assertForbidden();
-        $this->assertSame('trialing', $user->fresh()->subscription_status);
+        $this->assertSame('trial', $user->fresh()->subscription_status);
     }
 
     public function test_guest_cannot_bulk_update_subscriptions(): void
@@ -326,7 +326,7 @@ class AdminUserSubscriptionUpdateTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs(User::factory()->create())->patchJson(route('admin.users.subscription.update', $user), ['subscription_status' => 'active'])->assertForbidden();
-        $this->assertSame('trialing', $user->fresh()->subscription_status);
+        $this->assertSame('trial', $user->fresh()->subscription_status);
     }
 
     public function test_guest_cannot_update_subscription(): void
@@ -383,7 +383,7 @@ class AdminUserSubscriptionUpdateTest extends TestCase
         $response->assertSessionHasErrors('subscription_status');
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
-            'subscription_status' => 'trialing',
+            'subscription_status' => 'trial',
         ]);
     }
 
@@ -401,7 +401,7 @@ class AdminUserSubscriptionUpdateTest extends TestCase
         $response->assertSessionHasErrors('subscription_expires_at');
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
-            'subscription_status' => 'trialing',
+            'subscription_status' => 'trial',
         ]);
     }
 }
