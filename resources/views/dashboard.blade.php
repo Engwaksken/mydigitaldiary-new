@@ -143,487 +143,393 @@
     <script>document.getElementById('pm-expiry-notice-modal')?.showModal();</script>
 @endif
 
+@php
+    /*
+     * "Today" hub data. Everything here is derived from values the
+     * controller (or the self-loading block above) already provides, so
+     * this view never fails just because an optional service is missing.
+     */
+    $tdTimezone = auth()->user()->timezone ?: 'Africa/Kampala';
+    $tdNow = \Illuminate\Support\Carbon::now($tdTimezone);
+    $tdToday = $tdNow->toDateString();
+    $tdYesterday = $tdNow->copy()->subDay()->toDateString();
+    $tdHour = (int) $tdNow->format('G');
+    $tdGreeting = $tdHour < 12 ? 'Good morning' : ($tdHour < 17 ? 'Good afternoon' : 'Good evening');
+    $tdGreetingIcon = $tdHour < 6 ? 'fa-moon' : ($tdHour < 17 ? 'fa-sun' : 'fa-moon');
+    $tdEvening = $tdHour >= 17;
+
+    // Streak: the stored "current" only resets on the next action, so a
+    // streak whose last active day is older than yesterday is shown as 0.
+    $tdActiveDays = collect($recentActiveDays ?? [])->map(fn ($d) => substr((string) $d, 0, 10))->all();
+    $tdLastActive = substr((string) data_get($engagement, 'streak.last_day', ''), 0, 10);
+    $tdActiveToday = $tdLastActive === $tdToday || in_array($tdToday, $tdActiveDays, true);
+    $tdStreakAlive = $tdActiveToday || $tdLastActive === $tdYesterday;
+    $tdStreak = $tdStreakAlive ? $growthStreak : 0;
+    $tdWeekDots = collect(range(6, 0))->map(function ($daysAgo) use ($tdNow, $tdActiveDays, $tdToday, $tdActiveToday) {
+        $day = $tdNow->copy()->subDays($daysAgo);
+        $date = $day->toDateString();
+
+        return [
+            'label' => substr($day->format('D'), 0, 1),
+            'title' => $day->format('l j M'),
+            'active' => in_array($date, $tdActiveDays, true) || ($date === $tdToday && $tdActiveToday),
+            'today' => $date === $tdToday,
+        ];
+    });
+
+    // Today's tasks: prefer recurrence-aware stats from the controller.
+    $tdTaskTotal = (int) ($todayTaskStats['total'] ?? data_get($engagementProgress, 'tasks_total', 0));
+    $tdTaskDone = (int) ($todayTaskStats['completed'] ?? data_get($engagementProgress, 'tasks_completed', 0));
+    $tdTaskPercent = $tdTaskTotal > 0 ? (int) round(($tdTaskDone / $tdTaskTotal) * 100) : 0;
+    $tdTasks = $todayFocus->take(5);
+
+    // Coming up later today (meetings, reminders, project tasks due).
+    $tdAgenda = collect();
+    foreach (collect($upcomingMeetings ?? []) as $meeting) {
+        $tdAgenda->push(['icon' => 'fa-video', 'tone' => 'violet', 'title' => $meeting->title, 'time' => $meeting->start_at?->copy()->timezone($tdTimezone), 'url' => Route::has('meetings.show') ? route('meetings.show', $meeting) : route('meetings.index')]);
+    }
+    foreach (collect($upcomingReminders ?? []) as $reminder) {
+        $tdAgenda->push(['icon' => 'fa-bell', 'tone' => 'amber', 'title' => $reminder->title, 'time' => $reminder->next_run_at?->copy()->timezone($tdTimezone), 'url' => route('reminders.index')]);
+    }
+    foreach (collect($upcomingTasks ?? []) as $projectTask) {
+        $tdAgenda->push(['icon' => 'fa-clipboard-check', 'tone' => 'sky', 'title' => $projectTask->title, 'time' => null, 'url' => route('project-tasks.index')]);
+    }
+    $tdAgenda = $tdAgenda->sortBy(fn ($row) => $row['time'] ? $row['time']->format('H:i') : '99:99')->values();
+
+    // Progress rings — only where data already exists; otherwise a one-tap setup link.
+    $tdSavingsPercent = ($totalSavingsTarget ?? 0) > 0 ? (int) min(100, round((($totalSaved ?? 0) / $totalSavingsTarget) * 100)) : null;
+    $tdRings = [
+        [
+            'label' => 'This week',
+            'value' => (int) ($weeklyReview['completion_percent'] ?? 0),
+            'text' => (int) ($weeklyReview['completed_tasks'] ?? 0).'/'.(int) ($weeklyReview['total_tasks'] ?? 0).' tasks',
+            'color' => '#7c3aed',
+            'url' => route('activity'),
+            'empty' => false,
+            'hint' => 'Share of this week’s planned tasks you have completed.',
+        ],
+        [
+            'label' => 'Annual plans',
+            'value' => (int) ($annualPlanProgress ?? 0),
+            'text' => ($annualPlanTotal ?? 0) > 0 ? (int) ($annualPlanCompleted ?? 0).'/'.(int) $annualPlanTotal.' done' : 'Add a plan',
+            'color' => '#2563eb',
+            'url' => route('annual-plans.index'),
+            'empty' => ($annualPlanTotal ?? 0) === 0,
+            'hint' => 'Average progress across this year’s plans.',
+        ],
+        [
+            'label' => 'Savings',
+            'value' => (int) ($tdSavingsPercent ?? 0),
+            'text' => $tdSavingsPercent !== null ? $money($totalSaved ?? 0) : 'Set a target',
+            'color' => '#0d9488',
+            'url' => route('savings-goals.index'),
+            'empty' => $tdSavingsPercent === null,
+            'hint' => 'Saved so far against all savings goal targets.',
+        ],
+        [
+            'label' => 'Money health',
+            'value' => (int) ($financialHealth['score'] ?? 0),
+            'text' => $financialHealth['label'] ?? 'Getting started',
+            'color' => '#d97706',
+            'url' => route('financial-planner.index'),
+            'empty' => false,
+            'hint' => 'Score out of 100 from this month’s income, spending and saving.',
+        ],
+    ];
+
+    // Get-started checklist (server-known steps; "install" is resolved in the browser).
+    $tdActivationSteps = collect(data_get($growth, 'activation.steps', []))->keyBy(fn ($s) => is_array($s) ? ($s['key'] ?? '') : ($s->key ?? ''));
+    $tdStepDone = fn (string $key) => (bool) data_get($tdActivationSteps->get($key), 'complete', false);
+    $tdGetStarted = [
+        ['key' => 'plan', 'label' => 'Add your first task', 'icon' => 'fa-calendar-check', 'done' => $tdStepDone('plan') || $tdTaskTotal > 0, 'url' => route('daily-planner.index', ['new' => 1])],
+        ['key' => 'goal', 'label' => 'Set a goal', 'icon' => 'fa-bullseye', 'done' => $tdStepDone('goal'), 'url' => route('personal-goals.index', ['new' => 1])],
+        ['key' => 'money', 'label' => 'Record money', 'icon' => 'fa-wallet', 'done' => $tdStepDone('money'), 'url' => route('expenses.index', ['new' => 1])],
+        ['key' => 'reminder', 'label' => 'Turn on a reminder', 'icon' => 'fa-bell', 'done' => (bool) ($hasAnyReminder ?? false), 'url' => route('reminders.index', ['new' => 1])],
+    ];
+    $tdGetStartedDone = collect($tdGetStarted)->where('done', true)->count();
+
+    // App launcher — every module stays one tap away, without shouting.
+    $tdLauncher = collect([
+        ['Planner', 'fa-calendar-day', '#047857', 'daily-planner.index'],
+        ['Goals', 'fa-bullseye', '#be123c', 'personal-goals.index'],
+        ['Reminders', 'fa-bell', '#b45309', 'reminders.index'],
+        ['Notes', 'fa-note-sticky', '#ca8a04', 'notes.index'],
+        ['Meetings', 'fa-video', '#6d28d9', 'meetings.index'],
+        ['Expenses', 'fa-receipt', '#e11d48', 'expenses.index'],
+        ['Savings', 'fa-piggy-bank', '#0d9488', 'savings.index'],
+        ['Health', 'fa-heart-pulse', '#dc2626', 'wellbeing.index'],
+        ['Annual Plans', 'fa-list-check', '#1d4ed8', 'annual-plans.index'],
+        ['Projects', 'fa-diagram-project', '#0369a1', 'projects.index'],
+        ['Income', 'fa-arrow-trend-up', '#047857', 'incomes.index'],
+        ['Budgets', 'fa-chart-pie', '#1d4ed8', 'budgets.index'],
+        ['Debts', 'fa-hand-holding-dollar', '#c2410c', 'debts.index'],
+        ['Money Planner', 'fa-wallet', '#047857', 'financial-planner.index'],
+        ['Checkups', 'fa-stethoscope', '#be123c', 'health-checkups.index'],
+        ['Spiritual', 'fa-seedling', '#a21caf', 'spiritual-practices.index'],
+        ['AI Planner', 'fa-wand-magic-sparkles', '#6d28d9', 'ai-plans.index'],
+        ['Business Card', 'fa-address-card', '#0f766e', 'business-card.edit'],
+        ['Sign', 'fa-signature', '#4338ca', 'signature.show'],
+        ['Education', 'fa-graduation-cap', '#4338ca', 'education-plans.index'],
+        ['Network', 'fa-address-book', '#0369a1', 'network-contacts.index'],
+        ['Relationships', 'fa-heart', '#db2777', 'relationships.index'],
+        ['Social Planner', 'fa-bullhorn', '#0369a1', 'social-media-planner.index'],
+        ['Activity', 'fa-clock-rotate-left', '#475569', 'activity'],
+    ])->filter(fn ($tool) => Route::has($tool[3]))->values();
+
+    $tdPriorityColor = fn ($priority) => match (strtolower((string) $priority)) {
+        'urgent', 'high' => '#e11d48',
+        'medium' => '#d97706',
+        default => '#94a3b8',
+    };
+@endphp
+
 <style>
-    .md-home{--home-primary:var(--brand-1,#0f766e);color:#0f172a}.md-home *{box-sizing:border-box}html:not(.pm-a11y-underline-links) .md-home a{text-decoration:none!important}
-    .md-dashboard-section{margin-bottom:16px}.md-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.md-section-title{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:800;color:#172033}.md-section-title i{color:var(--home-primary)}.md-section-link{font-size:11px;font-weight:800;color:var(--home-primary)!important;white-space:nowrap}
-    .md-shell{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 6px 18px rgba(15,23,42,.04)}
-    .md-welcome{padding:14px 16px}.md-welcome-row{display:flex;align-items:center;justify-content:space-between;gap:14px}.md-welcome h1{font-size:20px;line-height:1.2;font-weight:800;margin:2px 0}.md-welcome-copy{font-size:12px;color:#64748b}.md-muted{color:#64748b}.md-header-actions{display:flex;align-items:center;gap:8px}.md-icon-btn{width:38px;height:38px;border:1px solid #dbe3ee;border-radius:10px;background:#fff;color:#475569;display:inline-flex;align-items:center;justify-content:center}.md-card-btn{height:38px;border-radius:10px;padding:0 13px;background:var(--home-primary);border:1px solid var(--home-primary);color:#fff!important;display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;box-shadow:0 5px 12px color-mix(in srgb,var(--home-primary) 20%,transparent)}
-    .md-notif{position:relative}.md-notif>summary{list-style:none;cursor:pointer;position:relative}.md-notif>summary::-webkit-details-marker{display:none}.md-notif-badge{position:absolute;right:-5px;top:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#e11d48;color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #fff}.md-notif-panel{position:absolute;z-index:80;right:0;top:46px;width:min(390px,calc(100vw - 28px));max-height:520px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 18px 45px rgba(15,23,42,.18);overflow:hidden}.md-notif-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid #eef2f7;background:#fff}.md-notif-title{font-size:13px;font-weight:900;color:#172033}.md-notif-sub{font-size:10px;color:#64748b;margin-top:1px}.md-notif-list{max-height:390px;overflow-y:auto}.md-notif-item{display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid #f1f5f9;color:#334155!important}.md-notif-item:hover{background:#f8fafc}.md-notif-item.unread{background:#f0f9ff80}.md-notif-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}.md-notif-copy{min-width:0;flex:1}.md-notif-item-title{font-size:11px;font-weight:800;color:#172033;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.md-notif-msg{font-size:10px;line-height:1.35;color:#64748b;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.md-notif-time{font-size:9px;color:#94a3b8;margin-top:4px}.md-notif-dot{width:7px;height:7px;border-radius:50%;background:#0ea5e9;margin-top:5px;flex:0 0 auto}.md-notif-action{font-size:8px;font-weight:900;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:999px;padding:2px 6px;white-space:nowrap}.md-notif-foot{padding:10px 13px;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;gap:8px}.md-notif-foot a,.md-notif-foot button{font-size:10px;font-weight:800;color:var(--home-primary)!important}.md-notif-empty{padding:28px 16px;text-align:center;color:#94a3b8;font-size:11px}
-    .md-progress-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.md-progress-card{border:1px solid #e2e8f0;border-radius:15px;background:#fff;padding:12px 13px;box-shadow:0 5px 14px rgba(15,23,42,.04);min-width:0}.md-progress-card.health{border-left:4px solid #0f766e}.md-progress-card.week{border-left:4px solid #7c3aed}.md-progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.md-progress-kicker{font-size:11px;color:#64748b;font-weight:700}.md-progress-main{font-size:19px;font-weight:900;color:#172033;line-height:1.2;margin-top:2px}.md-progress-icon{width:40px;height:40px;border-radius:12px;background:#ccfbf1;color:#0f766e;display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}.md-progress-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:11px}.md-progress-metrics.four{grid-template-columns:repeat(4,minmax(0,1fr))}.md-progress-label{font-size:10px;color:#64748b;margin-bottom:2px}.md-progress-value{font-size:12px;font-weight:800;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.md-progress-period{font-size:11px;color:#64748b;margin-top:4px}
-    .md-shortcuts{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.md-shortcut{border-radius:13px;padding:9px 10px;border:1px solid var(--c-border);background:var(--c-bg);min-height:70px;display:flex;align-items:center;gap:8px;transition:.16s ease;min-width:0}.md-shortcut:hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(15,23,42,.05)}.md-shortcut-icon{width:32px;height:32px;border-radius:9px;background:#fff9;display:flex;align-items:center;justify-content:center;color:var(--c-fg);font-size:13px;flex:0 0 auto}.md-shortcut-copy{min-width:0}.md-shortcut-title{font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.md-shortcut-sub{font-size:9px;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .md-insight{padding:12px 14px;border-radius:15px;border:1px solid var(--insight-border);background:var(--insight-bg)}.md-insight-inner{display:flex;align-items:center;gap:11px}.md-insight-icon{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.88);display:flex;align-items:center;justify-content:center;color:var(--insight-fg);font-size:16px;flex:0 0 auto}.md-insight-kicker{font-size:9px;letter-spacing:.07em;font-weight:800;color:var(--insight-fg)}.md-insight-title{font-size:13px;font-weight:800;margin-top:2px}.md-insight-message{font-size:11px;line-height:1.4;color:#64748b;margin-top:2px}.md-insight-action{font-size:11px;font-weight:800;white-space:nowrap;color:var(--insight-fg)!important}
-    .md-tab-wrap{padding:6px}.md-tabs{display:flex;align-items:center;gap:6px;background:#f4f7fb;border-radius:12px;padding:5px;overflow-x:auto;scrollbar-width:none}.md-tabs::-webkit-scrollbar{display:none}.md-tab-btn{border:0;background:transparent;color:#64748b;padding:8px 12px;border-radius:9px;font-size:11px;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:.16s ease}.md-tab-btn:hover{color:#334155;background:#fff}.md-tab-btn.active{background:var(--home-primary);color:#fff;box-shadow:0 4px 10px color-mix(in srgb,var(--home-primary) 22%,transparent)}.md-tab-panel{display:none;padding:11px 7px 5px}.md-tab-panel.active{display:block}.md-tab-meta{font-size:10px;color:#94a3b8;margin-left:auto}.md-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px 9px}.md-panel-title{font-size:12px;font-weight:800;color:#334155}.md-empty{padding:16px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;text-align:center;color:#64748b;font-size:11px}
-    .md-focus-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.md-focus-item{display:flex;align-items:center;gap:8px;min-width:0;padding:10px;border:1px solid #e2e8f0;border-left:4px solid var(--accent,#0f766e);border-radius:12px;background:#fff;transition:.15s ease}.md-focus-item:hover{background:#f8fafc;transform:translateY(-1px)}.md-focus-num{width:28px;height:28px;border-radius:9px;background:#f1f5f9;color:#475569;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex:0 0 auto}.md-row-copy{min-width:0;flex:1}.md-row-title{font-size:11px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.md-row-sub{font-size:9px;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.md-chevron{color:#94a3b8;font-size:9px}
-    .md-tools-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.md-tool-card{border:1px solid #e2e8f0;border-left:4px solid var(--tool-accent);border-radius:12px;background:#fff;padding:9px 10px;display:flex;align-items:center;gap:8px;min-width:0;transition:.15s ease}.md-tool-card:hover{transform:translateY(-1px);box-shadow:0 5px 13px rgba(15,23,42,.05)}.md-tool-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:13px}
-    .md-finance-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.md-finance-card{--fc-bg:#f8fafc;--fc-fg:#475569;--fc-border:#cbd5e1;position:relative;overflow:hidden;border:1px solid var(--fc-border);border-left:4px solid var(--fc-fg);border-radius:12px;padding:9px 10px;min-width:0;transition:.16s ease;box-shadow:0 4px 12px rgba(15,23,42,.035);background:var(--fc-bg);color:#172033!important}.md-finance-card:hover{transform:translateY(-1px);box-shadow:0 7px 15px rgba(15,23,42,.065)}.md-finance-card.income{--fc-bg:#ecfdf5;--fc-fg:#047857;--fc-border:#a7f3d0}.md-finance-card.expenses{--fc-bg:#fff1f2;--fc-fg:#be123c;--fc-border:#fecdd3}.md-finance-card.budgets{--fc-bg:#eff6ff;--fc-fg:#1d4ed8;--fc-border:#bfdbfe}.md-finance-card.savings{--fc-bg:#f5f3ff;--fc-fg:#6d28d9;--fc-border:#ddd6fe}.md-finance-card.debts{--fc-bg:#fff7ed;--fc-fg:#c2410c;--fc-border:#fed7aa}.md-finance-card.goals{--fc-bg:#ecfeff;--fc-fg:#0e7490;--fc-border:#a5f3fc}.md-finance-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}.md-finance-icon{width:28px;height:28px;border-radius:8px;background:#fff;color:var(--fc-fg);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:11px}.md-finance-name{font-size:11px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.md-finance-value{font-size:13px;font-weight:900;color:#172033;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.md-finance-small{font-size:9px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    /* Daily rhythm / retention loop */
-    .md-rhythm{padding:14px 15px;background:linear-gradient(135deg,color-mix(in srgb,var(--home-primary) 7%,#fff),#fff);border:1px solid color-mix(in srgb,var(--home-primary) 18%,#e2e8f0)}
-    .md-rhythm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.md-rhythm-eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:900;color:#94a3b8}.md-rhythm-title{font-size:15px;font-weight:900;color:#172033;margin-top:1px}.md-streak-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-size:10px;font-weight:900;white-space:nowrap}.md-streak-best{font-size:9px;color:#94a3b8;margin-left:4px}
-    .md-rhythm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.md-rhythm-card{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:12px;min-width:0;box-shadow:0 4px 12px rgba(15,23,42,.035)}.md-rhythm-card.start{border-color:#a7f3d0;background:#ecfdf580}.md-rhythm-card.progress{border-color:#ddd6fe;background:#f5f3ff80}.md-rhythm-card.close{border-color:#bae6fd;background:#f0f9ff80}.md-rhythm-card-head{display:flex;align-items:flex-start;gap:9px}.md-rhythm-icon{width:34px;height:34px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto;box-shadow:0 3px 10px rgba(15,23,42,.05)}.md-rhythm-card.start .md-rhythm-icon{color:#047857}.md-rhythm-card.progress .md-rhythm-icon{color:#6d28d9}.md-rhythm-card.close .md-rhythm-icon{color:#0369a1}.md-rhythm-label{font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#64748b}.md-rhythm-main{font-size:13px;font-weight:900;color:#172033;margin-top:2px}.md-rhythm-copy{font-size:10px;line-height:1.35;color:#64748b;margin-top:3px}.md-rhythm-action{margin-top:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:0 11px;border:0;border-radius:10px;font-size:10px;font-weight:900;cursor:pointer}.md-rhythm-action.start{background:#047857;color:#fff}.md-rhythm-action.close{background:#0369a1;color:#fff}.md-rhythm-action[disabled]{opacity:.55;cursor:default}.md-rhythm-bar{height:7px;border-radius:999px;background:#ede9fe;overflow:hidden;margin-top:10px}.md-rhythm-bar>span{display:block;height:100%;border-radius:inherit;background:#7c3aed}.md-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:9px}.md-review-card{border:1px solid #e2e8f0;border-radius:13px;background:#fff;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;cursor:pointer}.md-review-card:hover{border-color:var(--home-primary);box-shadow:0 5px 12px rgba(15,23,42,.05)}.md-review-kicker{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;font-weight:800}.md-review-title{font-size:11px;font-weight:900;color:#172033;margin-top:2px}.md-review-copy{font-size:9px;color:#64748b;margin-top:2px}.md-celebration{margin-top:9px;padding:10px 12px;border-radius:12px;border:1px solid #fde68a;background:#fffbeb;color:#92400e}.md-celebration-title{font-size:11px;font-weight:900}.md-celebration-copy{font-size:10px;margin-top:2px}.md-tomorrow{margin-top:9px;padding:10px 12px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc}.md-tomorrow-title{font-size:10px;font-weight:900;color:#475569}.md-tomorrow-items{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}.md-tomorrow-chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 8px;background:#fff;border:1px solid #e2e8f0;color:#475569;font-size:9px;font-weight:800}
-    .md-engagement-dialog{width:min(92vw,560px);max-width:560px;border:0;border-radius:18px;padding:0;overflow:hidden;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.25)}.md-engagement-dialog::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}.md-engagement-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #eef2f7}.md-engagement-dialog-title{font-size:16px;font-weight:900;color:#172033}.md-engagement-dialog-sub{font-size:10px;color:#64748b;margin-top:2px}.md-engagement-dialog-close{width:34px;height:34px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#64748b}.md-engagement-dialog-body{padding:15px 16px;max-height:min(70vh,620px);overflow-y:auto}.md-engagement-dialog-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid #eef2f7;background:#f8fafc}.md-engagement-fields{display:grid;gap:10px}.md-engagement-field label{display:block;font-size:10px;font-weight:900;color:#475569;margin-bottom:4px}.md-review-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.md-review-metric{padding:10px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc}.md-review-metric-label{font-size:9px;color:#94a3b8;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.md-review-metric-value{font-size:15px;font-weight:900;color:#172033;margin-top:2px}
-
-
-    /* Business growth + communication */
-    .md-growth-section{padding:14px 15px}
-    .md-growth-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-    .md-growth-eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:900;color:#94a3b8}
-    .md-growth-title{font-size:15px;font-weight:900;color:#172033;margin-top:2px}
-    .md-growth-copy{font-size:10px;line-height:1.4;color:#64748b;margin-top:3px}
-    .md-growth-private{display:inline-flex;align-items:center;gap:5px;border:1px solid #a7f3d0;background:#ecfdf5;color:#047857;padding:6px 9px;border-radius:999px;font-size:9px;font-weight:900;white-space:nowrap}
-    .md-growth-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
-    .md-growth-card{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:12px;min-width:0}
-    .md-growth-card.challenge{background:#f5f3ff80;border-color:#ddd6fe}
-    .md-growth-card.referral{background:#f0f9ff80;border-color:#bae6fd}
-    .md-growth-card-kicker{font-size:9px;text-transform:uppercase;letter-spacing:.07em;font-weight:900;color:#94a3b8}
-    .md-growth-card-title{font-size:12px;font-weight:900;color:#172033;margin-top:3px}
-    .md-growth-card-copy{font-size:10px;line-height:1.35;color:#64748b;margin-top:4px}
-    .md-growth-card-meta{font-size:9px;font-weight:900;color:#6d28d9;margin-top:6px}
-    .md-growth-progress{height:7px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin-top:10px}
-    .md-growth-progress>span{display:block;height:100%;border-radius:inherit;background:#0f766e}
-    .md-growth-progress.violet{background:#ede9fe}
-    .md-growth-progress.violet>span{background:#7c3aed}
-    .md-growth-steps{display:grid;gap:5px;margin-top:9px}
-    .md-growth-step{display:flex;align-items:center;gap:6px;font-size:9px;color:#64748b;font-weight:800}
-    .md-growth-step.complete{color:#047857}
-    .md-growth-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;border:0;border-radius:10px;min-height:34px;padding:0 11px;color:#fff;font-size:10px;font-weight:900;cursor:pointer}
-    .md-growth-action.violet{background:#6d28d9}
-    .md-growth-action.sky{background:#0369a1}
-    .md-growth-trust{display:flex;align-items:flex-start;gap:7px;margin-top:10px;border:1px solid #a7f3d0;background:#ecfdf5;color:#065f46;border-radius:12px;padding:9px 10px;font-size:9.5px;line-height:1.4}
-
-    @media(max-width:1200px){.md-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))}.md-finance-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.md-tools-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.md-focus-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:760px){.md-welcome-row{align-items:flex-start}.md-progress-grid{grid-template-columns:1fr}.md-progress-metrics.four{grid-template-columns:repeat(2,minmax(0,1fr))}.md-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}.md-tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.md-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.md-focus-grid{grid-template-columns:1fr}.md-rhythm-grid{grid-template-columns:1fr}.md-growth-grid{grid-template-columns:1fr}.md-card-btn span{display:none}.md-insight-inner{align-items:flex-start}.md-insight-action{display:none}.md-tab-wrap{padding:4px}.md-tab-panel{padding:10px 4px 4px}}
-    @media(max-width:460px){.md-welcome{padding:12px}.md-welcome h1{font-size:18px}.md-shortcut{min-height:62px;padding:8px}.md-progress-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.md-finance-grid{grid-template-columns:1fr 1fr}}
-
     /* ------------------------------------------------------------------
-       Dashboard usability redesign
+       Today hub — calm, glanceable, one clear next step per card.
        ------------------------------------------------------------------ */
-    .md-home{
-        width:min(1180px,100%);
-        margin:0 auto;
-        padding:6px 4px 28px;
-    }
-    .md-home .md-dashboard-section{margin-bottom:22px}
-    .md-home .md-shell{
-        border-radius:20px;
-        border:1px solid #e5e7eb;
-        box-shadow:0 8px 28px rgba(15,23,42,.055);
-    }
+    .td{--td-brand:var(--brand-1,#0f766e);--td-ink:#0f172a;--td-muted:#64748b;--td-line:#e7ecf3;--td-soft:#f6f8fb;width:min(1120px,100%);margin:0 auto;padding:2px 0 24px;color:var(--td-ink)}
+    .td *{box-sizing:border-box}
+    html:not(.pm-a11y-underline-links) .td a{text-decoration:none!important}
+    .td-card{background:#fff;border:1px solid var(--td-line);border-radius:20px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.04)}
+    .td-section{margin-bottom:16px}
+    .td-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 10px}
+    .td-h2{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:var(--td-ink)}
+    .td-h2 i{color:var(--td-brand);font-size:14px}
+    .td-link{font-size:12px;font-weight:700;color:var(--td-brand)!important;white-space:nowrap}
+    .td-link:hover{opacity:.8}
+    .td-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 16px;border-radius:12px;font-size:13px;font-weight:700;border:1px solid transparent;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease;white-space:nowrap}
+    .td-btn:active{transform:scale(.97)}
+    .td-btn-primary{background:var(--td-brand);color:#fff!important;box-shadow:0 6px 16px color-mix(in srgb,var(--td-brand) 28%,transparent)}
+    .td-btn-primary:hover{box-shadow:0 8px 20px color-mix(in srgb,var(--td-brand) 36%,transparent)}
+    .td-btn-ghost{background:#fff;border-color:var(--td-line);color:#334155!important}
+    .td-btn-ghost:hover{background:var(--td-soft)}
+    .td-btn-done{background:#ecfdf5;border-color:#a7f3d0;color:#047857!important}
+    .td-icon-btn{width:40px;height:40px;border-radius:12px;border:1px solid var(--td-line);background:#fff;color:#475569;display:inline-flex;align-items:center;justify-content:center;transition:background .15s ease}
+    .td-icon-btn:hover{background:var(--td-soft)}
 
-    .md-welcome{
-        padding:20px 22px;
-        background:
-            radial-gradient(circle at 95% 10%,color-mix(in srgb,var(--home-primary) 10%,transparent),transparent 35%),
-            #fff;
-    }
-    .md-welcome h1{font-size:25px;letter-spacing:-.02em}
-    .md-welcome-copy{font-size:13px;max-width:560px;line-height:1.6}
-    .md-header-actions{gap:10px}
-    .md-icon-btn,.md-card-btn{height:42px}
+    /* Hero */
+    .td-hero{position:relative;overflow:hidden;padding:22px 22px 18px;border-radius:24px;border:1px solid color-mix(in srgb,var(--td-brand) 18%,#e2e8f0);background:
+        radial-gradient(120% 140% at 100% 0%,color-mix(in srgb,var(--td-brand) 16%,transparent) 0%,transparent 55%),
+        radial-gradient(90% 120% at 0% 100%,#fff7ed 0%,transparent 60%),
+        linear-gradient(180deg,#ffffff 0%,#fbfdfc 100%);box-shadow:0 10px 30px rgba(15,23,42,.06)}
+    .td-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .td-date{font-size:12px;font-weight:700;color:var(--td-muted);display:flex;align-items:center;gap:6px}
+    .td-date i{color:#f59e0b}
+    .td-hello{font-size:26px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin-top:4px;font-family:'Outfit','Poppins',sans-serif}
+    .td-hero-actions{display:flex;align-items:center;gap:8px}
+    .td-hero-body{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;margin-top:18px}
+    .td-ring{--p:0;--c:var(--td-brand);--size:104px;--track:#e9eef5;position:relative;width:var(--size);height:var(--size);border-radius:50%;background:conic-gradient(var(--c) calc(var(--p) * 1%),var(--track) 0);display:grid;place-items:center;flex:0 0 auto;transition:--p .6s ease}
+    .td-ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:#fff}
+    .td-ring>*{position:relative;text-align:center}
+    .td-ring-num{font-size:22px;font-weight:800;line-height:1;font-family:'Outfit','Poppins',sans-serif}
+    .td-ring-sub{font-size:10px;font-weight:700;color:var(--td-muted);margin-top:3px}
+    .td-streak{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+    .td-streak-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;font-size:13px;font-weight:800}
+    .td-streak-pill.cold{background:#f8fafc;border-color:#e2e8f0;color:#475569}
+    .td-flame{display:inline-block;transform-origin:50% 90%}
+    .td-streak-pill:not(.cold) .td-flame{animation:tdFlicker 2.4s ease-in-out infinite}
+    .td-dots{display:flex;gap:6px}
+    .td-dot{width:26px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#94a3b8}
+    .td-dot span{width:12px;height:12px;border-radius:50%;background:#e9eef5;border:2px solid transparent;transition:background .2s ease}
+    .td-dot.on span{background:#f97316}
+    .td-dot.today span{border-color:color-mix(in srgb,var(--td-brand) 60%,#fff)}
+    .td-dot.today{color:var(--td-ink)}
+    .td-nudge{font-size:13px;color:#475569;margin-top:10px;font-weight:600}
+    .td-routine{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .td-celebrate{margin-top:14px;padding:10px 12px;border-radius:14px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12px;font-weight:700}
 
-    .md-overview-nav{
-        position:sticky;
-        top:8px;
-        z-index:40;
-        display:grid;
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        gap:8px;
-        margin:0 0 22px;
-        padding:7px;
-        border:1px solid #e2e8f0;
-        border-radius:16px;
-        background:rgba(255,255,255,.94);
-        box-shadow:0 10px 28px rgba(15,23,42,.07);
-        backdrop-filter:blur(14px);
-    }
-    .md-overview-link{
-        border:0;
-        min-height:42px;
-        border-radius:11px;
-        background:transparent;
-        color:#64748b!important;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        gap:7px;
-        font-size:12px;
-        font-weight:800;
-        cursor:pointer;
-    }
-    .md-overview-link:hover,
-    .md-overview-link.active{
-        background:#f0fdfa;
-        color:var(--home-primary)!important;
-    }
+    /* Notification bell (existing data, restyled) */
+    .md-notif{position:relative}.md-notif>summary{list-style:none;cursor:pointer;position:relative}.md-notif>summary::-webkit-details-marker{display:none}
+    .md-notif-badge{position:absolute;right:-5px;top:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#e11d48;color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+    .md-notif-panel{position:absolute;z-index:80;right:0;top:46px;width:min(370px,calc(100vw - 28px));background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 18px 45px rgba(15,23,42,.18);overflow:hidden}
+    .md-notif-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid #eef2f7}
+    .md-notif-title{font-size:13px;font-weight:800;color:#172033}.md-notif-sub{font-size:11px;color:#64748b}
+    .md-notif-list{max-height:380px;overflow-y:auto}
+    .md-notif-item{display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid #f1f5f9;color:#334155!important;background:#fff}.md-notif-item:hover{background:#f8fafc}.md-notif-item.unread{background:#f0f9ff}
+    .md-notif-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+    .md-notif-copy{min-width:0;flex:1}.md-notif-item-title{font-size:12px;font-weight:700;color:#172033;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .md-notif-msg{font-size:11px;line-height:1.35;color:#64748b;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .md-notif-time{font-size:10px;color:#94a3b8;margin-top:3px;display:block}
+    .md-notif-dot{width:7px;height:7px;border-radius:50%;background:#0ea5e9;margin-top:5px;flex:0 0 auto}
+    .md-notif-action{font-size:9px;font-weight:800;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:999px;padding:1px 6px}
+    .md-notif-foot{padding:10px 13px;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .md-notif-foot a,.md-notif-foot button{font-size:11px;font-weight:700;color:var(--td-brand)!important}
+    .md-notif-empty{padding:28px 16px;text-align:center;color:#94a3b8;font-size:12px}
 
-    /* Today is the primary surface. Give it air and prominence. */
-    .md-rhythm{
-        padding:20px!important;
-        border:1px solid color-mix(in srgb,var(--home-primary) 22%,#e2e8f0)!important;
-    }
-    .md-rhythm-title{font-size:19px!important;line-height:1.25}
-    .md-rhythm-eyebrow{font-size:10px!important;letter-spacing:.14em}
-    .md-rhythm-grid{
-        gap:12px!important;
-        margin-top:16px!important;
-    }
-    .md-rhythm-card{
-        min-height:126px;
-        padding:16px!important;
-        border-radius:16px!important;
-    }
+    /* Get started */
+    .td-start{padding:16px 18px;border-radius:20px;background:linear-gradient(135deg,color-mix(in srgb,var(--td-brand) 9%,#fff),#fff 70%);border:1px solid color-mix(in srgb,var(--td-brand) 22%,#e2e8f0)}
+    .td-start-bar{height:6px;border-radius:999px;background:#e9eef5;overflow:hidden;margin:10px 0 12px}
+    .td-start-bar>span{display:block;height:100%;background:var(--td-brand);border-radius:inherit;transition:width .4s ease}
+    .td-start-list{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+    .td-step{display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:14px;background:#fff;border:1px solid var(--td-line);color:#334155!important;font-size:12px;font-weight:700;min-width:0;transition:transform .15s ease,border-color .15s ease;cursor:pointer;text-align:left;width:100%}
+    .td-step:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--td-brand) 40%,#e2e8f0)}
+    .td-step i.td-step-ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--td-soft);color:var(--td-brand);flex:0 0 auto;font-size:12px}
+    .td-step span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .td-step.done{background:#f0fdf4;border-color:#bbf7d0;color:#15803d!important}
+    .td-step.done i.td-step-ic{background:#dcfce7;color:#15803d}
+    .td-step.done span{text-decoration:line-through;text-decoration-color:#86efac}
 
-    /* Focus panel gets more space than utility content. */
-    .md-tab-wrap{
-        padding:0!important;
-        overflow:hidden;
-    }
-    .md-tabs{
-        padding:9px 10px!important;
-        background:#f8fafc;
-        border-bottom:1px solid #e2e8f0;
-    }
-    .md-tab-btn{
-        min-height:42px!important;
-        border-radius:10px!important;
-    }
-    .md-tab-panel{
-        padding:18px!important;
-        min-height:150px;
-    }
+    /* Two-column today grid */
+    .td-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+    .td-pad{padding:16px 18px}
 
-    /* Secondary dashboard areas become calm, expandable groups. */
-    .md-secondary-wrap{
-        margin-bottom:20px;
-        border:1px solid #e2e8f0;
-        border-radius:18px;
-        background:#fff;
-        box-shadow:0 6px 18px rgba(15,23,42,.035);
-        overflow:hidden;
-    }
-    .md-secondary-summary{
-        list-style:none;
-        cursor:pointer;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:16px;
-        padding:16px 18px;
-        user-select:none;
-    }
-    .md-secondary-summary::-webkit-details-marker{display:none}
-    .md-secondary-summary-title{
-        display:flex;
-        align-items:center;
-        gap:10px;
-        font-size:14px;
-        font-weight:900;
-        color:#172033;
-    }
-    .md-secondary-summary-title i{
-        width:34px;
-        height:34px;
-        border-radius:10px;
-        display:grid;
-        place-items:center;
-        color:var(--home-primary);
-        background:#f0fdfa;
-    }
-    .md-secondary-summary-copy{
-        font-size:11px;
-        color:#64748b;
-        margin-top:2px;
-    }
-    .md-secondary-summary-chevron{
-        color:#94a3b8;
-        transition:transform .2s ease;
-    }
-    details[open]>.md-secondary-summary .md-secondary-summary-chevron{
-        transform:rotate(180deg);
-    }
-    .md-secondary-content{padding:0 16px 16px}
-    .md-secondary-content>.md-dashboard-section{
-        margin:0!important;
-        border:0!important;
-        box-shadow:none!important;
-    }
+    /* Tasks */
+    .td-tasks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+    .td-task{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;border:1px solid var(--td-line);background:#fff;transition:background .2s ease,opacity .3s ease,border-color .2s ease}
+    .td-task:hover{background:var(--td-soft)}
+    .td-check{position:relative;width:26px;height:26px;border-radius:50%;border:2px solid #cbd5e1;background:#fff;display:grid;place-items:center;flex:0 0 auto;cursor:pointer;color:transparent;font-size:12px;transition:background .2s ease,border-color .2s ease,color .2s ease,transform .15s ease}
+    .td-check:hover{border-color:var(--td-brand)}
+    .td-check:focus-visible{outline:3px solid color-mix(in srgb,var(--td-brand) 35%,transparent);outline-offset:2px}
+    .td-check[disabled]{cursor:progress;opacity:.7}
+    .td-task.is-done .td-check{background:var(--td-brand);border-color:var(--td-brand);color:#fff;animation:tdPop .35s ease}
+    .td-task.is-done .td-check::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--td-brand);opacity:0;animation:tdRipple .5s ease}
+    .td-task.is-done{background:#f8fafc}
+    .td-task.is-done .td-task-title{color:#94a3b8;text-decoration:line-through}
+    .td-task-copy{min-width:0;flex:1}
+    .td-task-title{font-size:14px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .2s ease}
+    .td-task-meta{font-size:11px;color:var(--td-muted);margin-top:1px;display:flex;align-items:center;gap:6px}
+    .td-prio{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+    .td-alldone{display:none;align-items:center;gap:10px;padding:12px;border-radius:14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;font-weight:700;margin-top:8px}
+    .td-alldone.show{display:flex;animation:tdFadeUp .35s ease}
+    .td-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:22px 12px;border:1px dashed #d5dde8;border-radius:16px;background:var(--td-soft)}
+    .td-empty i{font-size:22px;color:#94a3b8}
+    .td-empty p{font-size:13px;color:#475569;font-weight:600;margin:0}
 
-    /* Progress is useful, but not louder than today's plan. */
-    .md-progress-grid{gap:12px}
-    .md-progress-card{
-        padding:16px;
-        border-radius:16px;
-        box-shadow:none;
-        background:#fbfdff;
-    }
-    .md-progress-main{font-size:22px}
-    .md-progress-metrics{gap:12px}
+    /* Agenda */
+    .td-agenda{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+    .td-agenda a{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:12px;color:#334155!important}
+    .td-agenda a:hover{background:var(--td-soft)}
+    .td-agenda-ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;font-size:12px}
+    .td-agenda-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+    .td-agenda-time{font-size:11px;font-weight:700;color:var(--td-muted);white-space:nowrap}
 
-    /* Tool launcher: fewer visual blocks and stronger labels. */
-    .md-shortcuts{
-        grid-template-columns:repeat(4,minmax(0,1fr))!important;
-        gap:10px!important;
-    }
-    .md-shortcut{
-        min-height:92px!important;
-        border-radius:15px!important;
-        padding:14px!important;
-        box-shadow:none!important;
-        transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;
-    }
-    .md-shortcut:hover{
-        transform:translateY(-2px);
-        box-shadow:0 10px 22px rgba(15,23,42,.07)!important;
-    }
-    .md-shortcut:nth-child(n+5){
-        display:none;
-    }
-    .md-tools-expanded .md-shortcut:nth-child(n+5){
-        display:flex;
-    }
-    .md-more-tools{
-        margin-top:11px;
-        display:flex;
-        justify-content:flex-end;
-    }
-    .md-more-tools button{
-        border:1px solid #dbe3ee;
-        background:#fff;
-        color:#475569;
-        border-radius:10px;
-        padding:8px 12px;
-        font-size:11px;
-        font-weight:800;
-    }
+    /* Insight */
+    .td-insight{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:18px;border:1px solid var(--insight-border);background:var(--insight-bg)}
+    .td-insight-ic{width:38px;height:38px;border-radius:12px;background:#fff;display:grid;place-items:center;color:var(--insight-fg);flex:0 0 auto}
+    .td-insight-kicker{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--insight-fg)}
+    .td-insight-title{font-size:14px;font-weight:700;margin-top:2px;color:#172033}
+    .td-insight-msg{font-size:12px;line-height:1.45;color:#475569;margin-top:3px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .td-insight-foot{display:flex;align-items:center;gap:12px;margin-top:8px}
+    .td-insight-foot a,.td-insight-foot button{font-size:12px;font-weight:700;color:var(--insight-fg)!important;background:none;border:0;padding:0;cursor:pointer}
 
-    /* Growth/challenge should feel optional, not like another required task. */
-    .md-growth-section,
-    #growth-strategy-card{
-        background:#fbfdff!important;
+    /* Rings row */
+    .td-rings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .td-ring-card{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--td-line);color:var(--td-ink)!important;transition:transform .15s ease,box-shadow .15s ease;min-width:0}
+    .td-ring-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.07)}
+    .td-ring-card .td-ring{--size:58px}
+    .td-ring-card .td-ring::before{inset:6px}
+    .td-ring-card .td-ring-num{font-size:13px}
+    .td-ring-label{font-size:12px;font-weight:700;color:var(--td-muted)}
+    .td-ring-text{font-size:14px;font-weight:700;color:var(--td-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .td-ring-card.empty .td-ring-text{color:var(--td-brand)}
+
+    /* Launcher */
+    .td-launcher{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}
+    .td-app{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 4px;border-radius:16px;color:#334155!important;font-size:11.5px;font-weight:600;text-align:center;transition:background .15s ease,transform .15s ease;min-width:0}
+    .td-app:hover{background:var(--td-soft);transform:translateY(-2px)}
+    .td-app-ic{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;font-size:18px;color:var(--app-c);background:color-mix(in srgb,var(--app-c) 11%,#fff);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--app-c) 16%,transparent)}
+    .td-app-name{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .td-launcher:not(.expanded) .td-app:nth-child(n+9){display:none}
+    .td-more-apps{display:flex;justify-content:center;margin-top:6px}
+
+    /* "More" collapsibles */
+    .td-more{border:1px solid var(--td-line);border-radius:18px;background:#fff;overflow:hidden;margin-bottom:10px}
+    .td-more>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;user-select:none}
+    .td-more>summary::-webkit-details-marker{display:none}
+    .td-more>summary:hover{background:#fbfcfe}
+    .td-more-ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--td-soft);color:var(--td-brand);flex:0 0 auto}
+    .td-more-title{font-size:14px;font-weight:700;flex:1;min-width:0}
+    .td-more-badge{font-size:11px;font-weight:700;color:var(--td-muted)}
+    .td-more-chev{color:#94a3b8;transition:transform .2s ease}
+    .td-more[open] .td-more-chev{transform:rotate(180deg)}
+    .td-more-body{padding:4px 16px 16px;animation:tdFadeUp .2s ease}
+
+    .md-finance-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+    .md-finance-card{--fc-bg:#f8fafc;--fc-fg:#475569;display:block;border-radius:14px;padding:11px 12px;background:var(--fc-bg);color:#172033!important;min-width:0;transition:transform .15s ease}
+    .md-finance-card:hover{transform:translateY(-1px)}
+    .md-finance-card.income{--fc-bg:#ecfdf5;--fc-fg:#047857}.md-finance-card.expenses{--fc-bg:#fff1f2;--fc-fg:#be123c}.md-finance-card.budgets{--fc-bg:#eff6ff;--fc-fg:#1d4ed8}.md-finance-card.savings{--fc-bg:#f5f3ff;--fc-fg:#6d28d9}.md-finance-card.debts{--fc-bg:#fff7ed;--fc-fg:#c2410c}.md-finance-card.goals{--fc-bg:#ecfeff;--fc-fg:#0e7490}
+    .md-finance-name{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--fc-fg)}
+    .md-finance-value{font-size:15px;font-weight:800;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .md-finance-small{font-size:10.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    .td-list-links{display:grid;gap:6px}
+    .td-list-links a,.td-list-links button{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--td-line);background:#fff;color:#334155!important;font-size:13px;font-weight:600;text-align:left;width:100%;cursor:pointer}
+    .td-list-links a:hover,.td-list-links button:hover{background:var(--td-soft)}
+    .td-list-links small{display:block;font-size:11px;color:var(--td-muted);font-weight:500}
+
+    .td-growth{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .td-growth-card{padding:14px;border-radius:14px;border:1px solid var(--td-line);background:#fff}
+    .td-growth-kicker{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8}
+    .td-growth-title{font-size:13px;font-weight:700;margin-top:3px}
+    .td-bar{height:6px;border-radius:999px;background:#e9eef5;overflow:hidden;margin-top:10px}
+    .td-bar>span{display:block;height:100%;border-radius:inherit;background:var(--bar,#0f766e)}
+    .td-growth-step{display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;font-weight:600;margin-top:6px}
+    .td-growth-step.complete{color:#15803d}
+    .md-growth-action{display:inline-flex;align-items:center;gap:6px;margin-top:10px;border:0;border-radius:10px;min-height:34px;padding:0 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+    .md-growth-action.violet{background:#6d28d9}.md-growth-action.sky{background:#0369a1}
+    .td-private{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11px;color:#047857;font-weight:600}
+
+    /* Steps card (compact) */
+    #md-live-steps-card{margin-bottom:0}
+
+    /* Engagement dialogs (unchanged behaviour) */
+    .md-engagement-dialog{width:min(92vw,560px);max-width:560px;border:0;border-radius:18px;padding:0;overflow:hidden;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.25)}.md-engagement-dialog::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}.md-engagement-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #eef2f7}.md-engagement-dialog-title{font-size:16px;font-weight:800;color:#172033}.md-engagement-dialog-sub{font-size:11px;color:#64748b;margin-top:2px}.md-engagement-dialog-close{width:34px;height:34px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#64748b}.md-engagement-dialog-body{padding:15px 16px;max-height:min(70vh,620px);overflow-y:auto}.md-engagement-dialog-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid #eef2f7;background:#f8fafc}.md-engagement-fields{display:grid;gap:10px}.md-engagement-field label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:4px}.md-review-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.md-review-metric{padding:10px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc}.md-review-metric-label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.md-review-metric-value{font-size:15px;font-weight:800;color:#172033;margin-top:2px}
+
+    @@property --p{syntax:'<number>';inherits:false;initial-value:0}
+    @keyframes tdPop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+    @keyframes tdRipple{0%{opacity:.6;transform:scale(.8)}100%{opacity:0;transform:scale(1.5)}}
+    @keyframes tdFadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    @keyframes tdFlicker{0%,100%{transform:rotate(-3deg) scale(1)}50%{transform:rotate(3deg) scale(1.08)}}
+    @media (prefers-reduced-motion: reduce){.td *{animation:none!important;transition:none!important}}
+
+    @media (max-width:1024px){
+        .td-start-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .td-launcher{grid-template-columns:repeat(6,minmax(0,1fr))}
+        .td-launcher:not(.expanded) .td-app:nth-child(n+7){display:none}
+        .md-finance-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     }
-    .md-growth-section .md-growth-grid,
-    #growth-strategy-card .grid{
-        gap:12px!important;
+    @media (max-width:860px){
+        .td-grid{grid-template-columns:1fr}
+        .td-rings{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .td-growth{grid-template-columns:1fr}
     }
-
-    .md-insight{
-        border-radius:17px!important;
-        box-shadow:none!important;
+    @media (max-width:640px){
+        .td-hero{padding:18px 16px 16px;border-radius:20px}
+        .td-hello{font-size:22px}
+        .td-hero-body{gap:14px}
+        .td-hero .td-ring{--size:88px}
+        .td-ring-num{font-size:19px}
+        .td-start-list{grid-template-columns:1fr 1fr}
+        .td-launcher{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+        .td-launcher:not(.expanded) .td-app:nth-child(n+7){display:flex}
+        .td-launcher:not(.expanded) .td-app:nth-child(n+9){display:none}
+        .td-ring-card{padding:12px;gap:10px}
+        .td-ring-card .td-ring{--size:48px}
+        .td-ring-card .td-ring-num{font-size:11px}
+        .md-finance-grid{grid-template-columns:1fr 1fr}
+        .td-pad{padding:14px}
+        .td-dots{gap:3px}
+        .td-dot{width:22px}
     }
-
-    /* Finance remains intentionally secondary and compact. */
-    .md-finance-grid{
-        gap:10px!important;
+    @media (max-width:380px){
+        .td-dot{width:19px}
+        .td-start-list{grid-template-columns:1fr}
     }
-
-    @media(max-width:900px){
-        .md-home{padding-inline:2px}
-        .md-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-        .md-progress-grid{grid-template-columns:1fr}
-        .md-rhythm-grid{grid-template-columns:1fr!important}
-        .md-overview-nav{top:4px}
-    }
-
-    @media(max-width:640px){
-        .md-welcome{padding:16px}
-        .md-welcome-row{align-items:flex-start}
-        .md-welcome h1{font-size:21px}
-        .md-welcome-copy{font-size:12px}
-        .md-card-btn span{display:none}
-        .md-overview-nav{gap:4px;padding:5px}
-        .md-overview-link{font-size:10px;gap:5px}
-        .md-overview-link i{font-size:12px}
-        .md-rhythm{padding:15px!important}
-        .md-tab-panel{padding:14px!important}
-        .md-secondary-summary{padding:14px}
-        .md-shortcut:nth-child(n+5){display:none}
-    }
-
-
-    .md-secondary-wrap[data-dashboard-secondary="growth"]{
-        border-color:#fcd34d;
-        background:linear-gradient(180deg,#fffef7 0%,#fff 100%);
-    }
-    .md-secondary-wrap[data-dashboard-secondary="growth"] .md-secondary-summary-title i{
-        color:#d97706;
-        background:#fffbeb;
-    }
-
-    /* ------------------------------------------------------------------
-       Secondary dashboard cards:
-       3 per row when closed, full width when opened.
-       ------------------------------------------------------------------ */
-    .md-secondary-row{
-        display:grid;
-        grid-template-columns:repeat(3,minmax(0,1fr));
-        gap:14px;
-        align-items:start;
-        margin-bottom:24px;
-    }
-
-    .md-secondary-row .md-secondary-wrap{
-        margin:0;
-        min-width:0;
-        border:1px solid #e2e8f0;
-        border-radius:18px;
-        background:#fff;
-        box-shadow:0 6px 20px rgba(15,23,42,.045);
-        overflow:hidden;
-        transition:
-            box-shadow .2s ease,
-            border-color .2s ease,
-            transform .2s ease;
-    }
-
-    .md-secondary-row .md-secondary-wrap:not([open]):hover{
-        transform:translateY(-2px);
-        box-shadow:0 12px 28px rgba(15,23,42,.07);
-    }
-
-    .md-secondary-row .md-secondary-wrap[open]{
-        grid-column:1 / -1;
-        width:100%;
-        background:#fff;
-        box-shadow:0 14px 34px rgba(15,23,42,.08);
-    }
-
-    .md-secondary-row .md-secondary-summary{
-        min-height:104px;
-        padding:16px 17px;
-        align-items:flex-start;
-        cursor:pointer;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] > .md-secondary-summary{
-        min-height:auto;
-        padding:15px 18px;
-        border-bottom:1px solid #edf2f7;
-        background:#fbfdff;
-    }
-
-    .md-secondary-row .md-secondary-summary-title{
-        align-items:flex-start;
-        font-size:14px;
-    }
-
-    .md-secondary-row .md-secondary-summary-title i{
-        flex:0 0 auto;
-    }
-
-    .md-secondary-row .md-secondary-summary-copy{
-        max-width:280px;
-        line-height:1.45;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] .md-secondary-summary-copy{
-        max-width:none;
-    }
-
-    .md-secondary-row .md-secondary-content{
-        padding:0;
-    }
-
-    .md-secondary-row .md-secondary-wrap:not([open]) .md-secondary-content{
-        display:none;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] .md-secondary-content{
-        display:block;
-        padding:18px;
-        animation:mdSecondaryOpen .18s ease;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] .md-secondary-content > *{
-        width:100%!important;
-        max-width:none!important;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] .md-dashboard-section{
-        width:100%;
-        max-width:none;
-        margin:0!important;
-        border:0!important;
-        border-radius:0!important;
-        box-shadow:none!important;
-        background:transparent!important;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] .md-shortcuts{
-        grid-template-columns:repeat(4,minmax(0,1fr))!important;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] .md-progress-grid{
-        grid-template-columns:repeat(2,minmax(0,1fr))!important;
-    }
-
-    .md-secondary-row .md-secondary-wrap[open] .grid{
-        width:100%;
-    }
-
-    .md-secondary-row .md-secondary-wrap[data-dashboard-secondary="growth"]{
-        border-color:#f7c948;
-        background:linear-gradient(180deg,#fffef8 0%,#fff 100%);
-    }
-
-    .md-secondary-row .md-secondary-wrap[data-dashboard-secondary="growth"][open]{
-        border-color:#f3b61f;
-    }
-
-    @keyframes mdSecondaryOpen{
-        from{opacity:.25;transform:translateY(-4px)}
-        to{opacity:1;transform:translateY(0)}
-    }
-
-    @media(max-width:980px){
-        .md-secondary-row{
-            grid-template-columns:repeat(2,minmax(0,1fr));
-        }
-
-        .md-secondary-row .md-secondary-wrap[open]{
-            grid-column:1 / -1;
-        }
-
-        .md-secondary-row .md-secondary-wrap[open] .md-shortcuts{
-            grid-template-columns:repeat(2,minmax(0,1fr))!important;
-        }
-    }
-
-    @media(max-width:680px){
-        .md-secondary-row{
-            grid-template-columns:1fr;
-            gap:10px;
-        }
-
-        .md-secondary-row .md-secondary-summary{
-            min-height:auto;
-            padding:14px;
-        }
-
-        .md-secondary-row .md-secondary-wrap[open]{
-            grid-column:1;
-        }
-
-        .md-secondary-row .md-secondary-wrap[open] .md-secondary-content{
-            padding:12px;
-        }
-
-        .md-secondary-row .md-secondary-wrap[open] .md-shortcuts,
-        .md-secondary-row .md-secondary-wrap[open] .md-progress-grid{
-            grid-template-columns:1fr!important;
-        }
-    }
-
 </style>
 
-<div class="md-home">
-    <section class="md-dashboard-section md-shell md-welcome">
-        <div class="md-welcome-row">
+<div class="td" id="md-today">
+
+    {{-- 1. Hero: greeting, today's progress ring, streak, day rhythm --}}
+    <section class="td-hero td-section" id="daily-rhythm-section">
+        <div class="td-hero-top">
             <div class="min-w-0">
-                <div class="text-[10px] uppercase tracking-[.08em] text-slate-400 font-bold">My Digital Diary</div>
-                <h1>Welcome back, {{ $firstName }}</h1>
-                <div class="md-welcome-copy">See your progress, decide what matters today, and keep moving forward.</div>
+                <div class="td-date"><i class="fa-solid {{ $tdGreetingIcon }}"></i>{{ $tdNow->format('l, j F') }}</div>
+                <h1 class="td-hello">{{ $tdGreeting }}, {{ $firstName }}</h1>
             </div>
-            <div class="md-header-actions">
+            <div class="td-hero-actions">
+                @if (Route::has('user-guide'))
+                    <a href="{{ route('user-guide') }}" class="td-icon-btn" title="How to use My Digital Diary" aria-label="User guide"><i class="fa-regular fa-circle-question"></i></a>
+                @endif
                 @php
                     $bell = $notificationCenter ?? ['items'=>[], 'unread_count'=>0, 'action_count'=>0, 'badge_count'=>0];
                     $bellTones = [
@@ -633,7 +539,7 @@
                     ];
                 @endphp
                 <details class="md-notif" id="dashboard-notification-bell">
-                    <summary class="md-icon-btn" aria-label="Notifications" title="Notifications">
+                    <summary class="td-icon-btn" aria-label="Notifications" title="Notifications">
                         <i class="fa-regular fa-bell"></i>
                         @if(($bell['badge_count'] ?? 0) > 0)
                             <span class="md-notif-badge">{{ min(99, (int) $bell['badge_count']) }}{{ ($bell['badge_count'] ?? 0) > 99 ? '+' : '' }}</span>
@@ -645,13 +551,12 @@
                                 <div class="md-notif-title">{{ in_array((string)auth()->user()->role, ['admin','super_admin'], true) ? 'Admin notifications' : 'Notifications' }}</div>
                                 <div class="md-notif-sub">
                                     @if(in_array((string)auth()->user()->role, ['admin','super_admin'], true))
-                                        {{ (int)($bell['action_count'] ?? 0) }} item(s) need attention · {{ (int)($bell['unread_count'] ?? 0) }} unread
+                                        {{ (int)($bell['action_count'] ?? 0) }} need attention · {{ (int)($bell['unread_count'] ?? 0) }} unread
                                     @else
-                                        {{ (int)($bell['unread_count'] ?? 0) }} unread notification(s)
+                                        {{ (int)($bell['unread_count'] ?? 0) }} unread
                                     @endif
                                 </div>
                             </div>
-                            <i class="fa-regular fa-bell text-slate-400"></i>
                         </div>
                         <div class="md-notif-list">
                             @forelse($bell['items'] ?? [] as $notificationItem)
@@ -685,552 +590,380 @@
                             @endforelse
                         </div>
                         <div class="md-notif-foot">
-                            <a href="{{ route('notifications.index') }}">View all notifications</a>
+                            <a href="{{ route('notifications.index') }}">View all</a>
                             @if(($bell['unread_count'] ?? 0) > 0)
                                 <form method="POST" action="{{ route('notifications.read-all') }}" class="m-0">@csrf<button type="submit">Mark all read</button></form>
                             @endif
                         </div>
                     </div>
                 </details>
-                <a href="{{ route('business-card.edit') }}" class="md-card-btn"><i class="fa-regular fa-address-card"></i><span>My Business Card</span></a>
-            </div>
-        </div>
-    </section>
-
-    @include('dashboard.partials.live-steps-card', ['stepData' => $stepData ?? []])
-
-    <nav class="md-overview-nav" aria-label="Dashboard quick navigation">
-        <a href="#daily-rhythm-section" class="md-overview-link active">
-            <i class="fa-solid fa-sun"></i>
-            <span>Today</span>
-        </a>
-        <a href="#dashboard-tabbed-sections" class="md-overview-link">
-            <i class="fa-solid fa-list-check"></i>
-            <span>Focus</span>
-        </a>
-        <button type="button" class="md-overview-link" data-dashboard-panel-toggle="progress">
-            <i class="fa-solid fa-chart-line"></i>
-            <span>Progress</span>
-        </button>
-        <button type="button" class="md-overview-link" data-dashboard-panel-toggle="tools">
-            <i class="fa-solid fa-grid-2"></i>
-            <span>Tools</span>
-        </button>
-        <button type="button" class="md-overview-link" data-dashboard-panel-toggle="growth">
-            <i class="fa-solid fa-fire"></i>
-            <span>Challenge</span>
-        </button>
-    </nav>
-
-
-    @if(!empty($engagement))
-    <section class="md-dashboard-section md-shell md-rhythm" id="daily-rhythm-section">
-        <div class="md-rhythm-head">
-            <div>
-                <div class="md-rhythm-eyebrow">Daily rhythm</div>
-                <div class="md-rhythm-title">Build progress worth returning to</div>
-            </div>
-            <div>
-                <span class="md-streak-pill">
-                    <span aria-hidden="true">🔥</span>
-                    {{ $growthStreak }} day streak
-                </span>
-                <span class="md-streak-best">Best {{ $bestGrowthStreak }}</span>
             </div>
         </div>
 
-        <div class="md-rhythm-grid">
-            <article class="md-rhythm-card start" role="button" tabindex="0" data-routine-stats="start" style="cursor:pointer">
-                <div class="md-rhythm-card-head">
-                    <div class="md-rhythm-icon"><i class="fa-solid fa-sun"></i></div>
-                    <div class="min-w-0">
-                        <div class="md-rhythm-label">Start My Day</div>
-                        <div class="md-rhythm-main">{{ $startDayCompleted ? 'Your day is started' : 'Choose what matters first' }}</div>
-                        <div class="md-rhythm-copy">
-                            {{ (int) data_get($engagement, 'start_day.focus_count', $todayFocus->count()) }} focus item(s) ready.
-                        </div>
-                    </div>
-                </div>
-                <button type="button"
-                        class="md-rhythm-action start"
-                        data-routine-stats="start">
-                    <i class="fa-solid fa-chart-column"></i>
-                    View Today Stats
-                </button>
-            </article>
-
-            <article class="md-rhythm-card progress">
-                <div class="md-rhythm-card-head">
-                    <div class="md-rhythm-icon"><i class="fa-solid fa-chart-line"></i></div>
-                    <div class="min-w-0">
-                        <div class="md-rhythm-label">Meaningful Progress</div>
-                        <div class="md-rhythm-main">
-                            {{ (int) data_get($engagementProgress, 'tasks_completed', 0) }}/{{ (int) data_get($engagementProgress, 'tasks_total', 0) }} tasks
-                        </div>
-                        <div class="md-rhythm-copy">
-                            {{ (int) data_get($engagementProgress, 'meaningful_actions', 0) }} meaningful action(s) recorded today.
-                        </div>
-                    </div>
-                </div>
-                <div class="md-rhythm-bar" aria-label="Today completion">
-                    <span style="width:{{ min(100, max(0, (int) data_get($engagementProgress, 'completion_percent', 0))) }}%"></span>
-                </div>
-            </article>
-
-            <article class="md-rhythm-card close" role="button" tabindex="0" data-routine-stats="end" style="cursor:pointer">
-                <div class="md-rhythm-card-head">
-                    <div class="md-rhythm-icon"><i class="fa-solid fa-moon"></i></div>
-                    <div class="min-w-0">
-                        <div class="md-rhythm-label">Close My Day</div>
-                        <div class="md-rhythm-main">{{ $closeDayCompleted ? 'Today is closed' : 'Finish today with clarity' }}</div>
-                        <div class="md-rhythm-copy">Capture wins, gratitude and tomorrow’s first priority.</div>
-                    </div>
-                </div>
-                <button type="button"
-                        class="md-rhythm-action close"
-                        data-routine-stats="end">
-                    <i class="fa-solid fa-chart-column"></i>
-                    View Today Stats
-                </button>
-            </article>
-        </div>
-
-        <div class="md-review-grid">
-            <button type="button" class="md-review-card" data-engagement-review="week">
-                <span>
-                    <span class="md-review-kicker">Weekly reflection</span>
-                    <span class="md-review-title block">My Week in Review</span>
-                    <span class="md-review-copy block">Tasks, money, health and consistency.</span>
-                </span>
-                <i class="fa-solid fa-arrow-right text-slate-300"></i>
-            </button>
-            <button type="button" class="md-review-card" data-engagement-review="month">
-                <span>
-                    <span class="md-review-kicker">Personal wrapped</span>
-                    <span class="md-review-title block">My Month in Review</span>
-                    <span class="md-review-copy block">A shareable snapshot of your progress.</span>
-                </span>
-                <i class="fa-solid fa-share-nodes text-slate-300"></i>
-            </button>
-        </div>
-
-        @if($engagementCelebration)
-            <div class="md-celebration">
-                <div class="md-celebration-title">{{ data_get($engagementCelebration, 'title') }}</div>
-                <div class="md-celebration-copy">{{ data_get($engagementCelebration, 'message') }}</div>
-            </div>
-        @endif
-
-        @if($tomorrowFocus->isNotEmpty())
-            <div class="md-tomorrow">
-                <div class="md-tomorrow-title"><i class="fa-regular fa-calendar mr-1"></i> Tomorrow preview</div>
-                <div class="md-tomorrow-items">
-                    @foreach($tomorrowFocus as $tomorrowItem)
-                        @php
-                            $tomorrowTitle = is_array($tomorrowItem)
-                                ? ($tomorrowItem['title'] ?? 'Tomorrow item')
-                                : ($tomorrowItem->title ?? 'Tomorrow item');
-                        @endphp
-                        <span class="md-tomorrow-chip"><i class="fa-solid fa-arrow-right"></i>{{ $tomorrowTitle }}</span>
-                    @endforeach
-                </div>
-            </div>
-        @endif
-    </section>
-    @endif
-
-
-    @if(!empty($growth))
-        @php
-            $growthActivation = is_array(data_get($growth, 'activation'))
-                ? data_get($growth, 'activation')
-                : [];
-            $growthChallenge = is_array(data_get($growth, 'challenge'))
-                ? data_get($growth, 'challenge')
-                : [];
-            $growthReferral = is_array(data_get($growth, 'referral'))
-                ? data_get($growth, 'referral')
-                : [];
-            $growthTrustMessage = (string) data_get(
-                $growth,
-                'trust.message',
-                'Your personal diary, reflections and financial records are never included in shared progress cards.'
-            );
-            $growthActivationPercent = min(
-                100,
-                max(0, (int) data_get($growthActivation, 'percent', 0))
-            );
-            $growthChallengePercent = min(
-                100,
-                max(0, (int) data_get($growthChallenge, 'progress_percent', 0))
-            );
-        @endphp
-
-        <section class="md-dashboard-section md-shell md-growth-section" id="growth-strategy-section">
-            <div class="md-growth-head">
+        <div class="td-hero-body">
+            <div class="td-ring" id="td-today-ring" style="--p:{{ $tdTaskPercent }}" role="img" aria-label="{{ $tdTaskDone }} of {{ $tdTaskTotal }} tasks done today">
                 <div>
-                    <div class="md-growth-eyebrow">Take back your attention</div>
-                    <div class="md-growth-title">Build your own progress, not just your feed.</div>
-                    <div class="md-growth-copy">
-                        A few intentional minutes each day can make your priorities, money and goals easier to manage.
-                    </div>
+                    <div class="td-ring-num"><span id="td-done-count">{{ $tdTaskDone }}</span>/<span id="td-total-count">{{ $tdTaskTotal }}</span></div>
+                    <div class="td-ring-sub">done today</div>
                 </div>
-                <span class="md-growth-private">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    Private by design
-                </span>
             </div>
 
-            <div class="md-growth-grid">
-                <article class="md-growth-card">
-                    <div class="md-growth-card-kicker">First value</div>
-                    <div class="md-growth-card-title">
-                        {{ (int) data_get($growthActivation, 'completed', 0) }}/{{ (int) data_get($growthActivation, 'total', 3) }}
-                        setup actions complete
-                    </div>
-
-                    <div class="md-growth-progress">
-                        <span style="width:{{ $growthActivationPercent }}%"></span>
-                    </div>
-
-                    <div class="md-growth-steps">
-                        @foreach(data_get($growthActivation, 'steps', []) as $step)
-                            @php
-                                $step = is_array($step) ? $step : (array) $step;
-                                $stepComplete = !empty($step['complete']);
-                            @endphp
-                            <div class="md-growth-step {{ $stepComplete ? 'complete' : '' }}">
-                                <i class="fa-solid {{ $stepComplete ? 'fa-circle-check' : 'fa-circle' }}"></i>
-                                <span>{{ $step['label'] ?? 'Setup step' }}</span>
+            <div class="min-w-0">
+                <div class="td-streak">
+                    <span class="td-streak-pill {{ $tdStreak > 0 ? '' : 'cold' }}" title="Best streak: {{ $bestGrowthStreak }} days">
+                        <span class="td-flame" aria-hidden="true">🔥</span>
+                        {{ $tdStreak }} day{{ $tdStreak === 1 ? '' : 's' }}
+                    </span>
+                    <div class="td-dots" aria-label="Active days this week">
+                        @foreach ($tdWeekDots as $dot)
+                            <div class="td-dot {{ $dot['active'] ? 'on' : '' }} {{ $dot['today'] ? 'today' : '' }}" title="{{ $dot['title'] }}{{ $dot['active'] ? ' · active' : '' }}">
+                                <span></span>{{ $dot['label'] }}
                             </div>
                         @endforeach
                     </div>
-                </article>
-
-                <article class="md-growth-card challenge">
-                    <div class="md-growth-card-kicker">30-Day Challenge</div>
-                    <div class="md-growth-card-title">
-                        {{ data_get($growthChallenge, 'title', '30 Days With My Digital Diary') }}
-                    </div>
-                    <div class="md-growth-card-copy">
-                        Plan, act, record and reflect consistently for 30 days.
-                    </div>
-
-                    @if(data_get($growthChallenge, 'joined'))
-                        <div class="md-growth-progress violet">
-                            <span style="width:{{ $growthChallengePercent }}%"></span>
-                        </div>
-                        <div class="md-growth-card-meta">
-                            {{ (int) data_get($growthChallenge, 'meaningful_days', 0) }}
-                            meaningful day(s)
-                        </div>
-                    @elseif(Route::has('growth.challenge.join'))
-                        <form method="POST" action="{{ route('growth.challenge.join') }}" class="mt-3">
-                            @csrf
-                            <button type="submit" class="md-growth-action violet">
-                                <i class="fa-solid fa-flag-checkered"></i>
-                                Join Challenge
-                            </button>
-                        </form>
+                </div>
+                <div class="td-nudge" id="td-nudge">
+                    @if ($tdActiveToday)
+                        @if ($tdTaskTotal > 0 && $tdTaskDone >= $tdTaskTotal)
+                            Everything done. Enjoy your evening.
+                        @else
+                            You showed up today. Keep going.
+                        @endif
+                    @elseif ($tdStreakAlive && $growthStreak > 0)
+                        Tick off one task to keep your streak.
+                    @else
+                        One small action today starts a streak.
                     @endif
-                </article>
-
-                <article class="md-growth-card referral">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-11 h-11 shrink-0 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center overflow-hidden">
-                            @if($dashboardSystemLogoUrl)
-                                <img src="{{ $dashboardSystemLogoUrl }}"
-                                     alt="My Digital Diary"
-                                     class="w-8 h-8 object-contain">
-                            @else
-                                <span class="text-[10px] font-black text-sky-700">MDD</span>
-                            @endif
-                        </div>
-                        <div class="md-growth-card-kicker">Grow together</div>
-                    </div>
-                    <div class="md-growth-card-title">
-                        Invite someone who wants more intentional days.
-                    </div>
-                    <div class="md-growth-card-copy">
-                        {{ (int) data_get($growthReferral, 'conversions', 0) }}
-                        friend(s) joined from your invites.
-                    </div>
-
-                    @if(Route::has('growth.referral'))
-                        <button type="button"
-                                id="md-growth-referral-button"
-                                class="md-growth-action sky"
-                                data-referral-url="{{ route('growth.referral') }}">
-                            <i class="fa-solid fa-share-nodes"></i>
-                            Invite a friend
-                        </button>
-                    @endif
-                </article>
+                </div>
+                <div class="td-routine">
+                    <button type="button" class="td-btn {{ $startDayCompleted ? 'td-btn-done' : (! $tdEvening ? 'td-btn-primary' : 'td-btn-ghost') }}" data-routine-stats="start">
+                        <i class="fa-solid {{ $startDayCompleted ? 'fa-circle-check' : 'fa-sun' }}"></i> Start my day
+                    </button>
+                    <button type="button" class="td-btn {{ $closeDayCompleted ? 'td-btn-done' : ($tdEvening ? 'td-btn-primary' : 'td-btn-ghost') }}" data-routine-stats="end">
+                        <i class="fa-solid {{ $closeDayCompleted ? 'fa-circle-check' : 'fa-moon' }}"></i> Close my day
+                    </button>
+                </div>
             </div>
+        </div>
 
-            <div class="md-growth-trust">
-                <i class="fa-solid fa-lock"></i>
-                <span><strong>Privacy promise:</strong> {{ $growthTrustMessage }}</span>
-            </div>
-        </section>
-    @endif
+        @if ($engagementCelebration)
+            <div class="td-celebrate">{{ data_get($engagementCelebration, 'title') }}</div>
+        @endif
+    </section>
 
-    @if(!empty($personalProgress))
-    <section class="md-dashboard-section">
-        <div class="md-section-head"><div class="md-section-title"><i class="fa-solid fa-chart-line"></i> Your Progress</div>@if(Route::has('monthly-review'))<a href="{{ route('monthly-review') }}" class="md-section-link">My Month in Review <i class="fa-solid fa-arrow-right ml-1"></i></a>@endif</div>
-        <div class="md-progress-grid">
-            <a href="{{ route('financial-planner.index') }}" class="md-progress-card health">
-                <div class="md-progress-head">
-                    <div class="min-w-0">
-                        <div class="md-progress-kicker">Financial Health</div>
-                        <div class="md-progress-main">{{ (int)($financialHealth['score'] ?? 0) }}/100 · {{ $financialHealth['label'] ?? 'Getting started' }}</div>
-                        <div class="md-progress-period">{{ ($financialHealth['is_current_period'] ?? true) ? 'This month' : ($financialHealth['period'] ?? 'Latest recorded month') }}</div>
-                    </div>
-                    <div class="md-progress-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
-                </div>
-                <div class="md-progress-metrics">
-                    <div><div class="md-progress-label">Income</div><div class="md-progress-value">{{ $money($financialHealth['monthly_income'] ?? 0) }}</div></div>
-                    <div><div class="md-progress-label">Expenses</div><div class="md-progress-value">{{ $money($financialHealth['monthly_expenses'] ?? 0) }}</div></div>
-                    <div><div class="md-progress-label">Saved</div><div class="md-progress-value">{{ $money($financialHealth['monthly_savings'] ?? 0) }}</div></div>
-                </div>
-            </a>
-
-            <a href="{{ route('activity') }}" class="md-progress-card week">
-                <div class="md-progress-kicker">Your Week in Review</div>
-                <div class="md-progress-main">{{ (int)($weeklyReview['completion_percent'] ?? 0) }}% task completion</div>
-                <div class="md-progress-period">{{ ($weeklyReview['is_current_period'] ?? true) ? 'This week · ' : 'Most recent week · ' }}{{ $weeklyReview['period'] ?? '' }}</div>
-                <div class="md-progress-metrics four">
-                    <div><div class="md-progress-label">Tasks</div><div class="md-progress-value">{{ (int)($weeklyReview['completed_tasks'] ?? 0) }}/{{ (int)($weeklyReview['total_tasks'] ?? 0) }}</div></div>
-                    <div><div class="md-progress-label">Spent</div><div class="md-progress-value">{{ $money($weeklyReview['expenses'] ?? 0) }}</div></div>
-                    <div><div class="md-progress-label">Saved</div><div class="md-progress-value">{{ $money($weeklyReview['saved'] ?? 0) }}</div></div>
-                    <div><div class="md-progress-label">Exercise</div><div class="md-progress-value">{{ (int)($weeklyReview['exercise_sessions'] ?? 0) }} session{{ (int)($weeklyReview['exercise_sessions'] ?? 0) === 1 ? '' : 's' }}</div></div>
-                </div>
-            </a>
+    {{-- 2. Get started (first-run, dismissible) --}}
+    <section class="td-start td-section" id="td-get-started" hidden
+             data-server-done="{{ $tdGetStartedDone }}" data-server-total="{{ count($tdGetStarted) }}">
+        <div class="flex items-center justify-between gap-3">
+            <div class="td-h2"><i class="fa-solid fa-rocket"></i> Get started <span class="td-more-badge" id="td-start-count"></span></div>
+            <button type="button" class="td-link" id="td-start-dismiss" style="background:none;border:0;cursor:pointer">Hide</button>
+        </div>
+        <div class="td-start-bar"><span id="td-start-bar" style="width:0%"></span></div>
+        <div class="td-start-list">
+            @foreach ($tdGetStarted as $step)
+                <a href="{{ $step['url'] }}" class="td-step {{ $step['done'] ? 'done' : '' }}" data-step="{{ $step['key'] }}" data-done="{{ $step['done'] ? '1' : '0' }}">
+                    <i class="fa-solid {{ $step['done'] ? 'fa-check' : $step['icon'] }} td-step-ic"></i>
+                    <span>{{ $step['label'] }}</span>
+                </a>
+            @endforeach
+            <button type="button" class="td-step" data-step="install" data-done="0" id="td-step-install">
+                <i class="fa-solid fa-mobile-screen td-step-ic"></i>
+                <span>Install the app</span>
+            </button>
         </div>
     </section>
-    @endif
 
-    <section class="md-dashboard-section">
-        <div class="md-section-head"><div class="md-section-title"><i class="fa-solid fa-bolt"></i> Start Here</div></div>
-        @php
-            $dashboardShortcuts = [
-                [
-                    'title' => 'Daily Planner',
-                    'subtitle' => 'Plan today',
-                    'icon' => 'fa-calendar-day',
-                    'bg' => '#ecfdf5',
-                    'fg' => '#047857',
-                    'border' => '#a7f3d0',
-                    'url' => route('daily-planner.index'),
-                ],
-                [
-                    'title' => 'Reminders',
-                    'subtitle' => ($upcomingReminderCount ?? 0).' upcoming',
-                    'icon' => 'fa-bell',
-                    'bg' => '#fffbeb',
-                    'fg' => '#b45309',
-                    'border' => '#fde68a',
-                    'url' => route('reminders.index'),
-                ],
-                [
-                    'title' => 'Meetings',
-                    'subtitle' => 'Calendar & notes',
-                    'icon' => 'fa-video',
-                    'bg' => '#f5f3ff',
-                    'fg' => '#6d28d9',
-                    'border' => '#ddd6fe',
-                    'url' => route('meetings.index'),
-                ],
-                [
-                    'title' => 'Annual Plans',
-                    'subtitle' => 'Goals & progress',
-                    'icon' => 'fa-list-check',
-                    'bg' => '#eff6ff',
-                    'fg' => '#1d4ed8',
-                    'border' => '#bfdbfe',
-                    'url' => route('annual-plans.index'),
-                ],
-                [
-                    'title' => 'Projects',
-                    'subtitle' => ($activeProjects ?? 0).' active',
-                    'icon' => 'fa-diagram-project',
-                    'bg' => '#f0f9ff',
-                    'fg' => '#0369a1',
-                    'border' => '#bae6fd',
-                    'url' => route('projects.index'),
-                ],
-                [
-                    'title' => 'Health',
-                    'subtitle' => 'Checkups & wellbeing',
-                    'icon' => 'fa-heart-pulse',
-                    'bg' => '#fff1f2',
-                    'fg' => '#be123c',
-                    'border' => '#fecdd3',
-                    'url' => route('health-checkups.index'),
-                ],
-            ];
+    {{-- 3. Today: tasks + coming up --}}
+    <div class="td-grid td-section">
+        <section class="td-card td-pad" id="dashboard-tabbed-sections" aria-labelledby="td-tasks-title">
+            <div class="td-head">
+                <h2 class="td-h2" id="td-tasks-title"><i class="fa-solid fa-list-check"></i> Today’s tasks</h2>
+                <a href="{{ route('daily-planner.index', ['new' => 1]) }}" class="td-link"><i class="fa-solid fa-plus mr-1"></i>Add</a>
+            </div>
 
-            if (Route::has('social-media-planner.index')) {
-                $dashboardShortcuts[] = [
-                    'title' => 'Social Planner',
-                    'subtitle' => 'Plan & schedule posts',
-                    'icon' => 'fa-bullhorn',
-                    'bg' => '#f0f9ff',
-                    'fg' => '#0369a1',
-                    'border' => '#bae6fd',
-                    'url' => route('social-media-planner.index'),
-                ];
-            }
-        @endphp
+            @if ($tdTasks->isNotEmpty())
+                <ul class="td-tasks" id="td-task-list">
+                    @foreach ($tdTasks as $item)
+                        @php
+                            $isPlannerItem = $item instanceof \App\Models\DailyPlanItem && $item->id;
+                            $taskTitle = data_get($item, 'title') ?? data_get($item, 'name') ?? data_get($item, 'task') ?? 'Daily task';
+                            $taskTime = data_get($item, 'start_time') ?? data_get($item, 'due_time') ?? data_get($item, 'time');
+                            try {
+                                $taskTimeLabel = $taskTime ? \Illuminate\Support\Carbon::parse($taskTime)->format('g:i A') : 'Anytime';
+                            } catch (\Throwable $e) {
+                                $taskTimeLabel = (string) $taskTime;
+                            }
+                            $taskPriority = data_get($item, 'priority');
+                        @endphp
+                        <li class="td-task">
+                            @if ($isPlannerItem)
+                                <button type="button" class="td-check" aria-pressed="false"
+                                        aria-label="Mark “{{ $taskTitle }}” done"
+                                        data-toggle-url="{{ route('daily-planner.items.toggle', $item->id) }}"
+                                        data-date="{{ substr((string) (data_get($item, 'occurrence_date') ?: $tdToday), 0, 10) }}">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                            @else
+                                <span class="td-check" aria-hidden="true"></span>
+                            @endif
+                            <a href="{{ route('daily-planner.index') }}" class="td-task-copy">
+                                <div class="td-task-title" title="{{ $taskTitle }}">{{ $taskTitle }}</div>
+                                <div class="td-task-meta">
+                                    <span class="td-prio" style="background:{{ $tdPriorityColor($taskPriority) }}" title="{{ ucfirst((string) ($taskPriority ?: 'normal')) }} priority"></span>
+                                    {{ $taskTimeLabel }}
+                                </div>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="td-alldone" id="td-alldone"><i class="fa-solid fa-champagne-glasses"></i> All done for now. Nice work!</div>
+                @if ($todayFocus->count() > $tdTasks->count() || $tdTaskTotal - $tdTaskDone > $tdTasks->count())
+                    <div class="mt-3 text-center"><a href="{{ route('daily-planner.index') }}" class="td-link">See all in planner <i class="fa-solid fa-arrow-right ml-1"></i></a></div>
+                @endif
+            @elseif ($tdTaskTotal > 0)
+                <div class="td-empty">
+                    <i class="fa-solid fa-champagne-glasses" style="color:#16a34a"></i>
+                    <p>All of today’s tasks are done.</p>
+                    <a href="{{ route('daily-planner.index') }}" class="td-btn td-btn-ghost">Plan tomorrow</a>
+                </div>
+            @else
+                <div class="td-empty">
+                    <i class="fa-regular fa-calendar-plus"></i>
+                    <p>No tasks yet. What’s one thing you want done today?</p>
+                    <a href="{{ route('daily-planner.index', ['new' => 1]) }}" class="td-btn td-btn-primary"><i class="fa-solid fa-plus"></i> Add a task</a>
+                </div>
+            @endif
+        </section>
 
-        <div class="md-shortcuts">
-            @foreach($dashboardShortcuts as $item)
-                <a href="{{ $item['url'] }}"
-                   class="md-shortcut"
-                   style="--c-bg:{{ $item['bg'] }};--c-fg:{{ $item['fg'] }};--c-border:{{ $item['border'] }}">
-                    <div class="md-shortcut-icon">
-                        <i class="fa-solid {{ $item['icon'] }}"></i>
+        <div class="grid gap-4">
+            <section class="td-card td-pad" aria-labelledby="td-agenda-title">
+                <div class="td-head">
+                    <h2 class="td-h2" id="td-agenda-title"><i class="fa-regular fa-clock"></i> Coming up</h2>
+                    <a href="{{ route('reminders.index') }}" class="td-link">Reminders</a>
+                </div>
+                @if ($tdAgenda->isNotEmpty())
+                    <ul class="td-agenda">
+                        @foreach ($tdAgenda->take(4) as $row)
+                            @php $tone = $toneMap[$row['tone']] ?? $toneMap['slate']; @endphp
+                            <li>
+                                <a href="{{ $row['url'] }}">
+                                    <span class="td-agenda-ic" style="background:{{ $tone['bg'] }};color:{{ $tone['fg'] }}"><i class="fa-solid {{ $row['icon'] }}"></i></span>
+                                    <span class="td-agenda-title">{{ $row['title'] }}</span>
+                                    <span class="td-agenda-time">{{ $row['time'] ? $row['time']->format('g:i A') : 'Today' }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                    @if ($tdAgenda->count() > 4)
+                        <div class="mt-2 text-xs text-slate-500 text-center">+{{ $tdAgenda->count() - 4 }} more today</div>
+                    @endif
+                @else
+                    <div class="td-empty" style="padding:16px 12px">
+                        <i class="fa-regular fa-bell"></i>
+                        <p>Nothing else today.</p>
+                        <a href="{{ route('reminders.index', ['new' => 1]) }}" class="td-link"><i class="fa-solid fa-plus mr-1"></i>Set a reminder</a>
                     </div>
-                    <div class="md-shortcut-copy">
-                        <div class="md-shortcut-title">{{ $item['title'] }}</div>
-                        <div class="md-shortcut-sub">{{ $item['subtitle'] }}</div>
+                @endif
+            </section>
+
+            <section class="td-insight" style="--insight-bg:{{ $insightTone['bg'] }};--insight-fg:{{ $insightTone['fg'] }};--insight-border:{{ $insightTone['border'] }}">
+                <div class="td-insight-ic"><i class="fa-solid {{ $dailyInsight['icon'] ?? 'fa-lightbulb' }}"></i></div>
+                <div class="min-w-0 flex-1">
+                    <div class="td-insight-kicker">Today’s insight</div>
+                    <div class="td-insight-title">{{ $dailyInsight['title'] ?? 'Your insight is on its way.' }}</div>
+                    @if (! empty($dailyInsight['message']))
+                        <div class="td-insight-msg">{{ $dailyInsight['message'] }}</div>
+                    @endif
+                    <div class="td-insight-foot">
+                        <a href="{{ $dailyInsight['route'] ?? route('daily-planner.index') }}">{{ $dailyInsight['action'] ?? 'Open planner' }} <i class="fa-solid fa-arrow-right ml-1"></i></a>
+                        @if (Route::has('dashboard.today-insight.refresh'))
+                            <form method="POST" action="{{ route('dashboard.today-insight.refresh') }}" class="inline m-0">
+                                @csrf
+                                <button type="submit" title="New insight" aria-label="Refresh insight"><i class="fa-solid fa-rotate"></i></button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    {{-- 4. Progress at a glance --}}
+    <section class="td-section" aria-labelledby="td-progress-title">
+        <div class="td-head">
+            <h2 class="td-h2" id="td-progress-title"><i class="fa-solid fa-chart-simple"></i> Progress</h2>
+            @if (Route::has('monthly-review'))
+                <a href="{{ route('monthly-review') }}" class="td-link">Month in review</a>
+            @endif
+        </div>
+        <div class="td-rings">
+            @foreach ($tdRings as $ring)
+                <a href="{{ $ring['url'] }}" class="td-ring-card {{ $ring['empty'] ? 'empty' : '' }}" title="{{ $ring['hint'] }}">
+                    <div class="td-ring" style="--p:{{ $ring['empty'] ? 0 : min(100, max(0, $ring['value'])) }};--c:{{ $ring['color'] }}">
+                        <div class="td-ring-num">
+                            @if ($ring['empty'])
+                                <i class="fa-solid fa-plus" style="color:{{ $ring['color'] }}"></i>
+                            @else
+                                {{ $ring['value'] }}{{ $ring['label'] === 'Money health' ? '' : '%' }}
+                            @endif
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="td-ring-label">{{ $ring['label'] }}</div>
+                        <div class="td-ring-text">{{ $ring['text'] }}</div>
                     </div>
                 </a>
             @endforeach
         </div>
     </section>
 
-    <section class="md-insight md-dashboard-section" style="--insight-bg:{{ $insightTone['bg'] }};--insight-fg:{{ $insightTone['fg'] }};--insight-border:{{ $insightTone['border'] }}">
-        <div class="md-insight-inner">
-            <div class="md-insight-icon"><i class="fa-solid {{ $dailyInsight['icon'] ?? 'fa-wand-magic-sparkles' }}"></i></div>
-            <div class="flex-1 min-w-0">
-                <div class="flex flex-wrap items-center gap-x-2 gap-y-1"><span class="md-insight-kicker">TODAY'S INSIGHT</span><span class="text-[10px] md-muted">{{ $dailyInsight['category'] ?? 'Today' }}</span><span class="text-[10px] text-slate-400">• AI generated · refreshes every 2 hours</span>@if(\Illuminate\Support\Facades\Route::has('dashboard.today-insight.refresh'))<form method="POST" action="{{ route('dashboard.today-insight.refresh') }}" class="inline">@csrf<button type="submit" class="text-[10px] text-[var(--brand-1)] font-semibold hover:underline"><i class="fa-solid fa-rotate mr-1"></i>Refresh</button></form>@endif</div>
-                <div class="md-insight-title">{{ $dailyInsight['title'] ?? 'Your personalised insight is loading.' }}</div>
-                <div class="md-insight-message">{{ $dailyInsight['message'] ?? 'My Digital Diary will use the active AI provider to generate an insight from your current data.' }}</div>
-            </div>
-            <a href="{{ $dailyInsight['route'] ?? route('daily-planner.index') }}" class="md-insight-action">{{ $dailyInsight['action'] ?? 'Open planner' }} <i class="fa-solid fa-arrow-right ml-1"></i></a>
+    <div class="td-section">
+        @include('dashboard.partials.live-steps-card', ['stepData' => $stepData ?? []])
+    </div>
+
+    {{-- 5. Everything else, one tap away --}}
+    <section class="td-card td-pad td-section" aria-labelledby="td-apps-title">
+        <div class="td-head">
+            <h2 class="td-h2" id="td-apps-title"><i class="fa-solid fa-grip"></i> Apps</h2>
+        </div>
+        <nav class="td-launcher" id="td-launcher" aria-label="All features">
+            @foreach ($tdLauncher as $tool)
+                <a href="{{ route($tool[3]) }}" class="td-app" style="--app-c:{{ $tool[2] }}">
+                    <span class="td-app-ic"><i class="fa-solid {{ $tool[1] }}"></i></span>
+                    <span class="td-app-name">{{ $tool[0] }}</span>
+                </a>
+            @endforeach
+        </nav>
+        <div class="td-more-apps">
+            <button type="button" class="td-btn td-btn-ghost" id="td-more-apps" aria-controls="td-launcher" aria-expanded="false">
+                <i class="fa-solid fa-ellipsis"></i> <span>All apps</span>
+            </button>
         </div>
     </section>
 
-    <section class="md-dashboard-section md-shell md-tab-wrap" id="dashboard-tabbed-sections" data-default-tab="{{ $defaultDashboardTab }}">
-        <div class="md-tabs" role="tablist" aria-label="Dashboard sections">
-            <button type="button" class="md-tab-btn" data-tab-target="focus" role="tab" aria-controls="dashboard-panel-focus"><i class="fa-regular fa-sun"></i> Today’s Focus @if($todayFocus->isNotEmpty())<span class="text-[9px] opacity-80">{{ $todayFocus->count() }}</span>@endif</button>
-            <button type="button" class="md-tab-btn" data-tab-target="actions" role="tab" aria-controls="dashboard-panel-actions"><i class="fa-solid fa-compass"></i> Next Best Actions @if($nextActions->isNotEmpty())<span class="text-[9px] opacity-80">{{ $nextActions->count() }}</span>@endif</button>
-            <button type="button" class="md-tab-btn" data-tab-target="tools" role="tab" aria-controls="dashboard-panel-tools"><i class="fa-solid fa-grip"></i> Tools</button>
-            <button type="button" class="md-tab-btn" data-tab-target="finance" role="tab" aria-controls="dashboard-panel-finance"><i class="fa-solid fa-wallet"></i> Finance at a Glance</button>
-        </div>
+    <div class="td-section" id="td-more-sections">
+        <details class="td-more" data-td-more="money">
+            <summary>
+                <span class="td-more-ic"><i class="fa-solid fa-wallet"></i></span>
+                <span class="td-more-title">Money this month</span>
+                <span class="td-more-badge">{{ $money($monthlyExpenses ?? 0) }} spent</span>
+                <i class="fa-solid fa-chevron-down td-more-chev"></i>
+            </summary>
+            <div class="td-more-body">
+                <div class="md-finance-grid">
+                    @foreach($financeCards as $card)
+                        <a href="{{ $card['route'] }}" class="md-finance-card {{ $card['theme'] }}">
+                            <div class="md-finance-name"><i class="fa-solid {{ $card['icon'] }}"></i>{{ $card['title'] }}</div>
+                            <div class="md-finance-value">{{ $money($card['monthly']) }}</div>
+                            <div class="md-finance-small">Overall {{ $money($card['overall']) }}</div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </details>
 
-        <div class="md-tab-panel" id="dashboard-panel-focus" data-tab-panel="focus" role="tabpanel">
-            <div class="md-panel-head"><div class="md-panel-title">Today’s Focus</div><div class="flex items-center gap-3"><a href="{{ route('daily-planner.index') }}" class="md-section-link">Open planner</a><a href="{{ route('activity') }}" class="md-section-link">Recent activity</a></div></div>
-            @if($todayFocus->isNotEmpty())
-                <div class="md-focus-grid">
-                    @foreach($todayFocus as $item)
-                        @php
-                            $focusTitle = is_array($item)
-                                ? ($item['title'] ?? $item['name'] ?? $item['task'] ?? 'Daily task')
-                                : ($item->title ?? $item->name ?? $item->task ?? 'Daily task');
+        <details class="td-more" data-td-more="actions">
+            <summary>
+                <span class="td-more-ic"><i class="fa-solid fa-compass"></i></span>
+                <span class="td-more-title">Suggested next steps</span>
+                @if ($nextActions->isNotEmpty())<span class="td-more-badge">{{ $nextActions->count() }}</span>@endif
+                <i class="fa-solid fa-chevron-down td-more-chev"></i>
+            </summary>
+            <div class="td-more-body">
+                @if ($nextActions->isNotEmpty())
+                    <div class="td-list-links">
+                        @foreach ($nextActions as $action)
+                            @php $routeName = $action['route'] ?? null; @endphp
+                            <a href="{{ $routeName && Route::has($routeName) ? route($routeName) : (Route::has('goal-intelligence') ? route('goal-intelligence') : route('personal-goals.index')) }}">
+                                <i class="fa-solid {{ ($action['state'] ?? '') === 'overdue' ? 'fa-triangle-exclamation text-rose-500' : 'fa-arrow-trend-up text-amber-500' }}"></i>
+                                <span class="min-w-0">{{ $action['title'] ?? 'Next action' }}@if (! empty($action['message']))<small>{{ $action['message'] }}</small>@endif</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-slate-500">Nothing urgent. You’re on track.</p>
+                @endif
+            </div>
+        </details>
 
-                            $focusTime = is_array($item)
-                                ? ($item['start_time'] ?? $item['due_time'] ?? $item['time'] ?? null)
-                                : ($item->start_time ?? $item->due_time ?? $item->time ?? null);
+        <details class="td-more" data-td-more="reviews">
+            <summary>
+                <span class="td-more-ic"><i class="fa-solid fa-chart-line"></i></span>
+                <span class="td-more-title">Reviews</span>
+                <i class="fa-solid fa-chevron-down td-more-chev"></i>
+            </summary>
+            <div class="td-more-body">
+                <div class="td-list-links">
+                    <button type="button" data-engagement-review="week"><i class="fa-solid fa-calendar-week text-violet-600"></i><span>My week in review</span></button>
+                    <button type="button" data-engagement-review="month"><i class="fa-solid fa-share-nodes text-sky-600"></i><span>My month in review</span></button>
+                    <a href="{{ route('activity') }}"><i class="fa-solid fa-clock-rotate-left text-slate-500"></i><span>Recent activity</span></a>
+                </div>
+            </div>
+        </details>
 
-                            try {
-                                $focusTimeLabel = $focusTime
-                                    ? \Illuminate\Support\Carbon::parse($focusTime)->format('g:i A')
-                                    : 'Today';
-                            } catch (\Throwable $e) {
-                                $focusTimeLabel = $focusTime ?: 'Today';
-                            }
-                        @endphp
+        @if(!empty($growth))
+            @php
+                $growthActivation = is_array(data_get($growth, 'activation')) ? data_get($growth, 'activation') : [];
+                $growthChallenge = is_array(data_get($growth, 'challenge')) ? data_get($growth, 'challenge') : [];
+                $growthReferral = is_array(data_get($growth, 'referral')) ? data_get($growth, 'referral') : [];
+                $growthChallengePercent = min(100, max(0, (int) data_get($growthChallenge, 'progress_percent', 0)));
+            @endphp
+            <details class="td-more" data-td-more="growth" id="growth-strategy-section">
+                <summary>
+                    <span class="td-more-ic" style="color:#d97706;background:#fffbeb"><i class="fa-solid fa-flag-checkered"></i></span>
+                    <span class="td-more-title">30-day challenge &amp; invites</span>
+                    @if (data_get($growthChallenge, 'joined'))<span class="td-more-badge">{{ $growthChallengePercent }}%</span>@endif
+                    <i class="fa-solid fa-chevron-down td-more-chev"></i>
+                </summary>
+                <div class="td-more-body">
+                    <div class="td-growth">
+                        <article class="td-growth-card">
+                            <div class="td-growth-kicker">30-day challenge</div>
+                            <div class="td-growth-title">{{ data_get($growthChallenge, 'title', '30 Days With My Digital Diary') }}</div>
+                            @if(data_get($growthChallenge, 'joined'))
+                                <div class="td-bar" style="--bar:#7c3aed"><span style="width:{{ $growthChallengePercent }}%"></span></div>
+                                <div class="td-growth-step">{{ (int) data_get($growthChallenge, 'meaningful_days', 0) }} of 30 days</div>
+                            @elseif(Route::has('growth.challenge.join'))
+                                <form method="POST" action="{{ route('growth.challenge.join') }}">
+                                    @csrf
+                                    <button type="submit" class="md-growth-action violet"><i class="fa-solid fa-flag-checkered"></i> Join</button>
+                                </form>
+                            @endif
+                        </article>
 
-                        <a href="{{ route('daily-planner.index') }}"
-                           class="md-focus-item"
-                           style="--accent:{{ ['#0f766e','#2563eb','#7c3aed','#d97706'][$loop->index % 4] }}">
-                            <div class="md-focus-num">{{ $loop->iteration }}</div>
-                            <div class="md-row-copy">
-                                <div class="md-row-title" title="{{ $focusTitle }}">{{ $focusTitle }}</div>
-                                <div class="md-row-sub">{{ $focusTimeLabel }}</div>
+                        <article class="td-growth-card">
+                            <div class="td-growth-kicker">Setup</div>
+                            <div class="td-growth-title">{{ (int) data_get($growthActivation, 'completed', 0) }}/{{ (int) data_get($growthActivation, 'total', 3) }} done</div>
+                            <div class="td-bar"><span style="width:{{ min(100, max(0, (int) data_get($growthActivation, 'percent', 0))) }}%"></span></div>
+                            @foreach(data_get($growthActivation, 'steps', []) as $step)
+                                @php $step = is_array($step) ? $step : (array) $step; @endphp
+                                <div class="td-growth-step {{ !empty($step['complete']) ? 'complete' : '' }}">
+                                    <i class="fa-solid {{ !empty($step['complete']) ? 'fa-circle-check' : 'fa-circle' }}"></i>{{ $step['label'] ?? 'Setup step' }}
+                                </div>
+                            @endforeach
+                        </article>
+
+                        <article class="td-growth-card">
+                            <div class="flex items-center gap-2">
+                                @if($dashboardSystemLogoUrl)
+                                    <img src="{{ $dashboardSystemLogoUrl }}" alt="" class="w-6 h-6 object-contain">
+                                @endif
+                                <div class="td-growth-kicker">Invite a friend</div>
                             </div>
-                            <i class="fa-solid fa-chevron-right md-chevron"></i>
-                        </a>
-                    @endforeach
+                            <div class="td-growth-title">{{ (int) data_get($growthReferral, 'conversions', 0) }} joined from your invites</div>
+                            @if(Route::has('growth.referral'))
+                                <button type="button" id="md-growth-referral-button" class="md-growth-action sky" data-referral-url="{{ route('growth.referral') }}">
+                                    <i class="fa-solid fa-share-nodes"></i> Invite
+                                </button>
+                            @endif
+                        </article>
+                    </div>
+                    <div class="td-private"><i class="fa-solid fa-lock"></i> Your diary and money records are never shared.</div>
                 </div>
-            @else
-                <x-empty-state icon="fa-regular fa-circle-check" title="Nothing scheduled for today" message="Enjoy the breathing room or open your planner to set a priority." />
-            @endif
-        </div>
-
-        <div class="md-tab-panel" id="dashboard-panel-actions" data-tab-panel="actions" role="tabpanel">
-            <div class="md-panel-head"><div class="md-panel-title">Next Best Actions</div>@if(Route::has('goal-intelligence'))<a href="{{ route('goal-intelligence') }}" class="md-section-link">View all goals</a>@endif</div>
-            @if($nextActions->isNotEmpty())
-                <div class="md-focus-grid">
-                    @foreach($nextActions as $action)
-                        @php $routeName = $action['route'] ?? null; @endphp
-                        <a href="{{ $routeName && Route::has($routeName) ? route($routeName) : '#' }}" class="md-focus-item" style="--accent:{{ ($action['state'] ?? '') === 'overdue' ? '#e11d48' : '#f59e0b' }}">
-                            <div class="md-focus-num"><i class="fa-solid {{ ($action['state'] ?? '') === 'overdue' ? 'fa-triangle-exclamation' : 'fa-arrow-trend-up' }}"></i></div>
-                            <div class="md-row-copy"><div class="md-row-title">{{ $action['title'] ?? 'Next action' }}</div><div class="md-row-sub">{{ $action['message'] ?? 'Keep making progress on this goal.' }}</div></div>
-                            <i class="fa-solid fa-chevron-right md-chevron"></i>
-                        </a>
-                    @endforeach
-                </div>
-            @else
-                <x-empty-state icon="fa-solid fa-check" title="No urgent next actions" message="You have no urgent next actions right now." />
-            @endif
-        </div>
-
-        <div class="md-tab-panel" id="dashboard-panel-tools" data-tab-panel="tools" role="tabpanel">
-            <div class="md-panel-head"><div class="md-panel-title">Tools</div><span class="md-tab-meta">Quick access</span></div>
-            <div class="md-tools-grid">
-                @php
-                    $dashboardTools = [
-                        ['Sign Document','Sign documents','fa-signature','#eef2ff','#4338ca',route('signature.show')],
-                        ['My Business Card','View & share','fa-address-card','#f0fdfa','#0f766e',route('business-card.edit')],
-                        ['Notes','Capture ideas','fa-note-sticky','#fffbeb','#b45309',route('notes.index')],
-                        ['AI Planner','Smart advice','fa-wand-magic-sparkles','#f5f3ff','#6d28d9',route('ai-plans.index')],
-                        ['Financial Planner','Plan finances','fa-wallet','#ecfdf5','#047857',route('financial-planner.index')],
-                        ['Expenses','Track spending','fa-receipt','#fff1f2','#be123c',route('expenses.index')],
-                        ['Education','Learning plans','fa-graduation-cap','#eef2ff','#4338ca',route('education-plans.index')],
-                        ['Network Contacts','People & follow-ups','fa-address-book','#f0f9ff','#0369a1',route('network-contacts.index')],
-                        ['Spiritual Growth','Reflection','fa-seedling','#fdf4ff','#a21caf',route('spiritual-practices.index')],
-                    ];
-
-                    if (Route::has('social-media-planner.index')) {
-                        $dashboardTools[] = [
-                            'Social Media Planner',
-                            'Schedule posts',
-                            'fa-bullhorn',
-                            '#f0f9ff',
-                            '#0369a1',
-                            route('social-media-planner.index'),
-                        ];
-                    }
-                @endphp
-
-                @foreach($dashboardTools as $tool)
-                    <a href="{{ $tool[5] }}" class="md-tool-card" style="--tool-accent:{{ $tool[4] }}">
-                        <div class="md-tool-icon" style="background:{{ $tool[3] }};color:{{ $tool[4] }}"><i class="fa-solid {{ $tool[2] }}"></i></div>
-                        <div class="md-row-copy"><div class="md-row-title">{{ $tool[0] }}</div><div class="md-row-sub">{{ $tool[1] }}</div></div>
-                    </a>
-                @endforeach
-            </div>
-        </div>
-
-        <div class="md-tab-panel" id="dashboard-panel-finance" data-tab-panel="finance" role="tabpanel">
-            <div class="md-panel-head"><div class="md-panel-title">Finance at a Glance</div><a href="{{ route('financial-planner.index') }}" class="md-section-link">Open planner</a></div>
-            <div class="md-finance-grid">
-                @foreach($financeCards as $card)
-                    <a href="{{ $card['route'] }}" class="md-finance-card {{ $card['theme'] }}" title="Open {{ $card['title'] }}">
-                        <div class="md-finance-top"><div class="md-finance-icon"><i class="fa-solid {{ $card['icon'] }}"></i></div><div class="md-finance-name">{{ $card['title'] }}</div><i class="fa-solid fa-chevron-right md-chevron ml-auto"></i></div>
-                        <div class="md-finance-small">This month</div>
-                        <div class="md-finance-value">{{ $money($card['monthly']) }}</div>
-                        <div class="md-finance-small mt-1">Overall {{ $money($card['overall']) }}</div>
-                    </a>
-                @endforeach
-            </div>
-        </div>
-    </section>
+            </details>
+        @endif
+    </div>
 </div>
-
 
 <dialog id="md-engagement-checkin-modal" class="md-engagement-dialog">
     <form method="dialog" id="md-engagement-checkin-form">
@@ -1549,61 +1282,6 @@
 })();
 </script>
 
-<script>
-(function () {
-    const root = document.getElementById('dashboard-tabbed-sections');
-    if (!root) return;
-
-    const buttons = Array.from(root.querySelectorAll('[data-tab-target]'));
-    const panels = Array.from(root.querySelectorAll('[data-tab-panel]'));
-    const storageKey = 'myDigitalDiary.dashboardTab';
-    const validTabs = buttons.map(button => button.dataset.tabTarget);
-    let initial = root.dataset.defaultTab || 'tools';
-
-    try {
-        const remembered = sessionStorage.getItem(storageKey);
-        if (remembered && validTabs.includes(remembered)) initial = remembered;
-    } catch (_) {}
-
-    function openTab(name, remember = true) {
-        if (!validTabs.includes(name)) name = root.dataset.defaultTab || 'tools';
-
-        buttons.forEach(button => {
-            const active = button.dataset.tabTarget === name;
-            button.classList.toggle('active', active);
-            button.setAttribute('aria-selected', active ? 'true' : 'false');
-            button.tabIndex = active ? 0 : -1;
-            if (active) button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-        });
-
-        panels.forEach(panel => panel.classList.toggle('active', panel.dataset.tabPanel === name));
-        if (remember) {
-            try { sessionStorage.setItem(storageKey, name); } catch (_) {}
-        }
-    }
-
-    buttons.forEach(button => {
-        button.addEventListener('click', () => openTab(button.dataset.tabTarget));
-        button.addEventListener('keydown', event => {
-            if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
-            event.preventDefault();
-            const index = buttons.indexOf(button);
-            let next = index;
-            if (event.key === 'ArrowRight') next = (index + 1) % buttons.length;
-            if (event.key === 'ArrowLeft') next = (index - 1 + buttons.length) % buttons.length;
-            if (event.key === 'Home') next = 0;
-            if (event.key === 'End') next = buttons.length - 1;
-            openTab(buttons[next].dataset.tabTarget);
-            buttons[next].focus();
-        });
-    });
-
-    openTab(initial, false);
-})();
-</script>
-
-    
-
 @php
     // Pre-compute simple scalar arrays before JSON serialization. Keeping
     // method calls and nested expressions out of @json prevents Blade parser
@@ -1741,177 +1419,162 @@
 })();
 </script>
 
-
-<script id="md-dashboard-usability-runtime">
+<script id="td-today-runtime">
 (() => {
-    const root = document.querySelector('.md-home');
-    if (!root) return;
+    'use strict';
 
-    function findTopSection(label) {
-        return Array.from(root.querySelectorAll(':scope > section')).find(section => {
-            const title = section.querySelector('.md-section-title');
-            return title && title.textContent.trim().toLowerCase().includes(label);
-        });
-    }
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const store = {
+        get(key) { try { return localStorage.getItem(key); } catch (_) { return null; } },
+        set(key, value) { try { localStorage.setItem(key, value); } catch (_) {} },
+    };
 
-    function wrapSecondary(section, options) {
-        if (!section || section.closest('.md-secondary-wrap')) return null;
+    /* ---- Quick check-off ------------------------------------------------ */
+    const ring = document.getElementById('td-today-ring');
+    const doneEl = document.getElementById('td-done-count');
+    const totalEl = document.getElementById('td-total-count');
+    const allDone = document.getElementById('td-alldone');
+    const nudge = document.getElementById('td-nudge');
 
-        const details = document.createElement('details');
-        details.className = 'md-secondary-wrap';
-        details.dataset.dashboardSecondary = options.key;
-        details.open = !!options.open;
-
-        const summary = document.createElement('summary');
-        summary.className = 'md-secondary-summary';
-        summary.innerHTML = `
-            <div>
-                <div class="md-secondary-summary-title">
-                    <i class="fa-solid ${options.icon}"></i>
-                    <span>${options.title}</span>
-                </div>
-                <div class="md-secondary-summary-copy">${options.copy}</div>
-            </div>
-            <i class="fa-solid fa-chevron-down md-secondary-summary-chevron"></i>
-        `;
-
-        const content = document.createElement('div');
-        content.className = 'md-secondary-content';
-
-        section.parentNode.insertBefore(details, section);
-        content.appendChild(section);
-        details.appendChild(summary);
-        details.appendChild(content);
-
-        return details;
-    }
-
-    const progress = findTopSection('your progress');
-    const tools = findTopSection('start here');
-    const growth = document.getElementById('growth-strategy-section')
-        || document.getElementById('growth-strategy-card');
-
-    wrapSecondary(progress, {
-        key: 'progress',
-        icon: 'fa-chart-line',
-        title: 'Progress & wellbeing',
-        copy: 'Your financial health, task completion and review metrics.',
-        open: false,
-    });
-
-    const toolWrap = wrapSecondary(tools, {
-        key: 'tools',
-        icon: 'fa-grid-2',
-        title: 'Tools & shortcuts',
-        copy: 'Open the features you need without crowding your daily view.',
-        open: false,
-    });
-
-    const growthDetails = wrapSecondary(growth, {
-        key: 'growth',
-        icon: 'fa-seedling',
-        title: 'Growth & challenge',
-        copy: 'Join the 30-Day Challenge and review your activation and referral progress.',
-        open: false,
-    });
-
-    const progressDetails = document.querySelector(
-        '.md-secondary-wrap[data-dashboard-secondary="progress"]'
-    );
-    const toolsDetails = document.querySelector(
-        '.md-secondary-wrap[data-dashboard-secondary="tools"]'
-    );
-
-    if (growthDetails || progressDetails || toolsDetails) {
-        const row = document.createElement('div');
-        row.className = 'md-secondary-row';
-
-        const first = growthDetails || progressDetails || toolsDetails;
-        first.parentNode.insertBefore(row, first);
-
-        [growthDetails, progressDetails, toolsDetails].forEach(details => {
-            if (details) row.appendChild(details);
-        });
-
-        row.querySelectorAll('.md-secondary-wrap').forEach(details => {
-            details.addEventListener('toggle', () => {
-                if (!details.open) return;
-
-                row.querySelectorAll('.md-secondary-wrap').forEach(other => {
-                    if (other !== details) other.open = false;
-                });
-
-                requestAnimationFrame(() => {
-                    details.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start',
-                    });
-                });
-            });
-        });
-    }
-
-    if (tools) {
-        tools.classList.remove('md-dashboard-section');
-        const shortcuts = tools.querySelector('.md-shortcuts');
-        if (shortcuts && shortcuts.children.length > 4) {
-            const actions = document.createElement('div');
-            actions.className = 'md-more-tools';
-            actions.innerHTML = `
-                <button type="button" data-more-tools>
-                    <i class="fa-solid fa-ellipsis mr-1"></i>
-                    Show all tools
-                </button>
-            `;
-            tools.appendChild(actions);
-
-            actions.querySelector('[data-more-tools]')?.addEventListener('click', event => {
-                const expanded = shortcuts.classList.toggle('md-tools-expanded');
-                event.currentTarget.innerHTML = expanded
-                    ? '<i class="fa-solid fa-chevron-up mr-1"></i> Show fewer tools'
-                    : '<i class="fa-solid fa-ellipsis mr-1"></i> Show all tools';
-            });
+    function updateCounts(delta) {
+        if (!doneEl || !totalEl) return;
+        const total = Number(totalEl.textContent) || 0;
+        const done = Math.max(0, Math.min(total, (Number(doneEl.textContent) || 0) + delta));
+        doneEl.textContent = done;
+        if (ring) {
+            ring.style.setProperty('--p', total ? Math.round((done / total) * 100) : 0);
+            ring.setAttribute('aria-label', `${done} of ${total} tasks done today`);
         }
+        const open = document.querySelectorAll('#td-task-list .td-task:not(.is-done)').length;
+        allDone?.classList.toggle('show', open === 0);
+        if (nudge && delta > 0) nudge.textContent = open === 0 ? 'Everything done. Enjoy the rest of your day.' : 'Nice. Keep the momentum going.';
     }
 
-    document.querySelectorAll('[data-dashboard-panel-toggle]').forEach(button => {
-        button.addEventListener('click', () => {
-            const key = button.dataset.dashboardPanelToggle;
-            const details = document.querySelector(
-                `.md-secondary-wrap[data-dashboard-secondary="${key}"]`
-            );
+    document.querySelectorAll('.td-check[data-toggle-url]').forEach(button => {
+        button.addEventListener('click', async () => {
+            if (button.disabled) return;
+            const row = button.closest('.td-task');
+            const wasDone = row.classList.contains('is-done');
 
-            if (!details) return;
+            // Optimistic: feel instant, roll back if the server says no.
+            row.classList.toggle('is-done', !wasDone);
+            button.setAttribute('aria-pressed', String(!wasDone));
+            updateCounts(wasDone ? -1 : 1);
+            button.disabled = true;
 
-            document
-                .querySelectorAll('.md-secondary-row .md-secondary-wrap')
-                .forEach(other => {
-                    if (other !== details) other.open = false;
+            try {
+                const response = await fetch(button.dataset.toggleUrl, {
+                    method: 'PATCH',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ occurrence_date: button.dataset.date, respond: 'json' }),
                 });
-
-            details.open = true;
-            details.scrollIntoView({
-                behavior:'smooth',
-                block:'start',
-            });
+                if (!response.ok) throw new Error('toggle failed');
+            } catch (_) {
+                row.classList.toggle('is-done', wasDone);
+                button.setAttribute('aria-pressed', String(wasDone));
+                updateCounts(wasDone ? 1 : -1);
+                alert('Could not update that task. Please try again.');
+            } finally {
+                button.disabled = false;
+            }
         });
     });
 
-    document.querySelectorAll('.md-overview-link[href^="#"]').forEach(link => {
-        link.addEventListener('click', event => {
-            const target = document.querySelector(link.getAttribute('href'));
-            if (!target) return;
-            event.preventDefault();
-            target.scrollIntoView({behavior:'smooth',block:'start'});
-        });
-    });
+    /* ---- Get started checklist ------------------------------------------ */
+    const start = document.getElementById('td-get-started');
+    const DISMISS_KEY = 'md.getStarted.dismissed';
 
-    // Keep the first-screen experience focused on Today and Focus.
-    const rhythm = document.getElementById('daily-rhythm-section');
-    const tabs = document.getElementById('dashboard-tabbed-sections');
-    if (rhythm && tabs && rhythm.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING) {
-        // Existing order is already good; no move required.
+    function pwaInstalled() {
+        const api = window.pmPwa;
+        if (store.get('pm_pwa_installed') === '1') return true;
+        try { return !!(api && api.state().installed); } catch (_) { return false; }
     }
+
+    function renderStart() {
+        if (!start) return;
+        const installStep = document.getElementById('td-step-install');
+        const installed = pwaInstalled();
+        if (installStep) {
+            installStep.dataset.done = installed ? '1' : '0';
+            installStep.classList.toggle('done', installed);
+            const icon = installStep.querySelector('.td-step-ic');
+            if (icon) icon.className = `fa-solid ${installed ? 'fa-check' : 'fa-mobile-screen'} td-step-ic`;
+        }
+
+        const steps = Array.from(start.querySelectorAll('[data-step]'));
+        const done = steps.filter(step => step.dataset.done === '1').length;
+        const count = document.getElementById('td-start-count');
+        const bar = document.getElementById('td-start-bar');
+        if (count) count.textContent = `${done}/${steps.length}`;
+        if (bar) bar.style.width = `${Math.round((done / Math.max(1, steps.length)) * 100)}%`;
+
+        start.hidden = done >= steps.length || store.get(DISMISS_KEY) === '1';
+    }
+
+    document.getElementById('td-start-dismiss')?.addEventListener('click', () => {
+        store.set(DISMISS_KEY, '1');
+        if (start) start.hidden = true;
+    });
+
+    document.getElementById('td-step-install')?.addEventListener('click', () => {
+        const api = window.pmPwa;
+        let state = {};
+        try { state = api ? api.state() : {}; } catch (_) {}
+
+        if (state.installed) return;
+        if (api && state.canPromptDirectly) { api.install(); return; }
+
+        // iOS / Safari: reuse the existing "Add to Home Screen" instructions.
+        const root = document.getElementById('pm-pwa-root');
+        const dialog = document.getElementById('pm-pwa-ios-dialog');
+        if (state.isIos && root && dialog) {
+            root.hidden = false;
+            dialog.hidden = false;
+            document.getElementById('pm-pwa-ios-close-button')?.focus();
+            return;
+        }
+
+        window.location.href = @json(Route::has('tips') ? route('tips') : route('help.show'));
+    });
+
+    renderStart();
+    // public/js/pwa.js is deferred, so window.pmPwa only exists from DOMContentLoaded.
+    const bindPwa = () => {
+        renderStart();
+        try { window.pmPwa?.onChange?.(renderStart); } catch (_) {}
+    };
+    document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', bindPwa, { once: true }) : bindPwa();
+    window.addEventListener('appinstalled', () => { store.set('pm_pwa_installed', '1'); renderStart(); });
+
+    /* ---- App launcher ---------------------------------------------------- */
+    const launcher = document.getElementById('td-launcher');
+    const moreApps = document.getElementById('td-more-apps');
+    if (launcher && moreApps) {
+        const visibleCount = () => Array.from(launcher.children).filter(el => getComputedStyle(el).display !== 'none').length;
+        const syncMore = () => {
+            const expanded = launcher.classList.contains('expanded');
+            moreApps.hidden = !expanded && visibleCount() >= launcher.children.length;
+            moreApps.setAttribute('aria-expanded', String(expanded));
+            moreApps.querySelector('span').textContent = expanded ? 'Fewer apps' : 'All apps';
+            moreApps.querySelector('i').className = `fa-solid ${expanded ? 'fa-chevron-up' : 'fa-ellipsis'}`;
+        };
+        moreApps.addEventListener('click', () => { launcher.classList.toggle('expanded'); syncMore(); });
+        window.addEventListener('resize', syncMore, { passive: true });
+        syncMore();
+    }
+
+    /* ---- Remember which "more" sections are open ------------------------ */
+    document.querySelectorAll('[data-td-more]').forEach(details => {
+        const key = `md.more.${details.dataset.tdMore}`;
+        if (store.get(key) === '1') details.open = true;
+        details.addEventListener('toggle', () => store.set(key, details.open ? '1' : '0'));
+    });
 })();
 </script>
 

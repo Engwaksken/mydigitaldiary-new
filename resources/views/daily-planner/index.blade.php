@@ -296,7 +296,20 @@
         border-radius: .75rem;
         background: #fff;
     }
+    .dp-more-menu > summary::-webkit-details-marker { display: none; }
+    .dp-more-panel {
+        position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+        min-width: 230px; padding: 6px; border-radius: 12px; background: #fff;
+        border: 1px solid #e2e8f0; box-shadow: 0 14px 34px rgba(15,23,42,.14);
+        display: grid; gap: 2px;
+    }
+    .dp-more-panel button {
+        display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+        padding: 9px 10px; border-radius: 8px; font-size: .875rem; background: transparent; border: 0; cursor: pointer;
+    }
+    .dp-more-panel button:hover { background: #f8fafc; }
     @media (max-width: 640px) {
+        .dp-more-panel { right: auto; left: 0; }
         .dp-week-days {
             grid-template-columns: repeat(4, minmax(0, 1fr));
         }
@@ -322,9 +335,6 @@
             <h1 class="text-2xl font-bold text-slate-900">
                 <i class="fa-solid fa-calendar-check mr-2 dp-primary-text"></i>Daily Planner
             </h1>
-            <p class="text-sm text-slate-500 mt-1">
-                Plan tasks by time, track progress, and review previous days whenever you need them.
-            </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -392,7 +402,7 @@
                         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border dp-primary-border dp-primary-text bg-white font-medium">
                     <i class="fa-solid fa-calendar-week"></i> Plan Week
                 </button>
-                <button type="button" onclick="openAddTaskForDate({{ \Illuminate\Support\Js::from($date->toDateString()) }}, {{ \Illuminate\Support\Js::from($date->format('l, d M Y')) }}, '')"
+                <button type="button" id="dp-add-task-button" onclick="openAddTaskForDate({{ \Illuminate\Support\Js::from($date->toDateString()) }}, {{ \Illuminate\Support\Js::from($date->format('l, d M Y')) }}, '')"
                         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg dp-btn-primary font-medium shadow-sm">
                     <i class="fa-solid fa-plus"></i> Add Task
                 </button>
@@ -480,22 +490,27 @@
                                 class="inline-flex items-center gap-2 text-sm text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed">
                             <i class="fa-solid fa-check-double"></i> Mark selected complete
                         </button>
-                        <button type="button"
-                                onclick="openBulkMoveModal('{{ $tomorrowDate }}', true)"
-                                class="inline-flex items-center gap-2 text-sm dp-primary-text border dp-primary-border rounded-lg px-3 py-2 bg-white hover:bg-slate-50">
-                            <i class="fa-solid fa-calendar-arrow-up"></i> Move selected
-                        </button>
-                        <button type="button"
-                                onclick="moveAllPendingTomorrow()"
-                                class="inline-flex items-center gap-2 text-sm text-amber-700 border border-amber-200 rounded-lg px-3 py-2 bg-amber-50 hover:bg-amber-100">
-                            <i class="fa-solid fa-forward"></i> Move unfinished one-off tasks
-                        </button>
                     @endif
-                    <button type="submit" form="bulkDailyDelete"
-                            class="inline-flex items-center gap-2 text-sm text-rose-700 border border-rose-200 rounded-lg px-3 py-2 bg-white hover:bg-rose-50"
-                            data-confirm-click="Delete selected tasks? This action cannot be undone." data-confirm-title="Delete selected tasks?" data-confirm-text="Delete selected">
-                        <i class="fa-solid fa-trash"></i> Delete selected
-                    </button>
+                    {{-- Less-used bulk actions live behind "More" so the list stays calm. --}}
+                    <details class="dp-more-menu relative">
+                        <summary class="inline-flex items-center gap-2 text-sm text-slate-600 border border-slate-200 rounded-lg px-3 py-2 bg-white hover:bg-slate-50 cursor-pointer list-none">
+                            <i class="fa-solid fa-ellipsis"></i> More
+                        </summary>
+                        <div class="dp-more-panel">
+                            @if($pending)
+                                <button type="button" onclick="this.closest('details').open=false; openBulkMoveModal('{{ $tomorrowDate }}', true)">
+                                    <i class="fa-solid fa-calendar-arrow-up dp-primary-text"></i> Move selected
+                                </button>
+                                <button type="button" onclick="this.closest('details').open=false; moveAllPendingTomorrow()">
+                                    <i class="fa-solid fa-forward text-amber-600"></i> Move unfinished to tomorrow
+                                </button>
+                            @endif
+                            <button type="submit" form="bulkDailyDelete" class="text-rose-700"
+                                    data-confirm-click="Delete selected tasks? This action cannot be undone." data-confirm-title="Delete selected tasks?" data-confirm-text="Delete selected">
+                                <i class="fa-solid fa-trash"></i> Delete selected
+                            </button>
+                        </div>
+                    </details>
                 </div>
             @endif
         </div>
@@ -503,9 +518,16 @@
         @if(!$total)
             <x-empty-state
                 icon="fa-regular fa-calendar-check"
-                title="No tasks saved for this day."
-                message="Use Add Task to create a one-off task or a recurring task you only enter once."
-            />
+                title="No tasks yet."
+                message="Add one thing you want done{{ $isToday ? ' today' : '' }}."
+            >
+                <x-slot name="action">
+                    <button type="button" onclick="document.getElementById('dp-add-task-button')?.click()"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg dp-btn-primary font-medium shadow-sm">
+                        <i class="fa-solid fa-plus"></i> Add a task
+                    </button>
+                </x-slot>
+            </x-empty-state>
         @else
             <form id="bulkDailyDelete" method="POST" action="{{ route('daily-planner.items.bulk-destroy') }}">
                 @csrf
@@ -782,9 +804,6 @@
                         <h3 class="font-bold text-slate-900">
                             <i class="fa-solid fa-clock-rotate-left mr-2 dp-primary-text"></i>Past Tasks & Day Plans
                         </h3>
-                        <p class="text-xs text-slate-500 mt-1">
-                            Search previous plans or tasks, filter by period, and reopen any saved day.
-                        </p>
                     </div>
                     <div class="text-xs text-slate-500">
                         @if($pastPlans->total())
@@ -2150,5 +2169,16 @@
     } else {
         window.setTimeout(recoverDpTaskEdit, 0);
     }
+
+    // Deep link from the dashboard / quick-add sheet: ?new=1 opens Add Task.
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.get('new') !== '1') return;
+            url.searchParams.delete('new');
+            window.history.replaceState(null, '', url.toString());
+            window.setTimeout(() => document.getElementById('dp-add-task-button')?.click(), 50);
+        } catch (_) {}
+    });
 </script>
 @endsection

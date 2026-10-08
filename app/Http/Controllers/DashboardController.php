@@ -92,6 +92,9 @@ class DashboardController extends Controller
             ->whereBetween('next_run_at', [now(), now()->addDays(7)])
             ->count();
 
+        // Get-started checklist: "set a reminder" is done once any exists.
+        $hasAnyReminder = Reminder::where('user_id', $userId)->exists();
+
         // --- Finance tab: charts ----------------------------------------------
 
         $expensesByCategory = Expense::where('user_id', $userId)
@@ -135,6 +138,8 @@ class DashboardController extends Controller
         // This makes daily/weekly/monthly/repeat tasks appear in Today's Focus
         // even when they are generated virtually rather than stored directly
         // against today's DailyPlan row.
+        $todayTaskStats = null;
+
         try {
             if (! class_exists(\App\Services\DailyPlannerRecurrenceService::class)) {
                 throw new \RuntimeException('DailyPlannerRecurrenceService is not available.');
@@ -163,6 +168,7 @@ class DashboardController extends Controller
             )->statistics($allTodayPlannerItems);
 
             $todayPlanProgress = (int) ($todayStats['progress'] ?? 0);
+            $todayTaskStats = $todayStats;
         } catch (\Throwable $exception) {
             report($exception);
 
@@ -203,6 +209,26 @@ class DashboardController extends Controller
             report($exception);
             $startDaySummary = [];
             $endDaySummary = [];
+        }
+
+        // Last 7 local days with at least one meaningful action, for the
+        // dashboard's streak dots. Optional: never let it break the page.
+        $recentActiveDays = [];
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('engagement_events')) {
+                $recentActiveDays = \Illuminate\Support\Facades\DB::table('engagement_events')
+                    ->where('user_id', $userId)
+                    ->whereBetween('event_date', [$localToday->copy()->subDays(6)->toDateString(), $localDate])
+                    ->distinct()
+                    ->pluck('event_date')
+                    ->map(fn ($date) => substr((string) $date, 0, 10))
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
         }
 
         $activeProjectsList = Project::where('user_id', $userId)
@@ -424,7 +450,10 @@ class DashboardController extends Controller
             'notificationCenter',
             'startDaySummary',
             'endDaySummary',
-            'stepData'
+            'stepData',
+            'hasAnyReminder',
+            'todayTaskStats',
+            'recentActiveDays'
         ));
     }
 

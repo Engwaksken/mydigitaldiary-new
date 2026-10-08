@@ -77,3 +77,6 @@ html body dialog[open] > .overflow-y-auto {
         max-height: 100% !important;
     }
 }
+
+/* Hide empty modal subtitles (copy trimmed to keep forms quiet). */
+.pm-modal-description:empty { display: none; }

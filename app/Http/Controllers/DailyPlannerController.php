@@ -13,6 +13,7 @@ use App\Services\DailyPlannerRecurrenceService;
 use App\Services\DailyPlannerTaskReminderService;
 use App\Services\DailyPlannerWellbeingSyncService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -496,7 +497,7 @@ class DailyPlannerController extends Controller
     public function toggle(
         Request $request,
         DailyPlanItem $item
-    ): RedirectResponse {
+    ): RedirectResponse|JsonResponse {
         $this->owned($request, $item);
 
         $date = Carbon::parse(
@@ -525,6 +526,19 @@ class DailyPlannerController extends Controller
             $date,
             (bool) ($completion->is_completed ?? $freshItem->is_completed)
         );
+
+        // Dashboard quick check-off toggles tasks in place via fetch() and
+        // asks for JSON explicitly (respond=json), so it gets the new state
+        // back instead of a redirect to the planner (which would also leave
+        // a stale flash message). Every other caller keeps the redirect.
+        if ($request->input('respond') === 'json') {
+            return response()->json([
+                'id' => $freshItem->id,
+                'occurrence_date' => $date->toDateString(),
+                'is_completed' => (bool) ($completion->is_completed ?? $freshItem->is_completed),
+                'message' => $syncMessage ?: 'Task status updated.',
+            ]);
+        }
 
         return $this->backToDate(
             $date->toDateString(),

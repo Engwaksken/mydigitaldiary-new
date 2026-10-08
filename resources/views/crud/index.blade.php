@@ -55,7 +55,7 @@
                     @if ($moduleGoalSummary['latest'])
                         <p class="text-xs text-slate-600 mt-1 truncate">Focus: {{ $moduleGoalSummary['latest']->title }} &middot; {{ $moduleGoalSummary['latest']->progress_percent }}%</p>
                     @else
-                        <p class="text-xs text-slate-500 mt-1">Set a goal so your records and daily actions stay connected to what matters.</p>
+                        <p class="text-xs text-slate-500 mt-1">No goal yet.</p>
                     @endif
                 </div>
             </div>
@@ -778,7 +778,17 @@
                     <tr>
                         <td colspan="{{ count($tableColumns) + 1 + ($routeName === 'expenses' ? 1 : 0) + ($pmHasBulkDelete ? 1 : 0) }}" class="px-4 py-10 text-center text-slate-400">
                             <i class="{{ $icon }} text-3xl mb-2 block opacity-30" aria-hidden="true"></i>
-                            No {{ strtolower($title) }}s yet.
+                            @if (request()->filled('q') || request()->filled('period') || request()->filled('module'))
+                                No matching {{ strtolower($title) }}s.
+                            @else
+                                <span class="block text-slate-500 font-medium">No {{ strtolower($title) }}s yet.</span>
+                                @if (auth()->user()->hasActiveAccess())
+                                    <button type="button" onclick="openCrudCreateModal()"
+                                            class="mt-3 inline-flex items-center gap-2 btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm">
+                                        <i class="fa-solid fa-plus" aria-hidden="true"></i> Add your first {{ strtolower($title) }}
+                                    </button>
+                                @endif
+                            @endif
                         </td>
                     </tr>
                 @endforelse
@@ -918,7 +928,7 @@
                             {{ old('_method') === 'PUT' ? 'Edit' : 'New' }} {{ $title }}
                         </h2>
                         <p id="crud-modal-description" class="pm-modal-description">
-                            {{ old('_method') === 'PUT' ? 'Update the details below, then save your changes.' : 'Enter the details below. Required fields are marked with an asterisk.' }}
+                            {{ old('_method') === 'PUT' ? '' : '* Required' }}
                         </p>
                     </div>
                 </div>
@@ -935,10 +945,9 @@
                         <input type="checkbox" id="crud-set-reminder" name="set_reminder" value="1"
                                class="mt-0.5 rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-2)]">
                         <div>
-                            <label for="crud-set-reminder" class="!mb-0 text-sm font-semibold text-slate-700">
+                            <label for="crud-set-reminder" class="!mb-0 text-sm font-semibold text-slate-700" title="Get notified at the relevant date and time.">
                                 Also set a reminder
                             </label>
-                            <p class="text-xs text-slate-500 mt-1">Get notified about this {{ strtolower($title) }} at the relevant date and time.</p>
                         </div>
                     </div>
                 @endif
@@ -1082,7 +1091,7 @@
             var methodInput = form.querySelector('input[name="_method"]');
             if (methodInput) { methodInput.remove(); }
             document.getElementById('crud-modal-title').textContent = 'New {{ $title }}';
-            document.getElementById('crud-modal-description').textContent = 'Enter the details below. Required fields are marked with an asterisk.';
+            document.getElementById('crud-modal-description').textContent = '* Required';
             var saveLabel = document.getElementById('crud-modal-save-label'); if (saveLabel) { saveLabel.textContent = 'Save {{ $title }}'; }
             dialog.classList.remove('pm-dialog-quick');
             dialog.classList.add('pm-dialog');
@@ -1299,7 +1308,7 @@
             });
 
             document.getElementById('crud-modal-title').textContent = 'Edit {{ $title }}';
-            document.getElementById('crud-modal-description').textContent = 'Update the details below, then save your changes.';
+            document.getElementById('crud-modal-description').textContent = '';
             var saveLabel = document.getElementById('crud-modal-save-label'); if (saveLabel) { saveLabel.textContent = 'Save changes'; }
             dialog.showModal();
 
@@ -1329,6 +1338,19 @@
             @if ($errors->any() && old('_dialog_action'))
                 pmSelectCrudTab('table');
                 document.getElementById('crud-modal').showModal();
+            @else
+                // Deep link from the dashboard / quick-add sheet: ?new=1
+                // opens the existing "Add" modal straight away.
+                @if (auth()->user()->hasActiveAccess())
+                    try {
+                        var pmUrl = new URL(window.location.href);
+                        if (pmUrl.searchParams.get('new') === '1') {
+                            pmUrl.searchParams.delete('new');
+                            window.history.replaceState(null, '', pmUrl.toString());
+                            openCrudCreateModal();
+                        }
+                    } catch (e) { /* older browsers: user can still tap Add */ }
+                @endif
             @endif
         });
     </script>

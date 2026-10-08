@@ -16,66 +16,57 @@
 
 <section
     id="md-live-steps-card"
-    class="md-dashboard-section md-shell p-5 border border-emerald-100 bg-white shadow-sm"
+    class="td-card md-dashboard-section"
+    style="padding:14px 16px"
     data-url="{{ url('/wellbeing/steps/live') }}"
+    title="Counted by the mobile app and synced here automatically."
 >
-    <div class="flex items-start justify-between gap-4">
-        <div class="flex items-center gap-3 min-w-0">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-shoe-prints text-xl"></i>
+    <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-shoe-prints"></i>
+        </div>
+
+        <div class="min-w-0 flex-1">
+            <div class="flex items-baseline gap-2 flex-wrap">
+                <span id="md-step-count" class="text-xl font-extrabold text-slate-900">{{ number_format($steps) }}</span>
+                <span class="text-xs font-semibold text-slate-500">steps</span>
+                <span id="md-step-distance"
+                      class="text-xs font-bold text-emerald-700 {{ $steps > 0 && $distanceLabel ? '' : 'hidden' }}">
+                    ≈ {{ $distanceLabel }}
+                </span>
             </div>
-
-            <div class="min-w-0">
-                <div class="flex items-end gap-2">
-                    <span id="md-step-count" class="text-3xl font-black text-slate-900">{{ number_format($steps) }}</span>
-
-                    <span id="md-step-distance"
-                          class="text-sm font-black text-emerald-700 mb-1 {{ $steps > 0 && $distanceLabel ? '' : 'hidden' }}">
-                        ≈ {{ $distanceLabel }}
-                    </span>
-
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Steps today</span>
-                </div>
-
-                <div id="md-step-status" class="text-sm font-bold {{ $tracking ? 'text-emerald-700' : 'text-slate-500' }}">
-                    {{ $tracking ? 'Tracking your steps' : 'Tracking paused' }}
-                </div>
+            <div class="mt-1.5 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                    id="md-step-progress"
+                    class="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style="width: {{ $progress }}%"
+                ></div>
+            </div>
+            <div class="mt-1 flex items-center justify-between gap-3 text-[11px] text-slate-500">
+                <span><span id="md-step-status" class="{{ $tracking ? 'text-emerald-700' : 'text-slate-500' }}">{{ $tracking ? 'Tracking' : 'Paused' }}</span> · <span id="md-step-remaining">{{ number_format($remaining) }} remaining</span></span>
+                <span id="md-step-updated" class="truncate">
+                    @if(!empty($stepData['last_synced_at']))
+                        Synced {{ \Illuminate\Support\Carbon::parse($stepData['last_synced_at'])->format('g:i A') }}
+                    @else
+                        Waiting for phone
+                    @endif
+                </span>
             </div>
         </div>
 
         <div class="text-right shrink-0">
-            <div id="md-step-percent" class="text-lg font-black text-slate-800">{{ $progress }}%</div>
+            <div id="md-step-percent" class="text-base font-extrabold text-slate-800">{{ $progress }}%</div>
             <div class="text-[10px] text-slate-400">of {{ number_format($goal) }}</div>
         </div>
     </div>
 
-    <div class="mt-4 h-2.5 rounded-full bg-slate-100 overflow-hidden">
-        <div
-            id="md-step-progress"
-            class="h-full rounded-full bg-emerald-500 transition-all duration-300"
-            style="width: {{ $progress }}%"
-        ></div>
-    </div>
-
-    <div class="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
-        <span id="md-step-remaining">{{ number_format($remaining) }} remaining</span>
-        <span id="md-step-updated">
-            @if(!empty($stepData['last_synced_at']))
-                Last sync {{ \Illuminate\Support\Carbon::parse($stepData['last_synced_at'])->format('g:i A') }}
-            @else
-                Waiting for phone sync
-            @endif
-        </span>
-    </div>
-
-    <div id="md-step-sync-note" class="mt-3 text-[11px] text-slate-500">
-        The mobile app counts your movement and synchronises it to this dashboard automatically.
-    </div>
+    {{-- Kept for the live-sync script; status text is shown above instead. --}}
+    <div id="md-step-sync-note" class="hidden"></div>
 
     <div id="md-step-next-goal"
          class="mt-2 text-[11px] font-bold text-emerald-700 {{ !empty($stepData['goal_achieved']) ? '' : 'hidden' }}">
         @if(!empty($stepData['goal_achieved']))
-            Goal achieved. Your next daily target is {{ number_format((int) ($stepData['next_daily_goal'] ?? $goal)) }} steps.
+            Goal reached. Next target: {{ number_format((int) ($stepData['next_daily_goal'] ?? $goal)) }} steps.
         @endif
     </div>
 </section>
@@ -146,17 +137,17 @@
                 distance.classList.toggle('hidden', steps === 0 || km <= 0);
             }
 
-            status.textContent = tracking ? 'Tracking your steps' : 'Tracking paused';
-            status.className = `text-sm font-bold ${tracking ? 'text-emerald-700' : 'text-slate-500'}`;
+            status.textContent = tracking ? 'Tracking' : 'Paused';
+            status.className = tracking ? 'text-emerald-700' : 'text-slate-500';
 
             if (data.last_synced_at) {
                 const synced = new Date(data.last_synced_at);
-                updated.textContent = `Last sync ${synced.toLocaleTimeString([], {
+                updated.textContent = `Synced ${synced.toLocaleTimeString([], {
                     hour: 'numeric',
                     minute: '2-digit',
                 })}`;
             } else {
-                updated.textContent = 'Waiting for phone sync';
+                updated.textContent = 'Waiting for phone';
             }
 
             note.textContent = steps !== lastSeenSteps
@@ -168,7 +159,7 @@
                 nextGoal.classList.toggle('hidden', !achieved);
                 if (achieved) {
                     nextGoal.textContent =
-                        `Goal achieved. Your next daily target is ${number(data.next_daily_goal || goal)} steps.`;
+                        `Goal reached. Next target: ${number(data.next_daily_goal || goal)} steps.`;
                 }
             }
 

@@ -108,6 +108,11 @@
 </div>
 
 @auth
+    {{-- Phone-only bottom bar: Today, Planner, quick add, Goals, More --}}
+    @unless ((string) auth()->user()->role === 'support')
+        @include('partials.mobile-bottom-nav')
+    @endunless
+
     {{-- In-app reminder alarm --}}
     <dialog id="reminder-alarm-modal" aria-labelledby="reminder-alarm-title" class="rounded-2xl p-6 pm-dialog-sm shadow-2xl backdrop:bg-slate-900/50">
         <div class="flex items-center gap-3 mb-3">
