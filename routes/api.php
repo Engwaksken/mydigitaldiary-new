@@ -307,9 +307,16 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
         Route::post("{$endpoint}/bulk-delete", [$controller, 'bulkDestroy']);
         Route::post("{$endpoint}/{id}/archive", [$controller, 'archive'])->where('id', '[0-9]+');
         Route::post("{$endpoint}/{id}/unarchive", [$controller, 'unarchive'])->where('id', '[0-9]+');
-        Route::get("{$endpoint}/stats", [$controller, 'stats']);
+        // Only controllers that implement stats() get the route; the rest
+        // used to answer 500 "Call to undefined method ...::stats()".
+        if (method_exists($controller, 'stats')) {
+            Route::get("{$endpoint}/stats", [$controller, 'stats']);
+        }
         Route::get("{$endpoint}/report/pdf", [$controller, 'downloadPdf']);
-        Route::apiResource($endpoint, $controller);
+        // Numeric ids only, so e.g. GET reminders/overview is a clean 404
+        // instead of show('overview') throwing a TypeError (500).
+        Route::apiResource($endpoint, $controller)
+            ->where([str_replace('-', '_', \Illuminate\Support\Str::singular($endpoint)) => '[0-9]+']);
     }
 
     // Business Card
@@ -386,6 +393,7 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
 
     // Notifications
     Route::get('notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
     Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markRead']);
     Route::post('notifications/reminder/{reminderId}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markReminderRead']);
     Route::post('notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllRead']);

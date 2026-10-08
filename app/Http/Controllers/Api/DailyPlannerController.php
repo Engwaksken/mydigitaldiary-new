@@ -36,13 +36,7 @@ class DailyPlannerController extends Controller
 
         $dateString = $date->toDateString();
 
-        $plan = DailyPlan::firstOrCreate(
-            [
-                'user_id' => $request->user()->id,
-                'plan_date' => $dateString,
-            ],
-            ['title' => 'My Daily Plan']
-        );
+        $plan = $this->planFor($request->user()->id, $dateString);
 
         $items = $this->recurrence->itemsForDate(
             $request->user()->id,
@@ -768,6 +762,33 @@ class DailyPlannerController extends Controller
                     );
                 }
                 break;
+        }
+    }
+
+    /**
+     * The day's plan row, created on first use. Looked up with whereDate()
+     * because plan_date is date-cast (stored with a time part on SQLite),
+     * so firstOrCreate()'s plain equality could miss the row and then hit
+     * the unique (user_id, plan_date) index.
+     */
+    private function planFor(int $userId, string $dateString): DailyPlan
+    {
+        $find = fn () => DailyPlan::where('user_id', $userId)
+            ->whereDate('plan_date', $dateString)
+            ->first();
+
+        if ($plan = $find()) {
+            return $plan;
+        }
+
+        try {
+            return DailyPlan::create([
+                'user_id' => $userId,
+                'plan_date' => $dateString,
+                'title' => 'My Daily Plan',
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return $find() ?? throw $e;
         }
     }
 }

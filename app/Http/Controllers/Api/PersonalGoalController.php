@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Api\ApiCrudIndexRequest;
 use App\Models\PersonalGoal;
 use App\Services\PersonalHealthGoalProgressService;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,8 +33,12 @@ class PersonalGoalController extends ApiCrudController
      *
      * Health-linked goals are synchronised before returning the list so
      * current_value and progress_percent remain aligned with health data.
+     *
+     * Must keep the parent's ApiCrudIndexRequest type: a plain Request
+     * here is passed straight to parent::index() and throws a TypeError
+     * (every goals list request answered 500 "Server Error").
      */
-    public function index(Request $request): JsonResponse
+    public function index(ApiCrudIndexRequest $request): JsonResponse
     {
         try {
             app(PersonalHealthGoalProgressService::class)

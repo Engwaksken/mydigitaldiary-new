@@ -51,6 +51,11 @@ class FcmService
         $projectId = config('services.firebase.project_id');
         $webpush = $this->webpushOptions($title, $body, $data);
 
+        // Unread in-app notifications, for the launcher icon badge. The app
+        // also reads data.unread_count to refresh its own badge.
+        $unread = $this->unreadCount($user);
+        $data['unread_count'] = $unread;
+
         foreach ($user->deviceTokens as $device) {
             $response = Http::withToken($accessToken)
                 ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
@@ -74,7 +79,7 @@ class FcmService
                                 'sound' => 'default',
                                 'default_vibrate_timings' => true,
                                 'notification_priority' => 'PRIORITY_MAX',
-                            ],
+                            ] + ($unread > 0 ? ['notification_count' => $unread] : []),
                         ],
                         'apns' => [
                             'headers' => ['apns-priority' => '10'],
@@ -82,6 +87,7 @@ class FcmService
                                 'aps' => [
                                     'sound' => 'default',
                                     'content-available' => 1,
+                                    'badge' => $unread,
                                 ],
                             ],
                         ],
@@ -103,6 +109,17 @@ class FcmService
                     'body' => $response->json(),
                 ]);
             }
+        }
+    }
+
+    private function unreadCount(User $user): int
+    {
+        try {
+            return $user->unreadNotifications()->count();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return 0;
         }
     }
 

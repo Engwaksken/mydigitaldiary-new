@@ -18,13 +18,26 @@ class NotificationController extends Controller
     {
         $notifications = $request->user()->notifications()->limit(30)->get();
 
-        return response()->json(['data' => $notifications->map(fn ($n) => [
-            'id' => $n->id,
-            'type' => class_basename($n->type),
-            'data' => $n->data,
-            'read' => ! is_null($n->read_at),
-            'created_at' => $n->created_at->toIso8601String(),
-        ])]);
+        return response()->json([
+            'data' => $notifications->map(fn ($n) => [
+                'id' => $n->id,
+                'type' => class_basename($n->type),
+                'data' => $n->data,
+                'read' => ! is_null($n->read_at),
+                'created_at' => $n->created_at->toIso8601String(),
+            ]),
+            'unread_count' => $request->user()->unreadNotifications()->count(),
+        ]);
+    }
+
+    /**
+     * Lightweight count for the app's bell and launcher-icon badges.
+     */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        return response()->json([
+            'unread_count' => $request->user()->unreadNotifications()->count(),
+        ]);
     }
 
     public function markRead(Request $request, string $id): JsonResponse
