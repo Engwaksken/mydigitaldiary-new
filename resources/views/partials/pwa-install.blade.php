@@ -119,10 +119,11 @@
     (function () {
         'use strict';
 
+        function initialize() {
         var root = document.getElementById('pm-pwa-root');
         var api = window.pmPwa;
 
-        // No service workers, or the script never loaded: leave the page alone.
+        // pwa.js is deferred, so initialize only after deferred scripts have run.
         if (!root || !api) { return; }
 
         var banner = document.getElementById('pm-pwa-banner');
@@ -134,6 +135,7 @@
         var close = document.getElementById('pm-pwa-close-button');
         var dialog = document.getElementById('pm-pwa-ios-dialog');
         var dialogClose = document.getElementById('pm-pwa-ios-close-button');
+        var sidebarInstall = document.getElementById('pm-sidebar-install');
         var appName = @json($pwaAppName);
 
         var lastFocus = null;
@@ -148,6 +150,7 @@
         }
 
         function render(state) {
+            if (sidebarInstall) { sidebarInstall.hidden = state.installed; }
             // An update outranks the install prompt: the app is already on the
             // phone, so what is worth saying is "there is a new version".
             if (state.updateWaiting) {
@@ -218,6 +221,18 @@
             openDialog();
         });
 
+        if (sidebarInstall) {
+            sidebarInstall.addEventListener('click', function () {
+                var state = api.state();
+                if (state.installed) { return; }
+                if (state.canPromptDirectly) {
+                    api.install();
+                } else {
+                    openDialog();
+                }
+            });
+        }
+
         dismiss.addEventListener('click', function () { api.dismiss(); });
         close.addEventListener('click', function () { api.dismiss(); });
         dialogClose.addEventListener('click', closeDialog);
@@ -234,5 +249,12 @@
         // Look for a new build once the page has settled, rather than on load,
         // so the check never competes with the first paint.
         window.setTimeout(function () { api.checkForUpdate(); }, 8000);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize, { once: true });
+        } else {
+            initialize();
+        }
     })();
 </script>

@@ -343,6 +343,7 @@ class PwaManifestTest extends TestCase
             ->assertOk()
             ->assertSee(route('pwa.manifest'), false)
             ->assertSee('pm-pwa-root', false)
+            ->assertSee('pm-sidebar-install', false)
             ->assertSee('js/pwa.js', false)
             ->assertSee('beforeinstallprompt', false);
     }

@@ -183,6 +183,9 @@
     </nav>
 
     <div class="px-2 py-3 border-t border-white/10 space-y-0.5">
+        <button type="button" id="pm-sidebar-install" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-white/10 hover:text-white transition-all" aria-label="Install this app">
+            <i class="fa-solid fa-download w-4 text-center" aria-hidden="true"></i> Install app
+        </button>
         <a href="{{ route('subscription.show') }}" class="{{ $linkClass('subscription.show') }}" @if($isActive('subscription.show')) aria-current="page" @endif>
             <i class="fa-solid fa-credit-card w-4 text-center" aria-hidden="true"></i> Billing
         </a>
