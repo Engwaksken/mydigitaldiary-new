@@ -397,6 +397,8 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markRead']);
     Route::post('notifications/reminder/{reminderId}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markReminderRead']);
     Route::post('notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllRead']);
+    Route::delete('notifications', [\App\Http\Controllers\Api\NotificationController::class, 'bulkDestroy']);
+    Route::delete('notifications/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
 
     // AI Planner
     Route::get('ai-plans', [\App\Http\Controllers\Api\AiPlanController::class, 'index']);

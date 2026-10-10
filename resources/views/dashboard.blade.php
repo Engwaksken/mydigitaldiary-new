@@ -335,8 +335,6 @@
     .td-streak{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
     .td-streak-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;font-size:13px;font-weight:800}
     .td-streak-pill.cold{background:#f8fafc;border-color:#e2e8f0;color:#475569}
-    .td-flame{display:inline-block;transform-origin:50% 90%}
-    .td-streak-pill:not(.cold) .td-flame{animation:tdFlicker 2.4s ease-in-out infinite}
     .td-dots{display:flex;gap:6px}
     .td-dot{width:26px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#94a3b8}
     .td-dot span{width:12px;height:12px;border-radius:50%;background:#e9eef5;border:2px solid transparent;transition:background .2s ease}
@@ -501,7 +499,6 @@
     @keyframes tdPop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
     @keyframes tdRipple{0%{opacity:.6;transform:scale(.8)}100%{opacity:0;transform:scale(1.5)}}
     @keyframes tdFadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-    @keyframes tdFlicker{0%,100%{transform:rotate(-3deg) scale(1)}50%{transform:rotate(3deg) scale(1.08)}}
     @media (prefers-reduced-motion: reduce){.td *{animation:none!important;transition:none!important}}
 
     @media (max-width:1024px){
@@ -633,7 +630,6 @@
             <div class="min-w-0">
                 <div class="td-streak">
                     <span class="td-streak-pill {{ $tdStreak > 0 ? '' : 'cold' }}" title="Best streak: {{ $bestGrowthStreak }} days">
-                        <span class="td-flame" aria-hidden="true"> </span>
                         {{ $tdStreak }} day{{ $tdStreak === 1 ? '' : 's' }}
                     </span>
                     <div class="td-dots" aria-label="Active days this week">

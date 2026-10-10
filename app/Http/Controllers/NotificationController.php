@@ -31,4 +31,28 @@ class NotificationController extends Controller
 
         return back()->with('status', 'Notifications marked as read.');
     }
+
+    public function destroy(Request $request, string $id): RedirectResponse
+    {
+        $notification = $request->user()->notifications()->where('id', $id)->first();
+        $notification?->delete();
+
+        return back()->with('status', 'Notification deleted.');
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['string'],
+        ]);
+
+        $deleted = $request->user()->notifications()
+            ->whereIn('id', $data['ids'])
+            ->delete();
+
+        return back()->with('status', $deleted === 1
+            ? '1 notification deleted.'
+            : "{$deleted} notifications deleted.");
+    }
 }

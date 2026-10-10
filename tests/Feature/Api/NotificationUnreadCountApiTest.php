@@ -58,6 +58,41 @@ class NotificationUnreadCountApiTest extends TestCase
         $this->getJson('/api/notifications/unread-count')->assertJsonPath('unread_count', 0);
     }
 
+    public function test_user_can_delete_a_single_notification(): void
+    {
+        $user = User::factory()->create();
+        $id = $this->notify($user);
+        Sanctum::actingAs($user);
+
+        $this->deleteJson("/api/notifications/{$id}")->assertOk();
+        $this->assertDatabaseMissing('notifications', ['id' => $id]);
+    }
+
+    public function test_user_can_bulk_delete_only_their_own_notifications(): void
+    {
+        $user = User::factory()->create();
+        $a = $this->notify($user);
+        $b = $this->notify($user);
+        $other = $this->notify(User::factory()->create());
+        Sanctum::actingAs($user);
+
+        $this->deleteJson('/api/notifications', ['ids' => [$a, $b, $other]])
+            ->assertOk()
+            ->assertJsonPath('deleted', 2);
+
+        $this->assertDatabaseMissing('notifications', ['id' => $a]);
+        $this->assertDatabaseMissing('notifications', ['id' => $b]);
+        $this->assertDatabaseHas('notifications', ['id' => $other]);
+    }
+
+    public function test_bulk_delete_requires_at_least_one_id(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->deleteJson('/api/notifications', ['ids' => []])->assertUnprocessable();
+    }
+
     public function test_push_carries_the_unread_count_for_the_launcher_badge(): void
     {
         config(['services.firebase.project_id' => 'demo']);

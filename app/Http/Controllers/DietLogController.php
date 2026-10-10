@@ -582,7 +582,7 @@ class DietLogController extends CrudController
         $avgDailyCalories = $daily->whereNotNull('calories')->avg('calories');
 
         return [
-            ['label' => 'Avg calories/day (7d)', 'value' => $avgDailyCalories ? (string) round($avgDailyCalories) : '—', 'icon' => 'fa-solid fa-fire', 'color' => 'orange'],
+            ['label' => 'Avg calories/day (7d)', 'value' => $avgDailyCalories ? (string) round($avgDailyCalories) : '—', 'icon' => 'fa-solid fa-bolt', 'color' => 'orange'],
             ['label' => 'Meals logged (7d)', 'value' => (string) (clone $base)->where('logged_at', '>=', now()->subDays(7))->count(), 'icon' => 'fa-solid fa-utensils', 'color' => 'amber'],
             ['label' => 'Today calories', 'value' => (string) ((clone $base)->whereDate('logged_at', today())->sum('calories') ?: '—'), 'icon' => 'fa-solid fa-bowl-food', 'color' => 'emerald'],
             ['label' => 'Total meals logged', 'value' => (string) $base->count(), 'icon' => 'fa-solid fa-list-ol', 'color' => 'slate'],

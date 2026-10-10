@@ -150,7 +150,7 @@
 
                     <div class="flex items-center gap-2 text-xs">
                         <span class="rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-700">
-                            <i class="fa-solid fa-fire mr-1"></i>
+                            <i class="fa-solid fa-bolt mr-1"></i>
                             {{ number_format((int) $day->total_calories) }} kcal
                         </span>
                     </div>
