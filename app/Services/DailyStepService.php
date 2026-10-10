@@ -42,6 +42,13 @@ class DailyStepService
 
         $goal = $this->currentGoal($user);
 
+        /*
+         * Auto-start the day's tracking session. A person should not have to
+         * remember to press "Start" every morning — the moment today's step
+         * record is first touched (opening the app, syncing, viewing the
+         * dashboard) tracking is already on. Tapping "Stop" still pauses it
+         * for the rest of the day.
+         */
         return DailyStep::firstOrCreate(
             [
                 'user_id' => $user->id,
@@ -50,7 +57,8 @@ class DailyStepService
             [
                 'steps' => 0,
                 'daily_goal' => $goal,
-                'is_tracking' => false,
+                'is_tracking' => true,
+                'tracking_started_at' => now(),
             ]
         );
     }

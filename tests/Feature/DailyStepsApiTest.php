@@ -21,7 +21,7 @@ class DailyStepsApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.steps', 0)
             ->assertJsonPath('data.daily_goal', 5000)
-            ->assertJsonPath('data.is_tracking', false)
+            ->assertJsonPath('data.is_tracking', true)
             ->assertJsonPath('data.distance_km', 0)
             ->assertJsonPath('data.distance_m', 0);
 
@@ -45,6 +45,26 @@ class DailyStepsApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.is_tracking', true)
             ->assertJsonPath('data.steps', 125);
+    }
+
+    public function test_step_tracking_auto_starts_and_stop_persists_for_the_day(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        // Auto-started on first touch — no explicit "start" call needed.
+        $this->getJson('/api/wellbeing/steps')
+            ->assertOk()
+            ->assertJsonPath('data.is_tracking', true)
+            ->assertJsonPath('data.tracking_started_at', fn ($value) => $value !== null);
+
+        // Pausing persists: a later read must not auto-restart the session.
+        $this->postJson('/api/wellbeing/steps/stop')
+            ->assertOk()
+            ->assertJsonPath('data.is_tracking', false);
+
+        $this->getJson('/api/wellbeing/steps')
+            ->assertJsonPath('data.is_tracking', false);
     }
 
     public function test_step_payload_uses_height_based_stride_for_distance(): void
