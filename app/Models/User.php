@@ -46,7 +46,7 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         $this->reminders()->create([
-            'title' => 'Drink water 💧',
+            'title' => 'Drink water',
             'module' => 'health',
             'message' => "Time to hydrate — drink a glass of water. You can turn this off any time in Reminders.",
             'frequency' => 'every_n_minutes',

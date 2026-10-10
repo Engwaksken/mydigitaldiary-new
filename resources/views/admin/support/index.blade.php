@@ -64,8 +64,11 @@
                             <td class="px-4 py-4 text-slate-600">{{ $conversation->messages_count ?? 0 }}</td>
                             <td class="px-4 py-4 whitespace-nowrap">
                                 @if($conversation->support_rating)
-                                    <span class="text-amber-500">{{ str_repeat('★', $conversation->support_rating) }}</span>
-                                    <span class="text-slate-300">{{ str_repeat('★', 5-$conversation->support_rating) }}</span>
+                                    <span class="whitespace-nowrap">
+                                        @for ($i = 0; $i < 5; $i++)
+                                            <i class="fa-solid fa-star {{ $i < $conversation->support_rating ? 'text-amber-500' : 'text-slate-300' }}"></i>
+                                        @endfor
+                                    </span>
                                 @else
                                     <span class="text-slate-400">—</span>
                                 @endif

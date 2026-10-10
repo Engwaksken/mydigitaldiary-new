@@ -1,7 +1,7 @@
 @extends('errors.layout')
 
 @section('title', 'Sign in required')
-@section('icon', '↪')
+@section('icon', 'lock')
 @section('eyebrow', 'Authentication required')
 @section('heading', 'Please sign in to continue')
 @section('message', 'Your session may have ended, or this page requires a signed-in My Digital Diary account.')

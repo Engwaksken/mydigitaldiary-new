@@ -1,7 +1,7 @@
 @extends('errors.layout')
 
 @section('title', 'Please try again shortly')
-@section('icon', '◷')
+@section('icon', 'gauge-high')
 @section('eyebrow', 'Too many requests')
 @section('heading', 'Please wait a moment before trying again')
 @section('message', 'To keep your account and the platform secure, we temporarily limited repeated requests.')

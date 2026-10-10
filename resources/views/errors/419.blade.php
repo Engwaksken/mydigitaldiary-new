@@ -1,7 +1,7 @@
 @extends('errors.layout')
 
 @section('title', 'Session expired')
-@section('icon', '◷')
+@section('icon', 'clock-rotate-left')
 @section('eyebrow', 'Session expired')
 @section('heading', 'Your page session has expired')
 @section('message', 'For your security, this form can no longer be submitted from the current page.')

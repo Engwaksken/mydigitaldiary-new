@@ -1,7 +1,7 @@
 @extends('errors.layout')
 
 @section('title', 'Service temporarily unavailable')
-@section('icon', '↻')
+@section('icon', 'rotate-right')
 @section('eyebrow', 'Connected service problem')
 @section('heading', 'A connected service did not respond correctly')
 @section('message', 'My Digital Diary is working, but a service needed to complete this request returned an unexpected response.')

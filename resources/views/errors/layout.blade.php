@@ -13,6 +13,9 @@
          manifest link has to be here for the install prompt to stay valid. --}}
     @include('partials.pwa-head')
 
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
@@ -301,7 +304,7 @@
             </div>
 
             <div class="error-icon" aria-hidden="true">
-                @yield('icon', '!')
+                <i class="fa-solid fa-@yield('icon', 'triangle-exclamation')"></i>
             </div>
 
             <p class="error-eyebrow">

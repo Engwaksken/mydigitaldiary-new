@@ -1,7 +1,7 @@
 @extends('errors.layout')
 
 @section('title', 'Access not available')
-@section('icon', '⌁')
+@section('icon', 'ban')
 @section('eyebrow', 'Access restricted')
 @section('heading', 'You do not have access to this page')
 @section('message', 'Your account does not currently have permission to perform this action or view this information.')

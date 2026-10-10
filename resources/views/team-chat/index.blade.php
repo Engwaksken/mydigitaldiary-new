@@ -163,7 +163,7 @@
                             @endif
 
                             <div class="mt-2 flex flex-wrap items-center gap-1">
-                                @foreach(['like' => '👍', 'love' => '❤️', 'celebrate' => '🎉', 'support' => '🙌'] as $reaction => $emoji)
+                                @foreach(['like' => 'fa-thumbs-up', 'love' => 'fa-heart', 'celebrate' => 'fa-champagne-glasses', 'support' => 'fa-hands-clapping'] as $reaction => $icon)
                                     @php
                                         $count = $message->reactions->where('reaction', $reaction)->count();
                                     @endphp
@@ -171,7 +171,7 @@
                                         @csrf
                                         <input type="hidden" name="reaction" value="{{ $reaction }}">
                                         <button class="rounded-full border border-slate-200 px-2 py-1 text-xs hover:bg-slate-50">
-                                            {{ $emoji }} @if($count) {{ $count }} @endif
+                                            <i class="fa-solid {{ $icon }} mr-1"></i>@if($count) {{ $count }} @endif
                                         </button>
                                     </form>
                                 @endforeach
