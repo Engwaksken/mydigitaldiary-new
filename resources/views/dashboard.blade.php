@@ -317,7 +317,7 @@
     .td-icon-btn:hover{background:var(--td-soft)}
 
     /* Hero */
-    .td-hero{position:relative;overflow:hidden;padding:22px 22px 18px;border-radius:24px;border:1px solid color-mix(in srgb,var(--td-brand) 18%,#e2e8f0);background:
+    .td-hero{position:relative;padding:22px 22px 18px;border-radius:24px;border:1px solid color-mix(in srgb,var(--td-brand) 18%,#e2e8f0);background:
         radial-gradient(120% 140% at 100% 0%,color-mix(in srgb,var(--td-brand) 16%,transparent) 0%,transparent 55%),
         radial-gradient(90% 120% at 0% 100%,#fff7ed 0%,transparent 60%),
         linear-gradient(180deg,#ffffff 0%,#fbfdfc 100%);box-shadow:0 10px 30px rgba(15,23,42,.06)}

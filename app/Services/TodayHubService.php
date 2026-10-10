@@ -94,6 +94,7 @@ class TodayHubService
             'money' => $this->money($user, $now),
             'on_this_day' => $this->onThisDay($user),
             'daily_reminders' => $reminders,
+            'due_today' => $this->dueToday($user, $today),
         ];
     }
 
@@ -199,6 +200,18 @@ class TodayHubService
                     ];
                 });
         }, collect());
+    }
+
+    /**
+     * Everything due today across modules (subscriptions, spiritual, diet,
+     * savings, debts, budget, plans, exercise, sleep, expenses, steps, ...) —
+     * the same aggregation the daily due-items push and morning reminder use.
+     *
+     * @return array<int, array{label: string}>
+     */
+    private function dueToday(User $user, string $date): array
+    {
+        return $this->safe(fn () => app(DailyReminderService::class)->dueTodayFor($user, $date), []);
     }
 
     /** @return list<string> local dates (Y-m-d) of the last 7 days with a meaningful action */

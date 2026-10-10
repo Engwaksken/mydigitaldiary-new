@@ -4,6 +4,11 @@ namespace App\Services;
 
 use App\Models\Debt;
 use App\Models\EducationPlan;
+use App\Models\Budget;
+use App\Models\DailyStep;
+use App\Models\DietLog;
+use App\Models\ExerciseLog;
+use App\Models\Expense;
 use App\Models\HealthCheckup;
 use App\Models\Meeting;
 use App\Models\Plan;
@@ -11,6 +16,8 @@ use App\Models\Project;
 use App\Models\ProjectTask;
 use App\Models\Reminder;
 use App\Models\SavingsGoal;
+use App\Models\SleepLog;
+use App\Models\SpiritualPractice;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -310,7 +317,70 @@ class DailyReminderService
             ->get(['name'])
             ->each(fn ($s) => $items->push(['label' => "Savings goal target: {$s->name}"]));
 
+        // Subscription / trial renewal is as easy to forget as any task.
+        $expiry = $user->relevantExpiryDate();
+        if ($expiry && $expiry->isSameDay(Carbon::parse($date))) {
+            $items->push(['label' => in_array((string) $user->subscription_status, ['trial', 'trialing'], true)
+                ? 'Trial ends today'
+                : 'Subscription expires today']);
+        }
+
+        // Spiritual growth sessions planned for today.
+        SpiritualPractice::where('user_id', $userId)
+            ->where('is_archived', false)
+            ->whereDate('next_planned_date', $date)
+            ->get(['practice_type', 'title'])
+            ->each(fn ($s) => $items->push(['label' => 'Spiritual practice: '.($s->title ?: $s->practice_type)]));
+
+        // Budgets whose maturity date is today but not yet expensed.
+        Budget::where('user_id', $userId)
+            ->where('is_archived', false)
+            ->where('is_expensed', false)
+            ->whereDate('expensed_at', $date)
+            ->get(['category'])
+            ->each(fn ($b) => $items->push(['label' => 'Budget due: '.($b->category ?: 'budget')]));
+
+        $this->pushDailyRoutine($items, $userId, $date);
+
         return $items->all();
+    }
+
+    /**
+     * Recurring daily habit nudges. These modules have no future "due date" —
+     * they are logged every day — so they are listed whenever they have not
+     * yet been done today, reminding the user each day until completed.
+     *
+     * @param  \Illuminate\Support\Collection<int, array{label: string}>  $items
+     */
+    private function pushDailyRoutine($items, int $userId, string $date): void
+    {
+        if (Schema::hasTable('daily_steps')
+            && ! DailyStep::where('user_id', $userId)
+                ->whereDate('tracking_date', $date)
+                ->whereRaw('steps >= COALESCE(daily_goal, 0)')
+                ->exists()) {
+            $items->push(['label' => 'Hit your step goal']);
+        }
+
+        if (Schema::hasTable('exercise_logs')
+            && ! ExerciseLog::where('user_id', $userId)->whereDate('performed_at', $date)->exists()) {
+            $items->push(['label' => 'Exercise today']);
+        }
+
+        if (Schema::hasTable('sleep_logs')
+            && ! SleepLog::where('user_id', $userId)->whereDate('sleep_date', $date)->exists()) {
+            $items->push(['label' => 'Log your sleep']);
+        }
+
+        if (Schema::hasTable('diet_logs')
+            && ! DietLog::where('user_id', $userId)->whereDate('logged_at', $date)->exists()) {
+            $items->push(['label' => 'Log your meals']);
+        }
+
+        if (Schema::hasTable('expenses')
+            && ! Expense::where('user_id', $userId)->whereDate('spent_at', $date)->exists()) {
+            $items->push(['label' => 'Log today\'s expenses']);
+        }
     }
 
     private function row(User $user): ?object

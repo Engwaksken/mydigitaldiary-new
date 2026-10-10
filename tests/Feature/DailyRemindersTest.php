@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\DailyPlan;
 use App\Models\DailyPlanItem;
 use App\Models\DeviceToken;
+use App\Models\ExerciseLog;
 use App\Models\Reminder;
+use App\Models\SpiritualPractice;
 use App\Models\User;
 use App\Services\DailyReminderService;
 use App\Services\FcmService;
@@ -317,6 +319,54 @@ class DailyRemindersTest extends TestCase
             ->assertSee('id="td-step-daily-reminders"', false)
             ->assertSee('window.pmPushConfig', false)
             ->assertSee('js/push.js', false);
+    }
+
+    public function test_due_today_includes_subscription_spiritual_and_daily_routine(): void
+    {
+        $user = $this->subscriber('Africa/Kampala', false);
+        $date = '2026-10-08';
+
+        $user->forceFill([
+            'subscription_status' => 'active',
+            'subscription_expires_at' => $date.' 12:00:00',
+        ])->save();
+
+        SpiritualPractice::create([
+            'user_id' => $user->id,
+            'practice_type' => 'meditation',
+            'title' => 'Morning meditation',
+            'practiced_at' => $date.' 08:00:00',
+            'next_planned_date' => $date,
+            'is_archived' => false,
+        ]);
+
+        $labels = collect(app(DailyReminderService::class)->dueTodayFor($user, $date))->pluck('label')->all();
+
+        $this->assertContains('Subscription expires today', $labels);
+        $this->assertContains('Spiritual practice: Morning meditation', $labels);
+        // Routine nudges appear because nothing has been logged today yet.
+        $this->assertContains('Exercise today', $labels);
+        $this->assertContains('Log your sleep', $labels);
+        $this->assertContains('Log your meals', $labels);
+        $this->assertContains("Log today's expenses", $labels);
+    }
+
+    public function test_daily_routine_nudge_clears_once_logged(): void
+    {
+        $user = $this->subscriber('Africa/Kampala', false);
+        $date = '2026-10-08';
+
+        ExerciseLog::create([
+            'user_id' => $user->id,
+            'activity' => 'Run',
+            'duration_minutes' => 30,
+            'performed_at' => $date,
+        ]);
+
+        $labels = collect(app(DailyReminderService::class)->dueTodayFor($user, $date))->pluck('label')->all();
+
+        $this->assertNotContains('Exercise today', $labels);
+        $this->assertContains('Log your sleep', $labels);
     }
 
     public function test_fcm_removes_only_dead_tokens(): void
