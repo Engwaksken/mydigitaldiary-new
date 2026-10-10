@@ -136,7 +136,19 @@
             state.deferredPrompt = null;
             emit();
 
-            return prompt.prompt()
+            var promptResult;
+            try {
+                promptResult = prompt.prompt();
+            } catch (error) {
+                return Promise.resolve(false);
+            }
+
+            // Modern browsers resolve prompt() without a choice; the outcome
+            // lives on userChoice. Older implementations may return it directly.
+            return Promise.resolve(promptResult)
+                .then(function (choice) {
+                    return choice || prompt.userChoice || null;
+                })
                 .then(function (choice) {
                     return choice && choice.outcome === 'accepted';
                 })

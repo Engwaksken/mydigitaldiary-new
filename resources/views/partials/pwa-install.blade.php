@@ -72,8 +72,7 @@
         </div>
     </div>
 
-    {{-- iOS instructions: Safari has no beforeinstallprompt, so a button that
-         calls install() would do nothing at all there. --}}
+    {{-- Browsers without beforeinstallprompt need platform-specific manual steps. --}}
     <div
         id="pm-pwa-ios-dialog"
         role="dialog"
@@ -84,20 +83,25 @@
     >
         <div class="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
             <h2 id="pm-pwa-ios-title" class="text-base font-bold text-slate-900">
-                Install {{ $pwaAppName }}
+                Add {{ $pwaAppName }} to your device
             </h2>
+            <p class="mt-2 text-sm text-slate-600">Your browser does not provide an install pop-up here. Use its share or menu option:</p>
             <ol class="mt-3 space-y-2.5 text-sm text-slate-700">
                 <li class="flex gap-3">
                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">1</span>
-                    <span>Tap the <strong>Share</strong> button in Safari's toolbar.</span>
+                    <span><strong>iPhone / iPad:</strong> open this site in Safari and tap <strong>Share</strong>.</span>
                 </li>
                 <li class="flex gap-3">
                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">2</span>
-                    <span>Scroll down and choose <strong>Add to Home Screen</strong>.</span>
+                    <span>Choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</span>
                 </li>
                 <li class="flex gap-3">
                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">3</span>
-                    <span>Tap <strong>Add</strong>. {{ $pwaAppName }} then opens from your home screen.</span>
+                    <span><strong>Android:</strong> open the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</span>
+                </li>
+                <li class="flex gap-3">
+                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">4</span>
+                    <span><strong>Computer:</strong> check the address-bar install icon or browser menu. Firefox and Safari may not support installing this site as an app.</span>
                 </li>
             </ol>
             <div class="mt-5 flex justify-end">
