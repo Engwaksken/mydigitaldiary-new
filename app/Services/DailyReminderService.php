@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Debt;
 use App\Models\EducationPlan;
 use App\Models\HealthCheckup;
+use App\Models\Meeting;
 use App\Models\Plan;
 use App\Models\Project;
 use App\Models\ProjectTask;
@@ -261,6 +262,12 @@ class DailyReminderService
             ->whereDate('next_run_at', $date)
             ->get(['title'])
             ->each(fn ($r) => $items->push(['label' => "Reminder: {$r->title}"]));
+
+        Meeting::where('user_id', $userId)
+            ->where('status', 'scheduled')
+            ->whereDate('start_at', $date)
+            ->get(['title'])
+            ->each(fn ($m) => $items->push(['label' => "Meeting: {$m->title}"]));
 
         Plan::where('user_id', $userId)->where('is_archived', false)
             ->where('status', '!=', 'completed')

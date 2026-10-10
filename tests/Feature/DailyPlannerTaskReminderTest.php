@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\DailyPlan;
 use App\Models\DailyPlanItem;
+use App\Models\Reminder;
 use App\Models\User;
+use App\Services\DailyPlannerTaskReminderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -98,5 +101,47 @@ class DailyPlannerTaskReminderTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertFalse($item->fresh()->reminder_enabled);
+    }
+
+    public function test_a_future_task_gets_at_least_three_staggered_reminders(): void
+    {
+        $user = $this->subscriber();
+        $date = today()->addDays(3);
+        $plan = DailyPlan::create([
+            'user_id' => $user->id,
+            'plan_date' => $date->toDateString(),
+            'title' => 'My Daily Plan',
+        ]);
+
+        $item = DailyPlanItem::create([
+            'daily_plan_id' => $plan->id,
+            'title' => 'Submit the report',
+            'priority' => 'high',
+            'start_time' => '09:00:00',
+            'reminder_enabled' => true,
+            'reminder_offset_minutes' => 15,
+            'reminder_channels' => ['in_app'],
+        ]);
+
+        app(DailyPlannerTaskReminderService::class)->sync($item, $user, $date);
+
+        $reminders = Reminder::where('source_type', 'daily_plan_item')
+            ->where('source_id', $item->id)
+            ->where('is_active', true)
+            ->get();
+
+        $this->assertSame(3, $reminders->count(), 'a future task is reminded three times');
+
+        // The closest nudge is the configured reminder time (start - offset).
+        $this->assertTrue(
+            $reminders->contains(fn ($r) => $r->next_run_at->format('Y-m-d H:i:s') === $date->toDateString().' 08:45:00'),
+            'the due-time nudge fires at the configured reminder time'
+        );
+
+        // reminder_id points at that closest nudge.
+        $this->assertSame(
+            $date->toDateString().' 08:45:00',
+            Reminder::find($item->fresh()->reminder_id)->next_run_at->format('Y-m-d H:i:s')
+        );
     }
 }

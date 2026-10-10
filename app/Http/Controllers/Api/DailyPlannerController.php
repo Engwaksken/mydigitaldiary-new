@@ -10,7 +10,6 @@ use App\Http\Requests\DailyPlannerBulkDestroyRequest;
 use App\Http\Resources\DailyPlannerResource;
 use App\Models\DailyPlan;
 use App\Models\DailyPlanItem;
-use App\Models\Reminder;
 use App\Services\DailyPlannerRecurrenceService;
 use App\Services\DailyPlannerTaskReminderService;
 use App\Services\DailyPlannerWellbeingSyncService;
@@ -18,7 +17,6 @@ use App\Services\OfflineConflictGuard;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class DailyPlannerController extends Controller
 {
@@ -634,35 +632,14 @@ class DailyPlannerController extends Controller
         DailyPlanItem $item,
         string $targetDate
     ): void {
-        if (
-            ! Schema::hasColumns(
-                'reminders',
-                ['source_type', 'source_id']
-            )
-        ) {
-            return;
-        }
-
-        Reminder::query()
-            ->where('user_id', $request->user()->id)
-            ->where('source_type', 'daily_plan_item')
-            ->where('source_id', $item->id)
-            ->where('is_active', true)
-            ->get()
-            ->each(
-                function (Reminder $reminder) use ($targetDate) {
-                    if (! $reminder->next_run_at) {
-                        return;
-                    }
-
-                    $reminder->next_run_at = Carbon::parse(
-                        $targetDate.' '
-                        .$reminder->next_run_at->format('H:i:s')
-                    );
-
-                    $reminder->save();
-                }
-            );
+        // Rebuilding through sync() recomputes every nudge relative to the
+        // task's new date, so the multi-nudge reminder set stays correct when
+        // a task is moved to another day.
+        $this->taskReminders->sync(
+            $item->fresh(),
+            $request->user(),
+            Carbon::parse($targetDate)
+        );
     }
 
     private function owned(

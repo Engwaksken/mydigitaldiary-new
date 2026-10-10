@@ -343,7 +343,9 @@ class DailyPlannerRegressionTest extends TestCase
         $response = $this->actingAs($user)->patchJson($url, ['occurrence_date' => $date]);
         $api ? $response->assertOk() : $response->assertRedirect();
         $this->assertDatabaseHas('daily_plan_item_occurrences', ['daily_plan_item_id' => $item->id, 'is_completed' => false]);
-        $this->assertDatabaseHas('reminders', ['id' => $item->reminder_id, 'is_active' => true, 'next_run_at' => $date.' 08:45:00']);
+        // Reopening reschedules the reminder set; reminder_id now points at the
+        // closest (due-time) nudge of the multi-nudge reminder set.
+        $this->assertDatabaseHas('reminders', ['id' => $item->fresh()->reminder_id, 'is_active' => true, 'next_run_at' => $date.' 08:45:00']);
         $this->assertDatabaseMissing('exercise_logs', ['daily_plan_source_key' => $key]);
         $this->assertSame(1, $item->occurrences()->whereDate('occurrence_date', $date)->count());
     }

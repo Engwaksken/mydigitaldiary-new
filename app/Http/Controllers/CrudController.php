@@ -513,6 +513,10 @@ abstract class CrudController extends Controller
      * for every single Expense/Diet Log entry would be far more noise
      * than help. Silently does nothing if this module's date field has no
      * value to remind about (e.g. an optional date left blank).
+     *
+     * Creates three staggered nudges (the day before, a couple of hours
+     * before, and at the date/time itself) so a meeting — or any other
+     * item with a "set reminder" — cannot slip through unnoticed.
      */
     protected function createLinkedReminder(Request $request, $item): void
     {
@@ -524,14 +528,19 @@ abstract class CrudController extends Controller
         $labelField = collect($this->fields)->first(fn ($f) => in_array($f['type'], ['text', 'textarea'], true))['name'] ?? null;
         $label = $labelField ? data_get($item, $labelField) : ('#' . $item->id);
 
-        $request->user()->reminders()->create([
-            'title' => "{$this->title}: {$label}",
-            'message' => "Reminder for your {$this->title} \"{$label}\".",
-            'frequency' => 'once',
-            'next_run_at' => \Illuminate\Support\Carbon::parse($dateValue),
-            'channel' => 'mail',
-            'is_active' => true,
-            'alarm_enabled' => true,
-        ]);
+        $dueAt = \Illuminate\Support\Carbon::parse($dateValue);
+        $nudges = app(\App\Services\ReminderCadenceService::class)->nudgeTimes($dueAt);
+
+        foreach ($nudges as $nudgeAt) {
+            $request->user()->reminders()->create([
+                'title' => "{$this->title}: {$label}",
+                'message' => "Reminder for your {$this->title} \"{$label}\".",
+                'frequency' => 'once',
+                'next_run_at' => $nudgeAt,
+                'channel' => 'mail',
+                'is_active' => true,
+                'alarm_enabled' => true,
+            ]);
+        }
     }
 }

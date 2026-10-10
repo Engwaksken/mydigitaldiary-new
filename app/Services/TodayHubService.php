@@ -126,6 +126,7 @@ class TodayHubService
 
                 return [
                     'id' => (int) data_get($item, 'id'),
+                    'type' => 'task',
                     'title' => (string) (data_get($item, 'title') ?: 'Daily task'),
                     'priority' => (string) (data_get($item, 'priority') ?: ''),
                     'start_time' => $start ? substr((string) $start, 0, 5) : null,
@@ -133,8 +134,18 @@ class TodayHubService
                     'occurrence_date' => substr((string) (data_get($item, 'occurrence_date') ?: $now->toDateString()), 0, 10),
                     'is_completed' => false,
                     'is_recurring' => (string) (data_get($item, 'repeat_type') ?: 'once') !== 'once',
+                    'time_sort' => $start ? substr((string) $start, 0, 5) : '99:99',
                 ];
-            })->values()->all();
+            })->values();
+
+            // Bring today's meetings into the daily task list so a person sees
+            // them alongside their tasks instead of forgetting an appointment.
+            $merged = $items
+                ->concat($this->meetingTasks($user, $now))
+                ->sortBy(fn ($item) => (string) ($item['time_sort'] ?? '99:99'))
+                ->values()
+                ->map(fn ($item) => collect($item)->except('time_sort')->all())
+                ->values();
 
             $total = (int) ($stats['total'] ?? 0);
             $completed = (int) ($stats['completed'] ?? 0);
@@ -143,10 +154,51 @@ class TodayHubService
                 'total' => $total,
                 'completed' => $completed,
                 'percent' => $total > 0 ? (int) round(($completed / $total) * 100) : 0,
-                'items' => $items,
+                'items' => $merged->all(),
                 'has_more' => $open->count() > count($items),
             ];
         }, $empty);
+    }
+
+    /**
+     * Today's scheduled meetings, shaped like the planner task items above so
+     * they can be merged into the daily task list. Read-only: they carry a
+     * `type` discriminator and a `meeting_id` instead of a planner task id.
+     *
+     * @return \Illuminate\Support\Collection<int, array>
+     */
+    private function meetingTasks(User $user, Carbon $now): \Illuminate\Support\Collection
+    {
+        return $this->safe(function () use ($user, $now) {
+            $start = $now->copy()->startOfDay()->utc();
+            $end = $now->copy()->endOfDay()->utc();
+            $timezone = $now->getTimezone();
+
+            return Meeting::where('user_id', $user->id)
+                ->where('status', 'scheduled')
+                ->whereBetween('start_at', [$start, $end])
+                ->orderBy('start_at')
+                ->limit(self::TOP_TASKS)
+                ->get()
+                ->map(function (Meeting $meeting) use ($timezone) {
+                    $local = Carbon::parse($meeting->start_at)->setTimezone($timezone);
+                    $start = $local->format('H:i:s');
+
+                    return [
+                        'id' => (int) $meeting->id,
+                        'type' => 'meeting',
+                        'meeting_id' => (int) $meeting->id,
+                        'title' => (string) $meeting->title,
+                        'priority' => '',
+                        'start_time' => substr($start, 0, 5),
+                        'time_label' => $local->format('g:i A'),
+                        'occurrence_date' => $local->toDateString(),
+                        'is_completed' => false,
+                        'is_recurring' => false,
+                        'time_sort' => substr($start, 0, 5),
+                    ];
+                });
+        }, collect());
     }
 
     /** @return list<string> local dates (Y-m-d) of the last 7 days with a meaningful action */
