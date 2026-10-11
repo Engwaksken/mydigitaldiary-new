@@ -8,9 +8,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
 /**
- * Computes the staggered nudge times for a task/meeting reminder so a person
- * is reminded at least three times before an item is due, instead of relying
- * on a single one-off reminder that is easy to miss.
+ * Computes pre-due and overdue nudge times for a task/meeting reminder.
  *
  * Each reminder stays a plain "once" reminder in the reminders table; the
  * multi-nudge behaviour comes from creating one row per nudge time, each
@@ -20,18 +18,12 @@ use Carbon\CarbonInterface;
 class ReminderCadenceService
 {
     /**
-     * Minutes before the due time to nudge, earliest first. Together with the
-     * due time itself these give three distinct reminders:
-     *
-     *   1. the day before (1440 minutes),
-     *   2. a couple of hours before (120 minutes),
-     *   3. at the due/start time (0 minutes).
-     *
-     * Reminders whose computed time is already in the past are skipped, so a
-     * task created shortly before it is due simply gets fewer (but still
-     * timely) nudges rather than a burst of expired ones.
+     * Signed minute offsets from the due time, in delivery order: 30, 20,
+     * and 10 minutes before due; then 10, 20, and 30 minutes overdue. Past
+     * nudges are skipped. Source status is checked again at delivery time, so
+     * follow-ups are automatically suppressed after the item is completed.
      */
-    public const OFFSETS = [1440, 120, 0];
+    public const OFFSETS = [30, 20, 10, -10, -20, -30];
 
     /**
      * @param  CarbonInterface  $dueAt  the item's due/start time
@@ -52,11 +44,14 @@ class ReminderCadenceService
             static fn (CarbonInterface $time) => $time->greaterThan($now)
         );
 
-        // An item that is already due still deserves a nudge; fire once
-        // shortly so the "never forget a task" guarantee holds even for
-        // items added at the last minute.
+        // An item created after its due time still gets three spaced follow-ups
+        // rather than a burst of stale pre-due alerts.
         if ($future === []) {
-            return ['0' => $now->copy()->addMinute()];
+            return [
+                '3' => $now->copy()->addMinutes(1),
+                '4' => $now->copy()->addMinutes(11),
+                '5' => $now->copy()->addMinutes(21),
+            ];
         }
 
         return $future;

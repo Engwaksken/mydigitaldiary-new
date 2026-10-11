@@ -60,14 +60,20 @@ class ReminderNotification extends Notification
 
     public function toArray(object $notifiable): array
     {
+        $signature = (string) $this->reminder->source_signature;
+        $stage = preg_match('/(?:^|:)nudge:[3-5]$/', $signature) === 1
+            ? 'overdue'
+            : (preg_match('/(?:^|:)nudge:[0-2]$/', $signature) === 1 ? 'pre_due' : 'scheduled');
+
         return [
             'reminder_id' => $this->reminder->id,
             'title' => $this->reminder->title,
             'module' => $this->reminder->module,
             'message' => $this->reminder->message,
-            'url' => \Illuminate\Support\Facades\Route::has('reminders.index')
-                ? route('reminders.index')
-                : url('/reminders'),
+            'source_type' => $this->reminder->source_type,
+            'source_id' => $this->reminder->source_id,
+            'reminder_stage' => $stage,
+            'url' => \App\Services\ReminderCopyService::linkFor($this->reminder),
         ];
     }
 }

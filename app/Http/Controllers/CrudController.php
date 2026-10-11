@@ -514,9 +514,9 @@ abstract class CrudController extends Controller
      * than help. Silently does nothing if this module's date field has no
      * value to remind about (e.g. an optional date left blank).
      *
-     * Creates three staggered nudges (the day before, a couple of hours
-     * before, and at the date/time itself) so a meeting — or any other
-     * item with a "set reminder" — cannot slip through unnoticed.
+     * Creates three pre-due nudges and three overdue follow-ups, spaced ten
+     * minutes apart. The scheduler checks the linked item's current status
+     * before every delivery and stops the set once the item is done.
      */
     protected function createLinkedReminder(Request $request, $item): void
     {
@@ -531,7 +531,7 @@ abstract class CrudController extends Controller
         $dueAt = \Illuminate\Support\Carbon::parse($dateValue);
         $nudges = app(\App\Services\ReminderCadenceService::class)->nudgeTimes($dueAt);
 
-        foreach ($nudges as $nudgeAt) {
+        foreach ($nudges as $index => $nudgeAt) {
             $request->user()->reminders()->create([
                 'title' => "{$this->title}: {$label}",
                 'message' => "Reminder for your {$this->title} \"{$label}\".",
@@ -542,6 +542,7 @@ abstract class CrudController extends Controller
                 'alarm_enabled' => true,
                 'source_type' => $item::class,
                 'source_id' => $item->id,
+                'source_signature' => \App\Services\ReminderCadenceService::signature($item->id, $index),
             ]);
         }
     }

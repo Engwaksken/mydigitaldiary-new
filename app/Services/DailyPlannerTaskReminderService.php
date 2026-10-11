@@ -17,11 +17,10 @@ class DailyPlannerTaskReminderService
     /**
      * Create or refresh the reminder set for a planner task.
      *
-     * A task with a time is reminded at least three times (see
-     * ReminderCadenceService): the day before, a couple of hours before, and
-     * at the start time. Each nudge is its own "once" reminder so the existing
-     * scheduler simply fires whatever is due. The primary (closest-to-start)
-     * reminder is returned for callers that still expect a single row.
+     * Each nudge is its own "once" reminder. The cadence includes three
+     * pre-due notices and three overdue follow-ups, suppressed once the task
+     * is marked complete. Return the 10-minute pre-due reminder for callers
+     * that still expect a single row.
      */
     public function sync(DailyPlanItem $item, User $user, ?Carbon $occurrenceDate = null): ?Reminder
     {
@@ -94,10 +93,9 @@ class DailyPlannerTaskReminderService
 
             $reminder = Reminder::query()->updateOrCreate($lookup, $values);
 
-            // The primary reminder is the closest-to-due nudge (the last one
-            // in OFFSETS order), keeping reminder_id pointing at the reminder
-            // that fires at the task's configured reminder time.
-            $primary = $reminder;
+            if ((int) $index === 2 || ($primary === null && (int) $index > 2)) {
+                $primary = $reminder;
+            }
         }
 
         $this->cancelStaleNudges($item, $user, $activeSignatures, $columns);

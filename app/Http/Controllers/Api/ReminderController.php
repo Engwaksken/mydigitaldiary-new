@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Reminder;
 use App\Services\ReminderItemLookupService;
 use App\Services\ReminderConsolidationService;
+use App\Services\ReminderCopyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -170,7 +171,7 @@ class ReminderController extends ApiCrudController
      * mobile app is expected to poll this periodically while active
      * and show its own popup/sound, mirroring the web behavior.
      */
-    public function dueNow(Request $request): JsonResponse
+    public function dueNow(Request $request, ReminderCopyService $copy): JsonResponse
     {
         if ($request->user()->alarms_muted) {
             return response()->json([]);
@@ -183,9 +184,22 @@ class ReminderController extends ApiCrudController
             ->where('next_run_at', '<=', now()->addMinutes(30))
             ->orderBy('next_run_at')
             ->limit(5)
-            ->get(['id', 'title', 'message', 'next_run_at']);
+            ->get(['id', 'title', 'message', 'next_run_at', 'source_type', 'source_id', 'source_signature', 'module']);
 
-        return response()->json($reminders);
+        return response()->json($reminders->map(function (Reminder $reminder) use ($copy, $request): array {
+            $message = $copy->forDelivery($reminder, $request->user());
+
+            return [
+                'id' => $reminder->id,
+                'title' => $message['title'],
+                'message' => $message['message'],
+                'next_run_at' => $reminder->next_run_at?->toIso8601String(),
+                'source_type' => $reminder->source_type,
+                'source_id' => $reminder->source_id,
+                'reminder_stage' => $message['stage'],
+                'link' => ReminderCopyService::linkFor($reminder),
+            ];
+        }));
     }
 
     /**

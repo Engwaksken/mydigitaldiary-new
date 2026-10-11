@@ -16,8 +16,8 @@ class ProjectTaskReminderService
 
     /**
      * Create or refresh the reminder set for a project task. Like the daily
-     * planner, a task is reminded at least three times (the day before, a
-     * couple of hours before, and at the due time) so it cannot be forgotten.
+     * planner, a task gets three pre-due notices and three overdue follow-ups.
+     * The follow-ups stop once the task is marked done.
      */
     public function sync(ProjectTask $task, User $user): ?Reminder
     {
@@ -75,8 +75,9 @@ class ProjectTaskReminderService
 
             $reminder = Reminder::query()->updateOrCreate($lookup, $values);
 
-            // Primary points at the closest-to-due nudge (the last in OFFSETS order).
-            $primary = $reminder;
+            if ((int) $index === 2 || ($primary === null && (int) $index > 2)) {
+                $primary = $reminder;
+            }
         }
 
         $this->cancelStaleNudges($task, $user, $activeSignatures, $columns);

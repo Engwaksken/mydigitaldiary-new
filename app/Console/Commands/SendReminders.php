@@ -6,6 +6,7 @@ use App\Models\Reminder;
 use App\Notifications\ReminderFallbackMailNotification;
 use App\Notifications\ReminderNotification;
 use App\Services\FcmService;
+use App\Services\ReminderCopyService;
 use Illuminate\Console\Command;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Carbon;
@@ -20,7 +21,7 @@ class SendReminders extends Command
 
     protected $description = 'Send all due reminders and reschedule recurring ones';
 
-    public function handle(FcmService $fcm): int
+    public function handle(FcmService $fcm, ReminderCopyService $reminderCopy): int
     {
         $now = Carbon::now();
 
@@ -41,8 +42,12 @@ class SendReminders extends Command
             $user = $reminder->user;
 
             if ($this->sourceIsCompleted($reminder)) {
-                $reminder->is_active = false;
-                $reminder->save();
+                Reminder::query()
+                    ->where('user_id', $reminder->user_id)
+                    ->where('source_type', $reminder->source_type)
+                    ->where('source_id', $reminder->source_id)
+                    ->where('is_active', true)
+                    ->update(['is_active' => false]);
                 continue;
             }
 
@@ -60,6 +65,11 @@ class SendReminders extends Command
                 continue;
             }
 
+            $copy = $reminderCopy->forDelivery($reminder, $user);
+            $deliveryReminder = clone $reminder;
+            $deliveryReminder->title = $copy['title'];
+            $deliveryReminder->message = $copy['message'];
+
             $occurrence = $reminder->next_run_at->copy();
             $occurrenceSuffix = $occurrence->format('YmdHi');
             $pushKey = "reminder-push-sent:{$reminder->id}:{$occurrenceSuffix}";
@@ -76,7 +86,7 @@ class SendReminders extends Command
             if (! Cache::has($databaseKey)) {
                 try {
                     $before = now()->subSeconds(2);
-                    NotificationFacade::sendNow($user, new ReminderNotification($reminder, ['database']));
+                    NotificationFacade::sendNow($user, new ReminderNotification($deliveryReminder, ['database']));
 
                     $databaseNotificationId = $this->latestReminderNotificationId(
                         $user->notifications()
@@ -121,21 +131,25 @@ class SendReminders extends Command
                         'type' => 'reminder',
                         'scheduled_at' => $occurrence->toIso8601String(),
                         'target' => 'reminders',
+                        'reminder_stage' => $copy['stage'],
+                        'link' => ReminderCopyService::linkFor($reminder),
                     ];
+
+                    if ($reminder->source_type) $data['source_type'] = (string) $reminder->source_type;
+                    if ($reminder->source_id) $data['source_id'] = (string) $reminder->source_id;
 
                     if ($databaseNotificationId) {
                         $data['notification_id'] = $databaseNotificationId;
                     }
 
-                    if ($fcm->sendToUser(
+                    $fcm->sendToUser(
                         $user,
-                        $reminder->title,
-                        $reminder->message ?: 'This is your scheduled reminder.',
+                        $deliveryReminder->title,
+                        $deliveryReminder->message,
                         $data
-                    )) {
-                        Cache::put($pushKey, true, now()->addDays(2));
-                        $this->line("Push sent for reminder #{$reminder->id}.");
-                    }
+                    );
+                    Cache::put($pushKey, true, now()->addDays(2));
+                    $this->line("Push sent for reminder #{$reminder->id}.");
                 } catch (Throwable $e) {
                     Log::warning('FCM push attempt threw unexpectedly.', [
                         'reminder_id' => $reminder->id,
@@ -162,7 +176,7 @@ class SendReminders extends Command
             $brandedError = null;
 
             try {
-                NotificationFacade::sendNow($user, new ReminderNotification($reminder, ['mail']));
+                NotificationFacade::sendNow($user, new ReminderNotification($deliveryReminder, ['mail']));
             } catch (Throwable $e) {
                 $brandedError = $e;
                 Log::warning('Branded reminder email failed; trying simple fallback.', [
@@ -175,7 +189,7 @@ class SendReminders extends Command
 
             if ($brandedError) {
                 try {
-                    NotificationFacade::sendNow($user, new ReminderFallbackMailNotification($reminder));
+                    NotificationFacade::sendNow($user, new ReminderFallbackMailNotification($deliveryReminder));
                     $this->warn("Branded email was rejected for reminder #{$reminder->id}, but the simple fallback email was sent successfully.");
                 } catch (Throwable $fallbackError) {
                     Log::error('Both reminder email attempts failed.', [
@@ -208,18 +222,38 @@ class SendReminders extends Command
             'daily_plan_item', \App\Models\DailyPlanItem::class => \App\Models\DailyPlanItem::query()->find($reminder->source_id),
             'project_task', \App\Models\ProjectTask::class => \App\Models\ProjectTask::query()->find($reminder->source_id),
             \App\Models\Meeting::class => \App\Models\Meeting::query()->find($reminder->source_id),
-            default => null,
+            default => $this->findLinkedModel($reminder),
         };
 
         if (! $source) return false;
 
-        return match (true) {
-            $source instanceof \App\Models\DailyPlanItem => (bool) $source->is_completed,
-            $source instanceof \App\Models\ProjectTask => $source->status === 'done',
-            $source instanceof \App\Models\Meeting => in_array($source->status, ['completed', 'cancelled'], true)
-                || in_array($source->meeting_status, ['completed', 'cancelled'], true),
-            default => false,
-        };
+        if ($source instanceof \App\Models\DailyPlanItem) return (bool) $source->is_completed;
+
+        $finishedStatuses = ['completed', 'complete', 'done', 'paid', 'cancelled', 'canceled', 'closed', 'settled', 'resolved'];
+        foreach ([$source->status, $source->meeting_status] as $rawStatus) {
+            if (in_array(strtolower(trim((string) $rawStatus)), $finishedStatuses, true)) {
+                return true;
+            }
+        }
+
+        foreach (['is_completed', 'is_paid', 'is_expensed', 'is_archived'] as $flag) {
+            if ($source->getAttribute($flag) === true || $source->getAttribute($flag) === 1 || $source->getAttribute($flag) === '1') {
+                return true;
+            }
+        }
+
+        return filled($source->getAttribute('paid_at'));
+    }
+
+    private function findLinkedModel(Reminder $reminder): ?\Illuminate\Database\Eloquent\Model
+    {
+        $class = $reminder->source_type;
+        if (! is_string($class) || ! class_exists($class)
+            || ! is_subclass_of($class, \Illuminate\Database\Eloquent\Model::class)) {
+            return null;
+        }
+
+        return $class::query()->find($reminder->source_id);
     }
 
     private function latestReminderNotificationId(iterable $notifications, int $reminderId): ?string

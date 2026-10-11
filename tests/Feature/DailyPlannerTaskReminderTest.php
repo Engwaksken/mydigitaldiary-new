@@ -103,7 +103,7 @@ class DailyPlannerTaskReminderTest extends TestCase
         $this->assertFalse($item->fresh()->reminder_enabled);
     }
 
-    public function test_a_future_task_gets_at_least_three_staggered_reminders(): void
+    public function test_a_future_task_gets_three_pre_due_and_three_overdue_reminders(): void
     {
         $user = $this->subscriber();
         $date = today()->addDays(3);
@@ -130,17 +130,17 @@ class DailyPlannerTaskReminderTest extends TestCase
             ->where('is_active', true)
             ->get();
 
-        $this->assertSame(3, $reminders->count(), 'a future task is reminded three times');
+        $this->assertSame(6, $reminders->count(), 'a future task gets three pre-due and three overdue reminders');
 
-        // The closest nudge is the configured reminder time (start - offset).
+        // The reminder set brackets the configured reminder time (start - offset).
         $this->assertTrue(
-            $reminders->contains(fn ($r) => $r->next_run_at->format('Y-m-d H:i:s') === $date->toDateString().' 08:45:00'),
-            'the due-time nudge fires at the configured reminder time'
+            $reminders->contains(fn ($r) => $r->next_run_at->format('Y-m-d H:i:s') === $date->toDateString().' 08:35:00'),
+            'the last pre-due nudge fires ten minutes before the configured reminder time'
         );
 
-        // reminder_id points at that closest nudge.
+        // reminder_id points at the ten-minute pre-due nudge.
         $this->assertSame(
-            $date->toDateString().' 08:45:00',
+            $date->toDateString().' 08:35:00',
             Reminder::find($item->fresh()->reminder_id)->next_run_at->format('Y-m-d H:i:s')
         );
     }

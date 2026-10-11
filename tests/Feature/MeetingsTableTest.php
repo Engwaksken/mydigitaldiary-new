@@ -127,10 +127,21 @@ class MeetingsTableTest extends TestCase
             'source_type' => Meeting::class,
             'source_id' => $meeting->id,
         ]);
+        $followUp = Reminder::create([
+            'user_id' => $user->id,
+            'title' => 'Meeting follow-up: Finished meeting',
+            'frequency' => 'once',
+            'next_run_at' => now()->addMinutes(10),
+            'channel' => 'database',
+            'is_active' => true,
+            'source_type' => Meeting::class,
+            'source_id' => $meeting->id,
+        ]);
 
         Artisan::call('reminders:send');
 
         $this->assertFalse($reminder->fresh()->is_active);
+        $this->assertFalse($followUp->fresh()->is_active, 'completing the source cancels its future follow-ups too');
         $this->assertDatabaseMissing('notifications', [
             'notifiable_id' => $user->id,
             'type' => \App\Notifications\ReminderNotification::class,
