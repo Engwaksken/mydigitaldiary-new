@@ -7,7 +7,7 @@
                     <i class="fa-solid fa-bell" aria-hidden="true"></i>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xs font-bold uppercase tracking-wide text-blue-700">{{ $nearestMeeting->start_at->isPast() ? 'Happening now' : 'Next meeting' }}</p>
+                    <p class="text-xs font-bold uppercase tracking-wide text-blue-700">{{ $nearestMeeting->start_at->lessThanOrEqualTo(now()) ? 'Happening now' : 'Next meeting' }}</p>
                     <h2 class="text-lg font-bold text-slate-800 truncate">{{ $nearestMeeting->title }}</h2>
                     <p class="text-sm text-slate-600">{{ $nearestMeeting->start_at->format('D, M j · g:i A') }}@if($nearestMeeting->end_at) – {{ $nearestMeeting->end_at->format('g:i A') }}@endif</p>
                 </div>

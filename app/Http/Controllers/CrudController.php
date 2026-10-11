@@ -540,6 +540,8 @@ abstract class CrudController extends Controller
                 'channel' => 'mail',
                 'is_active' => true,
                 'alarm_enabled' => true,
+                'source_type' => $item::class,
+                'source_id' => $item->id,
             ]);
         }
     }

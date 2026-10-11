@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Meeting;
+use App\Models\Reminder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class MeetingsTableTest extends TestCase
@@ -61,5 +63,73 @@ class MeetingsTableTest extends TestCase
             ->assertOk()
             ->assertSee(route('meetings.notes', $meeting->id) . '#record-meeting', false)
             ->assertSee('title="Record meeting"', false);
+    }
+
+    public function test_meetings_page_exposes_day_week_and_month_filters(): void
+    {
+        $html = $this->actingAs($this->subscriber())
+            ->get(route('meetings.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<option value="daily"', $html);
+        $this->assertStringContainsString('<option value="weekly"', $html);
+        $this->assertStringContainsString('<option value="monthly"', $html);
+        $this->assertStringContainsString('Today', $html);
+        $this->assertStringContainsString('This week', $html);
+        $this->assertStringContainsString('This month', $html);
+    }
+
+    public function test_happening_now_prefers_an_active_meeting_over_one_that_has_ended(): void
+    {
+        $user = $this->subscriber();
+        Meeting::create([
+            'user_id' => $user->id,
+            'title' => 'Already ended',
+            'start_at' => now()->subHours(2),
+            'end_at' => now()->subHour(),
+            'status' => 'scheduled',
+        ]);
+        Meeting::create([
+            'user_id' => $user->id,
+            'title' => 'Currently active',
+            'start_at' => now()->subMinutes(20),
+            'end_at' => now()->addMinutes(20),
+            'status' => 'scheduled',
+        ]);
+
+        $html = $this->actingAs($user)->get(route('meetings.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Happening now', $html);
+        $this->assertStringContainsString('Currently active', $html);
+    }
+
+    public function test_due_reminder_for_completed_meeting_is_deactivated_without_sending(): void
+    {
+        $user = $this->subscriber();
+        $meeting = Meeting::create([
+            'user_id' => $user->id,
+            'title' => 'Finished meeting',
+            'start_at' => now()->subHour(),
+            'status' => 'completed',
+        ]);
+        $reminder = Reminder::create([
+            'user_id' => $user->id,
+            'title' => 'Meeting: Finished meeting',
+            'frequency' => 'once',
+            'next_run_at' => now()->subMinute(),
+            'channel' => 'database',
+            'is_active' => true,
+            'source_type' => Meeting::class,
+            'source_id' => $meeting->id,
+        ]);
+
+        Artisan::call('reminders:send');
+
+        $this->assertFalse($reminder->fresh()->is_active);
+        $this->assertDatabaseMissing('notifications', [
+            'notifiable_id' => $user->id,
+            'type' => \App\Notifications\ReminderNotification::class,
+        ]);
     }
 }

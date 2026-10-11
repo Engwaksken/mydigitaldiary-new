@@ -40,6 +40,12 @@ class SendReminders extends Command
         foreach ($due as $reminder) {
             $user = $reminder->user;
 
+            if ($this->sourceIsCompleted($reminder)) {
+                $reminder->is_active = false;
+                $reminder->save();
+                continue;
+            }
+
             if (! $user) {
                 $this->warn("Reminder #{$reminder->id} has no user; skipping.");
                 continue;
@@ -192,6 +198,28 @@ class SendReminders extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function sourceIsCompleted(Reminder $reminder): bool
+    {
+        if (! $reminder->source_type || ! $reminder->source_id) return false;
+
+        $source = match ($reminder->source_type) {
+            'daily_plan_item', \App\Models\DailyPlanItem::class => \App\Models\DailyPlanItem::query()->find($reminder->source_id),
+            'project_task', \App\Models\ProjectTask::class => \App\Models\ProjectTask::query()->find($reminder->source_id),
+            \App\Models\Meeting::class => \App\Models\Meeting::query()->find($reminder->source_id),
+            default => null,
+        };
+
+        if (! $source) return false;
+
+        return match (true) {
+            $source instanceof \App\Models\DailyPlanItem => (bool) $source->is_completed,
+            $source instanceof \App\Models\ProjectTask => $source->status === 'done',
+            $source instanceof \App\Models\Meeting => in_array($source->status, ['completed', 'cancelled'], true)
+                || in_array($source->meeting_status, ['completed', 'cancelled'], true),
+            default => false,
+        };
     }
 
     private function latestReminderNotificationId(iterable $notifications, int $reminderId): ?string

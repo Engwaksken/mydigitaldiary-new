@@ -385,10 +385,12 @@ class MeetingController extends CrudController
             ->get()
             ->filter(function (Meeting $meeting) {
                 $now = now();
-                return ($meeting->start_at && $meeting->start_at->greaterThanOrEqualTo($now))
-                    || ($meeting->start_at && $meeting->end_at
-                        && $meeting->start_at->lessThanOrEqualTo($now)
-                        && $meeting->end_at->greaterThanOrEqualTo($now));
+                return $meeting->start_at && (
+                    $meeting->start_at->greaterThanOrEqualTo($now)
+                    || ($meeting->start_at->lessThanOrEqualTo($now)
+                        && $meeting->end_at
+                        && $meeting->end_at->greaterThanOrEqualTo($now))
+                );
             })
             ->sortBy(function (Meeting $meeting) {
                 $now = now();
