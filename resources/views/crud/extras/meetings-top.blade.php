@@ -25,6 +25,25 @@
         </div>
     </section>
 @endif
+<nav class="mb-3 flex flex-wrap items-center gap-2" aria-label="Filter meetings by date">
+    @foreach (['' => 'All meetings', 'daily' => 'Today', 'weekly' => 'This week', 'monthly' => 'This month'] as $periodValue => $periodLabel)
+        @php($periodSelected = (string) request('period', '') === $periodValue)
+        <a href="{{ route('meetings.index', array_merge(request()->except('period', 'from', 'to', 'page'), $periodValue !== '' ? ['period' => $periodValue] : [])) }}"
+           @if ($periodSelected) aria-current="page" @endif
+           class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors {{ $periodSelected ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700' }}">
+            @if ($periodValue === 'daily')
+                <i class="fa-solid fa-sun" aria-hidden="true"></i>
+            @elseif ($periodValue === 'weekly')
+                <i class="fa-solid fa-calendar-week" aria-hidden="true"></i>
+            @elseif ($periodValue === 'monthly')
+                <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+            @else
+                <i class="fa-solid fa-calendar" aria-hidden="true"></i>
+            @endif
+            {{ $periodLabel }}
+        </a>
+    @endforeach
+</nav>
 <div class="flex flex-wrap gap-2 mb-4">
     @foreach (['' => 'All', 'scheduled' => 'Upcoming', 'completed' => 'Completed', 'cancelled' => 'Cancelled', 'missed' => 'Missed'] as $value => $label)
         <a href="{{ route('meetings.index', array_merge(request()->except('status_filter', 'page'), $value ? ['status_filter' => $value] : [])) }}"

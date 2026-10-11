@@ -78,6 +78,10 @@ class MeetingsTableTest extends TestCase
         $this->assertStringContainsString('Today', $html);
         $this->assertStringContainsString('This week', $html);
         $this->assertStringContainsString('This month', $html);
+        $this->assertStringContainsString('aria-label="Filter meetings by date"', $html);
+        $this->assertStringContainsString(route('meetings.index', ['period' => 'daily']), $html);
+        $this->assertStringContainsString(route('meetings.index', ['period' => 'weekly']), $html);
+        $this->assertStringContainsString(route('meetings.index', ['period' => 'monthly']), $html);
     }
 
     public function test_happening_now_prefers_an_active_meeting_over_one_that_has_ended(): void
