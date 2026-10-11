@@ -27,7 +27,9 @@
 @endif
 <nav class="mb-3 flex flex-wrap items-center gap-2" aria-label="Filter meetings by date">
     @foreach (['' => 'All meetings', 'daily' => 'Today', 'weekly' => 'This week', 'monthly' => 'This month'] as $periodValue => $periodLabel)
-        @php($periodSelected = (string) request('period', '') === $periodValue)
+        @php
+            $periodSelected = (string) request('period', '') === $periodValue;
+        @endphp
         <a href="{{ route('meetings.index', array_merge(request()->except('period', 'from', 'to', 'page'), $periodValue !== '' ? ['period' => $periodValue] : [])) }}"
            @if ($periodSelected) aria-current="page" @endif
            class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors {{ $periodSelected ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700' }}">
