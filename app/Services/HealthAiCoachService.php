@@ -8,6 +8,7 @@ use App\Models\HealthProfile;
 use App\Models\SleepLog;
 use App\Models\User;
 use App\Services\Ai\ActiveAiClient;
+use App\Services\Ai\AiTextFormatter;
 use Illuminate\Support\Facades\Log;
 
 class HealthAiCoachService
@@ -34,7 +35,7 @@ class HealthAiCoachService
             && is_array($profile->sleep_advice)
             && $profile->sleep_advice_generated_at?->isToday()
         ) {
-            return $profile->sleep_advice;
+            return AiTextFormatter::normalize($profile->sleep_advice);
         }
 
         $recent = SleepLog::where('user_id', $user->id)
@@ -84,7 +85,7 @@ class HealthAiCoachService
                 'message' => $e->getMessage(),
             ]);
 
-            return is_array($profile->sleep_advice) ? $profile->sleep_advice : null;
+            return is_array($profile->sleep_advice) ? AiTextFormatter::normalize($profile->sleep_advice) : null;
         }
     }
 
@@ -101,7 +102,7 @@ class HealthAiCoachService
             && is_array($profile->diet_advice)
             && $profile->diet_advice_generated_at?->isToday()
         ) {
-            return $profile->diet_advice;
+            return AiTextFormatter::normalize($profile->diet_advice);
         }
 
         $todayMeals = DietLog::where('user_id', $user->id)
@@ -174,7 +175,7 @@ class HealthAiCoachService
                 'message' => $e->getMessage(),
             ]);
 
-            return is_array($profile->diet_advice) ? $profile->diet_advice : null;
+            return is_array($profile->diet_advice) ? AiTextFormatter::normalize($profile->diet_advice) : null;
         }
     }
 

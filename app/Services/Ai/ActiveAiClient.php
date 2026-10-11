@@ -83,9 +83,10 @@ class ActiveAiClient
     public function json(string $system, string $prompt, ?User $user = null, int $maxTokens = 700): array
     {
         $cfg = $this->configuration($user);
+        $system .= "\nUse a standard hyphen (-), never an en dash or em dash, in generated text.";
 
         try {
-            return $this->sendJson($cfg, $system, $prompt, $maxTokens);
+            return AiTextFormatter::normalize($this->sendJson($cfg, $system, $prompt, $maxTokens));
         } catch (RuntimeException $exception) {
             // An invalid personal key must not prevent use of a valid shared
             // OpenAI key. Other provider failures remain visible in logs.
@@ -93,7 +94,7 @@ class ActiveAiClient
                 $shared = $this->configuration();
 
                 if ($shared['key'] === 'openai' && $shared['credential_source'] === 'shared') {
-                    return $this->sendJson($shared, $system, $prompt, $maxTokens);
+                    return AiTextFormatter::normalize($this->sendJson($shared, $system, $prompt, $maxTokens));
                 }
             }
 

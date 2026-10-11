@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use App\Services\Ai\AiTextFormatter;
 
 class MeetingRecording extends Model
 {
@@ -29,6 +30,29 @@ class MeetingRecording extends Model
     public function recordedBy()
     {
         return $this->belongsTo(User::class, 'recorded_by_user_id');
+    }
+
+    protected function transcript(): Attribute
+    {
+        return Attribute::get(fn ($value) => AiTextFormatter::normalize((string) $value));
+    }
+
+    protected function transcriptSegments(): Attribute
+    {
+        return Attribute::get(function ($value) {
+            $segments = is_array($value) ? $value : json_decode((string) $value, true);
+
+            return AiTextFormatter::normalize(is_array($segments) ? $segments : []);
+        });
+    }
+
+    protected function summary(): Attribute
+    {
+        return Attribute::get(function ($value) {
+            $summary = is_array($value) ? $value : json_decode((string) $value, true);
+
+            return is_array($summary) ? AiTextFormatter::normalize($summary) : null;
+        });
     }
 
     public function audioUrl(): ?string

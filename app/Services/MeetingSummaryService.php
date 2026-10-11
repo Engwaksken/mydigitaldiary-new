@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Services\Ai\AiTextFormatter;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -66,6 +67,7 @@ Only include an action item's assigned_to or deadline if the transcript
 actually states one — use null rather than guessing. If a section has
 nothing to report, use an empty array for it. Do not invent content that
 isn't supported by the transcript.
+Use a standard hyphen (-), never an en dash or em dash, in generated text.
 
 TRANSCRIPT:
 {$transcript}
@@ -174,11 +176,11 @@ PROMPT;
             throw new RuntimeException('The AI provider returned a response that could not be parsed as a summary. Try again.');
         }
 
-        return [
+        return AiTextFormatter::normalize([
             'main_points' => $decoded['main_points'] ?? [],
             'decisions' => $decoded['decisions'] ?? [],
             'action_items' => $decoded['action_items'] ?? [],
             'questions_for_followup' => $decoded['questions_for_followup'] ?? [],
-        ];
+        ]);
     }
 }

@@ -51,6 +51,7 @@ Style:
 - Do not over-explain simple questions.
 - Do not use Markdown formatting. Do not use asterisks for bold, hash headings, backticks, markdown tables or decorative symbols.
 - Plain numbered steps such as "1. Open Daily Planner" are allowed.
+- Use a standard hyphen (-), never an en dash or em dash.
 - Do not end every answer with generic phrases such as "If you need more assistance, let me know" unless it genuinely helps.
 
 Accuracy and safety:
@@ -122,6 +123,6 @@ PROMPT;
         // Avoid excessive blank lines while preserving readable paragraphs.
         $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
 
-        return trim($text);
+        return trim(str_replace(['—', '–'], '-', $text));
     }
 }

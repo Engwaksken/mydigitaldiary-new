@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Services\Ai\AiTextFormatter;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -729,7 +730,7 @@ class TranscriptionService
                         ] ?? ''
                     ) !== ''
                 ) {
-                    return $result;
+                    return AiTextFormatter::normalize($result);
                 }
 
                 $errors[] =

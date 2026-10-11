@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AiPlan;
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Services\Ai\AiTextFormatter;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -76,11 +77,11 @@ class AiPlannerService
 
     private function call(string $provider, string $apiKey, string $prompt): string
     {
-        return match ($provider) {
+        return AiTextFormatter::normalize(match ($provider) {
             'anthropic' => $this->callAnthropic($apiKey, $prompt),
             'openai' => $this->callOpenAi($apiKey, $prompt),
             default => $this->callCustomProvider($provider, $apiKey, $prompt),
-        };
+        });
     }
 
     /**
@@ -155,6 +156,7 @@ own line, followed by a blank line), and write list items as plain numbered
 lines (e.g. "1. Finish the report"). This will be displayed as-is, with no
 Markdown renderer, so any Markdown symbols would show up literally as
 clutter rather than formatting.
+Use a standard hyphen (-), never an en dash or em dash, in your response.
 
 {$customInstruction}
 SNAPSHOT:

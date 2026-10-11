@@ -36,6 +36,6 @@ class AiPlan extends Model
         // (numbered lines like "1. " are left alone; those aren't Markdown-specific)
         $text = preg_replace('/^[\-\*]\s+/m', '', $text);
 
-        return trim($text);
+        return trim(str_replace(['—', '–'], '-', $text));
     }
 }

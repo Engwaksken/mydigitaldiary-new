@@ -38,6 +38,7 @@ Return ONE valid JSON object only. Do not use Markdown or HTML.
 Never invent personal facts, names, contact details, private history, religious identity, dates, or commitments that the user did not provide.
 Generated text is only a draft for the user to review and edit before saving.
 Keep wording human, concise, useful and non-judgmental.
+Use a standard hyphen (-), never an en dash or em dash.
 SYS;
 
         $prompt = "MODULE: {$module}\n"
