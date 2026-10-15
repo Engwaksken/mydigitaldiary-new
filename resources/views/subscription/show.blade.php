@@ -103,6 +103,24 @@
                     @endif
                 </p>
 
+                <div class="mb-5 rounded-xl border border-teal-100 bg-teal-50/70 p-4">
+                    @php
+                        $usedMinutes = $monthlyTranscriptionUsedSeconds / 60;
+                        $remainingMinutes = max(0, $monthlyTranscriptionLimit - (int) ceil($usedMinutes));
+                        $transcriptionProgress = $monthlyTranscriptionLimit > 0
+                            ? min(100, (int) round(($usedMinutes / $monthlyTranscriptionLimit) * 100))
+                            : 0;
+                    @endphp
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-sm font-semibold text-teal-900">Meeting transcription allowance</p>
+                        <p class="text-sm text-teal-800"><strong>{{ $remainingMinutes }}</strong> of {{ number_format($monthlyTranscriptionLimit) }} min remaining this billing period</p>
+                    </div>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-white" role="progressbar" aria-label="Monthly transcription minutes used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $transcriptionProgress }}">
+                        <div class="h-full rounded-full bg-teal-600" style="width: {{ $transcriptionProgress }}%"></div>
+                    </div>
+                    <p class="mt-2 text-xs text-teal-800">{{ number_format($usedMinutes, 1) }} minutes used. Your allowance resets at the start of each subscription month; extra quota is used after this plan allowance.</p>
+                </div>
+
                 @if ($user->subscription_expires_at && $user->subscriptionPlan && ! $user->subscriptionPlan->isLifetime())
                     <div class="mt-5 mb-5 rounded-2xl border {{ $autoRenewEnabled ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-slate-50' }} overflow-hidden">
                         <div class="p-4 sm:p-5">

@@ -63,7 +63,8 @@ class TranscriptionService
     public function transcribe(
         User $user,
         string $audioPath,
-        string $language = 'auto'
+        string $language = 'auto',
+        int $durationSeconds = 1
     ): array {
         $hasActive = $user->hasActiveAccess();
         $extraMinutes = (int) ($user->extra_recording_quota_minutes ?? 0);
@@ -168,9 +169,14 @@ class TranscriptionService
         $temporary =
             $prepared['temporary'];
 
+        $usageService = app(MonthlyTranscriptionUsageService::class);
+        $usageReservation = null;
+
         try {
+            $usageReservation = $usageService->reserve($user, $durationSeconds);
+
             try {
-                return $this->sendToOpenAi(
+                $result = $this->sendToOpenAi(
                     $apiKey,
                     $preparedPath,
                     $preparedName,
@@ -193,16 +199,26 @@ class TranscriptionService
                         $e->getMessage()
                     )
                 ) {
-                    return $this->sendToOpenAi(
+                    $result = $this->sendToOpenAi(
                         $sharedKey,
                         $preparedPath,
                         $preparedName,
                         $language
                     );
+                } else {
+                    throw $e;
                 }
-
-                throw $e;
             }
+
+            $usageService->complete($usageReservation);
+
+            return $result;
+        } catch (Throwable $e) {
+            if ($usageReservation) {
+                $usageService->release($usageReservation);
+            }
+
+            throw $e;
         } finally {
             if (
                 $temporary

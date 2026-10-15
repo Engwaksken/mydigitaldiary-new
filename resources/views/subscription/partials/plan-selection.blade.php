@@ -40,29 +40,32 @@
             $plansByCategory = $plans->groupBy('category');
         @endphp
 
-        {{-- Individual its own full-width row, same as before. --}}
+        {{-- Individual plans are grouped by their Starter/Gold/Premium/Custom tier. --}}
         @if ($plansByCategory->get('individual', collect())->isNotEmpty())
-            <h3 class="text-sm font-semibold text-slate-600 uppercase tracking-wide mt-5 mb-3">Individual</h3>
-            @php
-                $individualPlans = $plansByCategory->get('individual');
-                $primaryPlans = $individualPlans->filter(fn($p) => in_array((int) $p->duration_months, [1, 12], true));
-                if ($primaryPlans->isEmpty()) $primaryPlans = $individualPlans->take(2);
-                $moreIndividualPlans = $individualPlans->reject(fn($p) => $primaryPlans->contains('id', $p->id));
-            @endphp
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-                @foreach ($primaryPlans as $plan)
-                    @include('subscription.partials.plan-card', ['plan' => $plan])
-                @endforeach
-            </div>
-            @if($moreIndividualPlans->isNotEmpty())
-                <details class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <summary class="cursor-pointer text-sm font-semibold text-slate-700">More billing options</summary>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
-                        @foreach ($moreIndividualPlans as $plan)
+            @php $individualPlans = $plansByCategory->get('individual'); @endphp
+            @foreach (['starter' => 'Starter', 'gold' => 'Gold', 'premium' => 'Premium', 'custom' => 'Custom'] as $tierKey => $tierLabel)
+                @php $tierPlans = $individualPlans->where('individual_tier', $tierKey); @endphp
+                @if ($tierPlans->isNotEmpty())
+                    <section class="mt-5" aria-label="{{ $tierLabel }} individual plans">
+                        <h3 class="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">{{ $tierLabel }}</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                            @foreach ($tierPlans as $plan)
+                                @include('subscription.partials.plan-card', ['plan' => $plan])
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+            @endforeach
+            @php $untieredPlans = $individualPlans->whereNull('individual_tier'); @endphp
+            @if ($untieredPlans->isNotEmpty())
+                <section class="mt-5">
+                    <h3 class="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">Starter</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                        @foreach ($untieredPlans as $plan)
                             @include('subscription.partials.plan-card', ['plan' => $plan])
                         @endforeach
                     </div>
-                </details>
+                </section>
             @endif
         @endif
 

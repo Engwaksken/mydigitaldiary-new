@@ -493,7 +493,8 @@ class MeetingRecordingController extends Controller
                 )->transcribe(
                     $request->user(),
                     $recording->audio_path,
-                    $language
+                    $language,
+                    (int) $recording->duration_seconds
                 );
 
             $recording->update([
@@ -534,8 +535,9 @@ class MeetingRecordingController extends Controller
                     'top up'
                 )
             ) {
-                $errorMessage =
-                    'The recording is too large. Please top up your recording quota to complete full transcription.';
+                $errorMessage = str_contains(strtolower((string) $e->getMessage()), 'monthly transcription')
+                    ? 'Your monthly transcription allowance is used. Top up your recording quota or try again after it resets.'
+                    : 'The recording is too large. Please top up your recording quota to complete full transcription.';
             }
 
             $recording->update([
@@ -721,7 +723,8 @@ class MeetingRecordingController extends Controller
                     )->transcribe(
                         $request->user(),
                         $recording->audio_path,
-                        $language
+                        $language,
+                        (int) $recording->duration_seconds
                     );
 
                 $recording->update([
@@ -785,14 +788,15 @@ class MeetingRecordingController extends Controller
                 $recording->transcription_status
                 === 'processing'
             ) {
+                $message = str_contains(strtolower((string) $e->getMessage()), 'monthly transcription')
+                    ? 'Your monthly transcription allowance is used. Top up your recording quota or try again after it resets.'
+                    : self::TRANSCRIPTION_FAILURE_MESSAGE;
                 $recording->update([
                     'transcription_status' =>
                         'failed',
 
-                    'transcription_error' =>
-                        self::TRANSCRIPTION_FAILURE_MESSAGE,
+                    'transcription_error' => $message,
                 ]);
-                $message = self::TRANSCRIPTION_FAILURE_MESSAGE;
             } else {
                 $recording->update([
                     'summary_status' =>
@@ -1543,7 +1547,8 @@ class MeetingRecordingController extends Controller
             $result = app(TranscriptionService::class)->transcribe(
                 $request->user(),
                 $segment->audio_path,
-                $language
+                $language,
+                (int) $segment->duration_seconds
             );
 
             $segment->update([
@@ -1574,7 +1579,9 @@ class MeetingRecordingController extends Controller
                     'top up'
                 )
             ) {
-                $errorMessage = 'The recording is too large. Please top up your recording quota to complete full transcription.';
+                $errorMessage = str_contains(strtolower((string) $e->getMessage()), 'monthly transcription')
+                    ? 'Your monthly transcription allowance is used. Top up your recording quota or try again after it resets.'
+                    : 'The recording is too large. Please top up your recording quota to complete full transcription.';
             }
 
             $segment->update([

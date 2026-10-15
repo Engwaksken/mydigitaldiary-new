@@ -16,6 +16,7 @@
             ? (is_null($plan->duration_months) ? 'lifetime' : (! is_null($plan->flat_price) ? 'flat' : 'discount'))
             : 'discount');
         $category = old('category', $plan->category ?? 'individual');
+        $individualTier = old('individual_tier', $plan->individual_tier ?? 'starter');
     @endphp
 
     <form method="POST"
@@ -29,8 +30,10 @@
 
         @php
             // Open the tab holding a validation error, otherwise Plan.
-            $planTab = $errors->hasAny(['pricing_type', 'duration_months', 'discount_percent', 'duration_months_flat', 'flat_price', 'included_seats', 'additional_user_price', 'included_extra_recording_minutes']) ? 1
-                : ($errors->hasAny(['color', 'badge']) ? 2 : ($errors->has('features') ? 3 : 0));
+            $planTab = $errors->hasAny(['category', 'individual_tier']) ? 0
+                : ($errors->hasAny(['pricing_type', 'duration_months', 'discount_percent', 'duration_months_flat', 'flat_price', 'included_seats', 'additional_user_price', 'included_extra_recording_minutes']) ? 1
+                    : ($errors->hasAny(['color', 'badge']) ? 2
+                        : ($errors->hasAny(['features', 'monthly_transcription_minutes', 'transcription_capacity_mb']) ? 3 : 0)));
         @endphp
 
         <div class="pm-form-tabs" role="tablist" aria-label="Plan sections" data-pm-form-tabs>
@@ -78,6 +81,16 @@
                     <option value="organization" @selected($category === 'organization')>Enterprise</option>
                 </select>
             </div>
+            <div id="individual-tier-field" style="{{ $category === 'individual' ? '' : 'display:none;' }}">
+                <label for="individual_tier" class="block text-sm font-medium text-slate-700 mb-1">Individual plan tier</label>
+                <select id="individual_tier" name="individual_tier" class="pm-input">
+                    @foreach (['starter' => 'Starter', 'gold' => 'Gold', 'premium' => 'Premium', 'custom' => 'Custom'] as $tierKey => $tierName)
+                        <option value="{{ $tierKey }}" @selected($individualTier === $tierKey)>{{ $tierName }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-slate-500">Individual plans are grouped by tier on the subscription page. Custom tiers can use a negotiated flat price.</p>
+                @error('individual_tier') <p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+            </div>
         </div>
 
         <div class="pm-form-panel" role="tabpanel" id="plan-panel-1" aria-labelledby="plan-tab-1" data-pm-form-panel="1" @if ($planTab !== 1) hidden @endif>
@@ -116,14 +129,15 @@
                 <input type="number" id="duration_months_flat" name="duration_months_flat" min="1" max="120" value="{{ old('duration_months_flat', $plan->exists && ! is_null($plan->flat_price) && ! is_null($plan->duration_months) ? $plan->duration_months : 1) }}" placeholder="1 = monthly, 12 = annual" class="pm-input">
             </div>
 
-            <div id="fields-flat-price" class="space-y-4 border-t pt-4" style="display: none;">
+                <div id="fields-flat-price" class="space-y-4 border-t pt-4" style="display: none;">
                 <label for="flat_price" class="block text-sm font-medium text-slate-700 mb-1">
                     Flat Price <span class="text-slate-400 font-normal">({{ $settings->default_currency_code ?? 'UGX' }})</span>
                 </label>
-                <input type="number" id="flat_price" name="flat_price" min="0" step="0.01"
+                    <input type="number" id="flat_price" name="flat_price" min="0" step="0.01"
                        value="{{ old('flat_price', $plan->flat_price) }}"
                        placeholder="Fixed total, not based on the monthly price"
-                       class="pm-input">
+                        class="pm-input">
+                    <p class="mt-1 text-xs text-slate-500">Use Flat price for a super-admin-set price instead of calculating it from the base monthly price.</p>
                 @error('flat_price')
                     <p role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p>
                 @enderror
@@ -143,7 +157,7 @@
                     </div>
                 </div>
                 <div>
-                    <label for="included_extra_recording_minutes" class="block text-sm font-medium text-slate-700 mb-1">Included Recording Minutes</label>
+                    <label for="included_extra_recording_minutes" class="block text-sm font-medium text-slate-700 mb-1">Bonus extra-quota minutes per activation</label>
                     <input type="number" id="included_extra_recording_minutes" name="included_extra_recording_minutes" min="0" value="{{ old('included_extra_recording_minutes', $plan->included_extra_recording_minutes ?? 0) }}" class="pm-input">
                     @error('included_extra_recording_minutes')
                         <p role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p>
@@ -211,6 +225,12 @@
 
         <div class="pm-form-panel" role="tabpanel" id="plan-panel-3" aria-labelledby="plan-tab-3" data-pm-form-panel="3" @if ($planTab !== 3) hidden @endif>
             <div>
+                <label for="monthly_transcription_minutes" class="block text-sm font-medium text-slate-700 mb-1">Included transcription minutes per month</label>
+                <input type="number" id="monthly_transcription_minutes" name="monthly_transcription_minutes" min="0" max="1000000" required value="{{ old('monthly_transcription_minutes', $plan->monthly_transcription_minutes ?? 60) }}" class="pm-input">
+                <p class="text-xs text-slate-500 mt-1">Allowance refreshes monthly. Unused minutes do not roll over. Failed transcriptions do not consume minutes.</p>
+                @error('monthly_transcription_minutes') <p role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div>
                 <label for="transcription_capacity_mb" class="block text-sm font-medium text-slate-700 mb-1">Maximum transcription recording size (MB)</label>
                 <input type="number" id="transcription_capacity_mb" name="transcription_capacity_mb" min="1" max="102400" required value="{{ old('transcription_capacity_mb', $plan->transcription_capacity_mb ?? 30) }}" class="pm-input">
                 <p class="text-xs text-slate-500 mt-1">Per-recording limit for users on this plan; an admin per-user override takes precedence.</p>
@@ -276,6 +296,7 @@
 
         function pmToggleSeatFields(category) {
             document.getElementById('fields-seats').style.display = category === 'individual' ? 'none' : 'block';
+            document.getElementById('individual-tier-field').style.display = category === 'individual' ? 'block' : 'none';
         }
 
         document.addEventListener('DOMContentLoaded', function () {

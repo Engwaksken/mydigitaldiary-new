@@ -18,9 +18,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SubscriptionPlan extends Model
 {
     protected $fillable = [
-        'key', 'name', 'category', 'duration_months', 'discount_percent', 'flat_price',
+        'key', 'name', 'category', 'individual_tier', 'duration_months', 'discount_percent', 'flat_price',
         'included_seats', 'additional_user_price', 'included_extra_recording_minutes', 'is_enabled', 'sort_order', 'features',
-        'color', 'badge', 'is_recommended', 'is_best_value', 'transcription_capacity_mb',
+        'color', 'badge', 'is_recommended', 'is_best_value', 'transcription_capacity_mb', 'monthly_transcription_minutes',
     ];
 
     protected $casts = [
@@ -33,11 +33,23 @@ class SubscriptionPlan extends Model
         'is_recommended' => 'boolean',
         'is_best_value' => 'boolean',
         'transcription_capacity_mb' => 'integer',
+        'monthly_transcription_minutes' => 'integer',
     ];
 
     public function isIndividual(): bool
     {
         return $this->category === 'individual';
+    }
+
+    public function individualTierLabel(): ?string
+    {
+        return match ($this->individual_tier) {
+            'starter' => 'Starter',
+            'gold' => 'Gold',
+            'premium' => 'Premium',
+            'custom' => 'Custom',
+            default => null,
+        };
     }
 
     public function includedExtraRecordingMinutes(): int

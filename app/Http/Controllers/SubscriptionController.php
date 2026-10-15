@@ -10,6 +10,7 @@ use App\Models\PaymentGateway;
 use App\Models\SiteSetting;
 use App\Models\SubscriptionPlan;
 use App\Services\MonthlyReviewService;
+use App\Services\MonthlyTranscriptionUsageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -24,7 +25,7 @@ use Illuminate\View\View;
 
 class SubscriptionController extends Controller
 {
-    public function show(Request $request, MonthlyReviewService $monthlyReviewService): View
+    public function show(Request $request, MonthlyReviewService $monthlyReviewService, MonthlyTranscriptionUsageService $transcriptionUsageService): View
     {
         $user = $request->user();
         $settings = Schema::hasTable((new SiteSetting())->getTable())
@@ -324,6 +325,11 @@ class SubscriptionController extends Controller
             ? ($user->getAttribute('auto_renew_network') ?: 'mtn')
             : 'mtn';
 
+        $monthlyTranscriptionLimit = (int) ($user->subscriptionPlan?->monthly_transcription_minutes ?? 60);
+        $monthlyTranscriptionUsedSeconds = Schema::hasTable('transcription_minute_usages')
+            ? $transcriptionUsageService->usedPlanSeconds($user)
+            : 0;
+
         return view('subscription.show', [
             'user' => $user,
             'settings' => $settings,
@@ -344,6 +350,8 @@ class SubscriptionController extends Controller
             'autoRenewEnabled' => $autoRenewEnabled,
             'autoRenewPhone' => $autoRenewPhone,
             'autoRenewNetwork' => $autoRenewNetwork,
+            'monthlyTranscriptionLimit' => $monthlyTranscriptionLimit,
+            'monthlyTranscriptionUsedSeconds' => $monthlyTranscriptionUsedSeconds,
         ]);
     }
 
