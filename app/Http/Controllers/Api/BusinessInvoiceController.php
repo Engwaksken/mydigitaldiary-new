@@ -65,12 +65,12 @@ class BusinessInvoiceController extends Controller
     public function send(Request $request, int $id, BusinessInvoiceDocumentService $documents): JsonResponse
     {
         $invoice = $this->owned($request, $id);
-        $pdf = $documents->pdf($invoice);
+        $pdf = $documents->output($invoice);
         Mail::send([], [], function ($message) use ($invoice, $pdf): void {
             $message->to($invoice->customer_email, $invoice->customer_name)
                 ->subject('Invoice '.$invoice->invoice_number)
                 ->text('Please find attached invoice '.$invoice->invoice_number.' from '.$invoice->business_name.'.')
-                ->attachData($pdf->output(), 'invoice-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
+                ->attachData($pdf, 'invoice-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
         });
         $invoice->forceFill(['sent_at' => now()])->save();
         return response()->json(['message' => 'Invoice sent.', 'data' => $invoice->fresh()]);
@@ -79,7 +79,11 @@ class BusinessInvoiceController extends Controller
     public function download(Request $request, int $id, BusinessInvoiceDocumentService $documents)
     {
         $invoice = $this->owned($request, $id);
-        return $documents->pdf($invoice)->download('invoice-'.$invoice->invoice_number.'.pdf');
+        return response()->streamDownload(
+            static fn () => print $documents->output($invoice),
+            'invoice-'.$invoice->invoice_number.'.pdf',
+            ['Content-Type' => 'application/pdf']
+        );
     }
 
     public function markPaid(Request $request, int $id, BusinessInvoicePaymentService $payments): JsonResponse
@@ -95,13 +99,13 @@ class BusinessInvoiceController extends Controller
     {
         $invoice = $this->owned($request, $id);
         abort_unless($invoice->status === 'paid', 422, 'Mark the invoice paid before sending a receipt.');
-        $pdf = $documents->pdf($invoice, 'PAYMENT RECEIPT');
+        $pdf = $documents->output($invoice, 'PAYMENT RECEIPT');
 
         Mail::send([], [], function ($message) use ($invoice, $pdf): void {
             $message->to($invoice->customer_email, $invoice->customer_name)
                 ->subject('Receipt for invoice '.$invoice->invoice_number)
                 ->text('Thank you for your payment. Please find the receipt for invoice '.$invoice->invoice_number.' attached.')
-                ->attachData($pdf->output(), 'receipt-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
+                ->attachData($pdf, 'receipt-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
         });
 
         return response()->json(['message' => 'Payment receipt sent.', 'data' => $invoice]);

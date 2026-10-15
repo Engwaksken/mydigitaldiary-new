@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\BusinessInvoice;
 use Barryvdh\DomPDF\PDF;
 use Barryvdh\DomPDF\Facade\Pdf as DomPdfFacade;
+use setasign\Fpdi\Fpdi;
+use setasign\Fpdi\PdfParser\StreamReader;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -14,7 +16,8 @@ class BusinessInvoiceDocumentService
     {
         $invoice->loadMissing('template');
 
-        if ($invoice->template && Storage::disk('local')->exists($invoice->template->storage_path)) {
+        if ($invoice->template && ! $this->isPdfTemplate($invoice->template->storage_path)
+            && Storage::disk('local')->exists($invoice->template->storage_path)) {
             $html = Storage::disk('local')->get($invoice->template->storage_path);
 
             return DomPdfFacade::loadHTML($this->renderTemplate($html, $invoice, $title))
@@ -31,6 +34,69 @@ class BusinessInvoiceDocumentService
             'invoice' => $invoice,
             'documentTitle' => $title,
         ])->setPaper('a4');
+    }
+
+    /** Return the final PDF bytes, prepending uploaded PDF stationery pages. */
+    public function output(BusinessInvoice $invoice, string $title = 'INVOICE'): string
+    {
+        $basePdf = $this->pdf($invoice, $title)->output();
+        $templatePath = $invoice->template?->storage_path;
+
+        if (! $templatePath || ! $this->isPdfTemplate($templatePath)
+            || ! Storage::disk('local')->exists($templatePath)) {
+            return $basePdf;
+        }
+
+        $merged = new Fpdi;
+        $this->appendPdfFile($merged, Storage::disk('local')->path($templatePath));
+        $this->appendPdfStream($merged, $basePdf);
+
+        return $merged->Output('S');
+    }
+
+    public function validatePdfTemplate(string $contents): ?string
+    {
+        if (! str_starts_with($contents, '%PDF-')) {
+            return 'The uploaded file is not a valid PDF.';
+        }
+
+        try {
+            $reader = new Fpdi;
+            if ($reader->setSourceFile(StreamReader::createByString($contents)) < 1) {
+                return 'The PDF template must contain at least one page.';
+            }
+        } catch (\Throwable) {
+            return 'This PDF could not be read. Upload an unencrypted PDF file.';
+        }
+
+        return null;
+    }
+
+    private function isPdfTemplate(string $path): bool
+    {
+        return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'pdf';
+    }
+
+    private function appendPdfFile(Fpdi $target, string $path): void
+    {
+        $pageCount = $target->setSourceFile($path);
+        for ($page = 1; $page <= $pageCount; $page++) {
+            $templateId = $target->importPage($page);
+            $size = $target->getTemplateSize($templateId);
+            $target->AddPage($size['orientation'], [$size['width'], $size['height']]);
+            $target->useTemplate($templateId);
+        }
+    }
+
+    private function appendPdfStream(Fpdi $target, string $contents): void
+    {
+        $pageCount = $target->setSourceFile(StreamReader::createByString($contents));
+        for ($page = 1; $page <= $pageCount; $page++) {
+            $templateId = $target->importPage($page);
+            $size = $target->getTemplateSize($templateId);
+            $target->AddPage($size['orientation'], [$size['width'], $size['height']]);
+            $target->useTemplate($templateId);
+        }
     }
 
     public function validateTemplate(string $html): ?string

@@ -32,6 +32,44 @@ class BusinessInvoiceController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $data = $this->validatedInvoice($request);
+        $data['template_id'] = $data['template_id'] ?? BusinessInvoiceTemplate::query()
+            ->where('user_id', $request->user()->id)
+            ->where('is_default', true)
+            ->value('id');
+
+        $invoice = BusinessInvoice::query()->create([
+            ...$data,
+            'user_id' => $request->user()->id,
+            'invoice_number' => 'BI-'.now()->format('Y').'-'.strtoupper(Str::random(8)),
+            'status' => 'unpaid',
+        ]);
+
+        return redirect()->route('business-invoices.index')->with('success', 'Invoice '.$invoice->invoice_number.' created.');
+    }
+
+    public function update(Request $request, int $id): RedirectResponse
+    {
+        $invoice = $this->ownedInvoice($request, $id);
+        abort_unless($invoice->status !== 'paid', 422, 'Paid invoices cannot be edited.');
+
+        $data = $this->validatedInvoice($request);
+        $invoice->update($data);
+
+        return redirect()->route('business-invoices.index')->with('success', 'Invoice '.$invoice->invoice_number.' updated.');
+    }
+
+    public function destroy(Request $request, int $id): RedirectResponse
+    {
+        $invoice = $this->ownedInvoice($request, $id);
+        abort_unless($invoice->status !== 'paid' && ! $invoice->income()->exists(), 422, 'Paid invoices cannot be deleted because they are linked to Finance income.');
+        $invoice->delete();
+
+        return redirect()->route('business-invoices.index')->with('success', 'Invoice deleted.');
+    }
+
+    private function validatedInvoice(Request $request): array
+    {
         $data = $request->validate([
             'business_name' => ['required', 'string', 'max:255'],
             'business_address' => ['nullable', 'string', 'max:2000'],
@@ -53,11 +91,6 @@ class BusinessInvoiceController extends Controller
             }],
         ]);
 
-        $data['template_id'] = $data['template_id'] ?? BusinessInvoiceTemplate::query()
-            ->where('user_id', $request->user()->id)
-            ->where('is_default', true)
-            ->value('id');
-
         $lineItems = array_map(static function (array $line): array {
             $quantity = (float) $line['quantity'];
             $unitPrice = (float) $line['unit_price'];
@@ -70,29 +103,24 @@ class BusinessInvoiceController extends Controller
             ];
         }, $data['line_items']);
 
-        $invoice = BusinessInvoice::query()->create([
+        return [
             ...$data,
-            'user_id' => $request->user()->id,
-            'invoice_number' => 'BI-'.now()->format('Y').'-'.strtoupper(Str::random(8)),
             'line_items' => $lineItems,
             'currency' => strtoupper($data['currency']),
             'total' => round(array_sum(array_column($lineItems, 'amount')), 2),
-            'status' => 'unpaid',
-        ]);
-
-        return redirect()->route('business-invoices.index')->with('success', 'Invoice '.$invoice->invoice_number.' created.');
+        ];
     }
 
     public function send(Request $request, int $id, BusinessInvoiceDocumentService $documents): RedirectResponse
     {
         $invoice = $this->ownedInvoice($request, $id);
-        $pdf = $documents->pdf($invoice);
+        $pdf = $documents->output($invoice);
 
         Mail::send([], [], function ($message) use ($invoice, $pdf): void {
             $message->to($invoice->customer_email, $invoice->customer_name)
                 ->subject('Invoice '.$invoice->invoice_number)
                 ->text('Please find attached invoice '.$invoice->invoice_number.' from '.$invoice->business_name.'.')
-                ->attachData($pdf->output(), 'invoice-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
+                ->attachData($pdf, 'invoice-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
         });
 
         $invoice->forceFill(['sent_at' => now()])->save();
@@ -104,13 +132,13 @@ class BusinessInvoiceController extends Controller
     {
         $invoice = $this->ownedInvoice($request, $id);
         abort_unless($invoice->status === 'paid', 422, 'Mark the invoice paid before sending a receipt.');
-        $pdf = $documents->pdf($invoice, 'PAYMENT RECEIPT');
+        $pdf = $documents->output($invoice, 'PAYMENT RECEIPT');
 
         Mail::send([], [], function ($message) use ($invoice, $pdf): void {
             $message->to($invoice->customer_email, $invoice->customer_name)
                 ->subject('Receipt for invoice '.$invoice->invoice_number)
                 ->text('Thank you for your payment. Please find the receipt for invoice '.$invoice->invoice_number.' attached.')
-                ->attachData($pdf->output(), 'receipt-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
+                ->attachData($pdf, 'receipt-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
         });
 
         return back()->with('success', 'Payment receipt emailed to '.$invoice->customer_email.'.');
@@ -120,7 +148,11 @@ class BusinessInvoiceController extends Controller
     {
         $invoice = $this->ownedInvoice($request, $id);
 
-        return $documents->pdf($invoice)->download('invoice-'.$invoice->invoice_number.'.pdf');
+        return response()->streamDownload(
+            static fn () => print $documents->output($invoice),
+            'invoice-'.$invoice->invoice_number.'.pdf',
+            ['Content-Type' => 'application/pdf']
+        );
     }
 
     public function markPaid(Request $request, int $id, BusinessInvoicePaymentService $payments): RedirectResponse
@@ -137,17 +169,21 @@ class BusinessInvoiceController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'template_file' => ['required', 'file', 'max:500'],
+            'template_file' => ['required', 'file', 'mimes:html,htm,pdf', 'max:10240'],
             'is_default' => ['nullable', 'boolean'],
         ]);
         $file = $request->file('template_file');
-        abort_unless(in_array(strtolower($file->getClientOriginalExtension()), ['html', 'htm'], true), 422, 'Upload an .html or .htm invoice template.');
+        $extension = strtolower($file->getClientOriginalExtension());
+        abort_unless(in_array($extension, ['html', 'htm', 'pdf'], true), 422, 'Upload an HTML or PDF invoice template.');
         $content = $file->get();
-        if ($error = $documents->validateTemplate($content)) {
+        $error = $extension === 'pdf'
+            ? $documents->validatePdfTemplate($content)
+            : $documents->validateTemplate($content);
+        if ($error) {
             return back()->withErrors(['template_file' => $error])->withInput();
         }
 
-        $path = $file->storeAs('business-invoice-templates/'.$request->user()->id, Str::uuid().'.html', 'local');
+        $path = $file->storeAs('business-invoice-templates/'.$request->user()->id, Str::uuid().'.'.$extension, 'local');
 
         DB::transaction(function () use ($request, $data, $path): void {
             if ($request->boolean('is_default')) {

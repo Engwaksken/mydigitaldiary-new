@@ -10,6 +10,8 @@ use App\Services\BusinessInvoiceDocumentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use setasign\Fpdi\Fpdi;
+use setasign\Fpdi\PdfParser\StreamReader;
 use Tests\TestCase;
 
 class BusinessInvoiceWorkflowTest extends TestCase
@@ -42,7 +44,39 @@ class BusinessInvoiceWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee($invoice->invoice_number)
             ->assertSee('Business invoices')
-            ->assertSee('Finance → Income');
+            ->assertSee('Finance')
+            ->assertSee('invoice-modal')
+            ->assertSee('data-edit-invoice', false)
+            ->assertSee('fa-arrow-right', false);
+    }
+
+    public function test_user_can_edit_and_delete_an_unpaid_invoice(): void
+    {
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $invoice = $this->invoiceFor($user);
+
+        $this->actingAs($user)->put(route('business-invoices.update', $invoice->id), [
+            'business_name' => 'Studio North Ltd',
+            'customer_name' => 'Customer Two',
+            'customer_email' => 'two@example.test',
+            'line_items' => [
+                ['description' => 'Design', 'quantity' => 3, 'unit_price' => 200],
+            ],
+            'currency' => 'usd',
+            'issue_date' => today()->toDateString(),
+            'due_date' => today()->addDays(10)->toDateString(),
+        ])->assertRedirect(route('business-invoices.index'));
+
+        $this->assertDatabaseHas('business_invoices', [
+            'id' => $invoice->id,
+            'business_name' => 'Studio North Ltd',
+            'customer_name' => 'Customer Two',
+            'total' => 600,
+        ]);
+
+        $this->delete(route('business-invoices.destroy', $invoice->id))
+            ->assertRedirect(route('business-invoices.index'));
+        $this->assertDatabaseMissing('business_invoices', ['id' => $invoice->id]);
     }
 
     public function test_marking_invoice_paid_creates_one_linked_finance_income_and_receipt_can_be_emailed(): void
@@ -76,7 +110,7 @@ class BusinessInvoiceWorkflowTest extends TestCase
         $user = User::factory()->create(['subscription_status' => 'active']);
         $html = '<html><body><h1>{{business_name}}</h1><p>{{invoice_number}}</p>{{line_items_table}}<p>{{total}}</p></body></html>';
 
-        $this->actingAs($user)->post(route('business-invoices.templates.store'), [
+        $this->actingAs($user)->from(route('business-invoices.index'))->post(route('business-invoices.templates.store'), [
             'name' => 'My clean template',
             'template_file' => UploadedFile::fake()->createWithContent('invoice.html', $html),
             'is_default' => 1,
@@ -90,6 +124,39 @@ class BusinessInvoiceWorkflowTest extends TestCase
         $this->actingAs($user)->get(route('business-invoices.download', $invoice->id))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_user_can_upload_a_pdf_stationery_template_used_before_invoice_pages(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $templateBytes = \Barryvdh\DomPDF\Facade\Pdf::loadHTML('<h1>Company stationery</h1>')->output();
+
+        $this->actingAs($user)->from(route('business-invoices.index'))->post(route('business-invoices.templates.store'), [
+            'name' => 'PDF stationery',
+            'template_file' => UploadedFile::fake()->createWithContent('stationery.pdf', $templateBytes),
+            'is_default' => 1,
+        ])->assertRedirect(route('business-invoices.index'))->assertSessionHasNoErrors();
+
+        $template = BusinessInvoiceTemplate::query()->where('user_id', $user->id)->firstOrFail();
+        $this->assertStringEndsWith('.pdf', $template->storage_path);
+        Storage::disk('local')->assertExists($template->storage_path);
+
+        $invoice = $this->invoiceFor($user, ['template_id' => $template->id]);
+        $response = $this->actingAs($user)->get(route('business-invoices.download', $invoice->id));
+        $response->assertOk()->assertHeader('content-type', 'application/pdf');
+        $reader = new Fpdi;
+        $this->assertSame(2, $reader->setSourceFile(StreamReader::createByString($response->streamedContent())));
+    }
+
+    public function test_paid_invoice_cannot_be_edited_or_deleted(): void
+    {
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $invoice = $this->invoiceFor($user, ['status' => 'paid']);
+
+        $this->actingAs($user)->put(route('business-invoices.update', $invoice->id), [])->assertStatus(422);
+        $this->delete(route('business-invoices.destroy', $invoice->id))->assertStatus(422);
+        $this->assertDatabaseHas('business_invoices', ['id' => $invoice->id, 'status' => 'paid']);
     }
 
     public function test_user_can_download_the_starter_invoice_template(): void

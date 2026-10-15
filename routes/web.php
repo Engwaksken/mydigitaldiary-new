@@ -447,6 +447,8 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::get('business-invoices/templates/sample', [BusinessInvoiceController::class, 'sampleTemplate'])->name('business-invoices.templates.sample');
     Route::get('business-invoices', [BusinessInvoiceController::class, 'index'])->name('business-invoices.index');
     Route::post('business-invoices', [BusinessInvoiceController::class, 'store'])->name('business-invoices.store');
+    Route::put('business-invoices/{id}', [BusinessInvoiceController::class, 'update'])->whereNumber('id')->name('business-invoices.update');
+    Route::delete('business-invoices/{id}', [BusinessInvoiceController::class, 'destroy'])->whereNumber('id')->name('business-invoices.destroy');
     Route::post('business-invoices/templates', [BusinessInvoiceController::class, 'uploadTemplate'])->name('business-invoices.templates.store');
     Route::post('business-invoices/templates/{id}/default', [BusinessInvoiceController::class, 'setDefaultTemplate'])->whereNumber('id')->name('business-invoices.templates.default');
     Route::delete('business-invoices/templates/{id}', [BusinessInvoiceController::class, 'deleteTemplate'])->whereNumber('id')->name('business-invoices.templates.destroy');
