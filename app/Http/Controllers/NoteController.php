@@ -12,11 +12,12 @@ class NoteController extends CrudController {
         ['name'=>'title','label'=>'Title','type'=>'text','required'=>true],
         ['name'=>'category','label'=>'Category','type'=>'text'],
         ['name'=>'tags','label'=>'Tags','type'=>'text','placeholder'=>'e.g. work, ideas, personal'],
+        ['name'=>'color','label'=>'Sticky note color','type'=>'select','options'=>['sunshine'=>'Sunshine yellow','peach'=>'Warm peach','mint'=>'Fresh mint','lavender'=>'Soft lavender','sky'=>'Clear sky','rose'=>'Rose pink'],'default'=>'sunshine'],
         ['name'=>'content','label'=>'Note','type'=>'textarea'],
         ['name'=>'is_pinned','label'=>'Pinned','type'=>'checkbox'],
         ['name'=>'is_favorite','label'=>'Favourite','type'=>'checkbox'],
     ];
-    protected array $rules=['title'=>'required|string|max:255','category'=>'nullable|string|max:100','tags'=>'nullable|string|max:500','content'=>'nullable|string','is_pinned'=>'sometimes|boolean','is_favorite'=>'sometimes|boolean'];
+    protected array $rules=['title'=>'required|string|max:255','category'=>'nullable|string|max:100','tags'=>'nullable|string|max:500','color'=>'nullable|in:sunshine,peach,mint,lavender,sky,rose','content'=>'nullable|string','is_pinned'=>'sometimes|boolean','is_favorite'=>'sometimes|boolean'];
     public function index(Request $request)
     {
         $query = Note::where('user_id', $request->user()->id)

@@ -447,6 +447,70 @@
                 </div>
             @endforelse
         </div>
+    @elseif ($routeName === 'notes')
+        @php
+            $noteColors = [
+                'sunshine' => ['#fff6bf', '#edd66a', '#8a6410'],
+                'peach' => ['#ffe0cc', '#f3b58f', '#8f4a25'],
+                'mint' => ['#d9f5df', '#9bd5a7', '#28633a'],
+                'lavender' => ['#ebe2ff', '#c4b1ef', '#5e478c'],
+                'sky' => ['#dceeff', '#9bc9ee', '#285a82'],
+                'rose' => ['#ffe0e8', '#f0adbf', '#8e4157'],
+            ];
+        @endphp
+        <div class="pm-sticky-notes-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            @forelse ($items as $item)
+                @php
+                    $rowValues = [];
+                    foreach ($fields as $fieldConfig) {
+                        $value = data_get($item, $fieldConfig['name']);
+                        if (is_object($value) && method_exists($value, 'format')) {
+                            $value = $value->format('Y-m-d');
+                        }
+                        $rowValues[$fieldConfig['name']] = $value;
+                    }
+                    $notePalette = $noteColors[$item->color ?? 'sunshine'] ?? $noteColors['sunshine'];
+                @endphp
+                <article class="pm-sticky-note relative min-w-0 rounded-2xl border p-5 shadow-md transition-transform duration-200"
+                         style="--note-paper:{{ $notePalette[0] }};--note-edge:{{ $notePalette[1] }};--note-ink:{{ $notePalette[2] }};background-color:var(--note-paper);border-color:var(--note-edge)">
+                    <div class="mb-4 flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold" style="color:var(--note-ink)">
+                                @if ($item->is_pinned)<span><i class="fa-solid fa-thumbtack" aria-hidden="true"></i> Pinned</span>@endif
+                                @if ($item->is_favorite)<span><i class="fa-solid fa-star" aria-hidden="true"></i> Favorite</span>@endif
+                                @if (filled($item->category))<span class="rounded-full bg-white/60 px-2 py-1">{{ $item->category }}</span>@endif
+                            </div>
+                            <h2 class="break-words text-lg font-black text-slate-900">{{ $item->title }}</h2>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1">
+                            @if ($pmHasBulkDelete)
+                                <input type="checkbox" name="ids[]" value="{{ $item->id }}" form="pm-crud-bulk-delete-form" onchange="pmUpdateCrudBulkBar()" class="pm-crud-row-checkbox rounded border-slate-400 text-[var(--brand-1)] focus:ring-[var(--brand-2)]" aria-label="Select {{ $item->title }}">
+                            @endif
+                            <button type="button" onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, true)' class="grid h-9 w-9 place-items-center rounded-xl bg-white/70 text-slate-700 hover:bg-white" aria-label="View {{ $item->title }}" title="View note"><i class="fa-solid fa-eye"></i></button>
+                            @if (auth()->user()->hasActiveAccess())
+                                <button type="button" onclick='openCrudEditModal({{ json_encode(route($routeName . '.update', $item->id)) }}, {{ json_encode($rowValues) }})' class="grid h-9 w-9 place-items-center rounded-xl bg-white/70 text-slate-700 hover:bg-white" aria-label="Edit {{ $item->title }}" title="Edit note"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button type="button" onclick='openCrudDeleteModal({{ json_encode(route($routeName . '.destroy', $item->id)) }}, {{ json_encode($item->title) }})' class="grid h-9 w-9 place-items-center rounded-xl bg-white/70 text-rose-700 hover:bg-white" aria-label="Delete {{ $item->title }}" title="Delete note"><i class="fa-solid fa-trash-can"></i></button>
+                            @endif
+                        </div>
+                    </div>
+                    @if (filled($item->content))
+                        <p class="min-h-24 break-words text-sm leading-6 text-slate-700" style="white-space:pre-wrap">{{ \Illuminate\Support\Str::limit($item->content, 420) }}</p>
+                    @else
+                        <p class="min-h-24 text-sm italic text-slate-500">No note text yet.</p>
+                    @endif
+                    <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/10 pt-3 text-xs text-slate-600">
+                        <span class="break-words">{{ filled($item->tags) ? '#'.str_replace(',', ' #', $item->tags) : 'Sticky note' }}</span>
+                        <time datetime="{{ $item->updated_at?->toIso8601String() }}">Updated {{ $item->updated_at?->diffForHumans() }}</time>
+                    </div>
+                </article>
+            @empty
+                <div class="sm:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 p-10 text-center text-slate-500">
+                    <i class="fa-solid fa-note-sticky mb-3 block text-4xl text-amber-400" aria-hidden="true"></i>
+                    <p class="font-semibold">No sticky notes yet.</p>
+                    <p class="mt-1 text-sm">Create a note and choose a color to make important thoughts easy to spot.</p>
+                </div>
+            @endforelse
+        </div>
     @else
     @php
         // Compact layout: title (+ folded details) | status | date | amount | actions.

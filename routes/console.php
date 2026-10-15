@@ -105,6 +105,10 @@ Schedule::command('subscriptions:send-expiry-reminders')
     ->dailyAt('08:00')
     ->withoutOverlapping(10);
 
+Schedule::command('subscriptions:expire')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping(10);
+
 /*
 |--------------------------------------------------------------------------
 | Automatic Subscription Renewal

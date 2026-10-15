@@ -61,7 +61,7 @@
     @include('partials.pwa-head')
     @stack('styles')
 </head>
-<body class="pm-professional-shell text-slate-800 {{ request()->routeIs('admin.*') ? 'pm-admin-page' : '' }}">
+<body class="pm-professional-shell text-slate-800 {{ request()->routeIs('admin.*') ? 'pm-admin-page' : '' }} {{ request()->routeIs('savings.*', 'savings-goals.*', 'savings-contributions.*', 'subscription.show', 'budgets.*', 'signature.*', 'tips', 'spiritual-practices.*', 'daily-planner.*', 'business-card.*', 'privacy.*', 'notes.*') ? 'pm-responsive-feature-page' : '' }}">
 
 @include('partials.accessibility-widget')
 @include('partials.password-toggle')
