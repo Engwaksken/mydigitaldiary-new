@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BusinessInvoice;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\BusinessInvoiceTemplate;
+use App\Services\BusinessInvoiceDocumentService;
+use App\Services\BusinessInvoicePaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -33,6 +35,11 @@ class BusinessInvoiceController extends Controller
             'currency' => ['nullable', 'string', 'size:3'],
             'issue_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:issue_date'],
+            'template_id' => ['nullable', 'integer', function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                if ($value && ! BusinessInvoiceTemplate::query()->where('user_id', $request->user()->id)->whereKey($value)->exists()) {
+                    $fail('Select one of your own invoice templates.');
+                }
+            }],
         ]);
 
         $data['line_items'] = array_map(function (array $line): array {
@@ -44,6 +51,10 @@ class BusinessInvoiceController extends Controller
         $data['total'] = round(array_sum(array_column($data['line_items'], 'amount')), 2);
         $data['currency'] = strtoupper($data['currency'] ?? 'UGX');
         $data['user_id'] = $request->user()->id;
+        $data['template_id'] = $data['template_id'] ?? BusinessInvoiceTemplate::query()
+            ->where('user_id', $request->user()->id)
+            ->where('is_default', true)
+            ->value('id');
         $data['invoice_number'] = 'BI-'.now()->format('Y').'-'.strtoupper(bin2hex(random_bytes(4)));
         $data['status'] = 'unpaid';
 
@@ -51,10 +62,10 @@ class BusinessInvoiceController extends Controller
         return response()->json(['data' => $invoice], 201);
     }
 
-    public function send(Request $request, int $id): JsonResponse
+    public function send(Request $request, int $id, BusinessInvoiceDocumentService $documents): JsonResponse
     {
         $invoice = $this->owned($request, $id);
-        $pdf = Pdf::loadView('business-invoices.pdf', ['invoice' => $invoice])->setPaper('a4');
+        $pdf = $documents->pdf($invoice);
         Mail::send([], [], function ($message) use ($invoice, $pdf): void {
             $message->to($invoice->customer_email, $invoice->customer_name)
                 ->subject('Invoice '.$invoice->invoice_number)
@@ -65,11 +76,35 @@ class BusinessInvoiceController extends Controller
         return response()->json(['message' => 'Invoice sent.', 'data' => $invoice->fresh()]);
     }
 
-    public function download(Request $request, int $id)
+    public function download(Request $request, int $id, BusinessInvoiceDocumentService $documents)
     {
         $invoice = $this->owned($request, $id);
-        return Pdf::loadView('business-invoices.pdf', ['invoice' => $invoice])
-            ->setPaper('a4')->download('invoice-'.$invoice->invoice_number.'.pdf');
+        return $documents->pdf($invoice)->download('invoice-'.$invoice->invoice_number.'.pdf');
+    }
+
+    public function markPaid(Request $request, int $id, BusinessInvoicePaymentService $payments): JsonResponse
+    {
+        $invoice = $this->owned($request, $id);
+        $data = $request->validate(['received_at' => ['required', 'date', 'before_or_equal:today']]);
+        $payments->markPaid($request->user(), $invoice, $data['received_at']);
+
+        return response()->json(['message' => 'Invoice marked paid and added to Finance income.', 'data' => $invoice->fresh()->load('income')]);
+    }
+
+    public function sendReceipt(Request $request, int $id, BusinessInvoiceDocumentService $documents): JsonResponse
+    {
+        $invoice = $this->owned($request, $id);
+        abort_unless($invoice->status === 'paid', 422, 'Mark the invoice paid before sending a receipt.');
+        $pdf = $documents->pdf($invoice, 'PAYMENT RECEIPT');
+
+        Mail::send([], [], function ($message) use ($invoice, $pdf): void {
+            $message->to($invoice->customer_email, $invoice->customer_name)
+                ->subject('Receipt for invoice '.$invoice->invoice_number)
+                ->text('Thank you for your payment. Please find the receipt for invoice '.$invoice->invoice_number.' attached.')
+                ->attachData($pdf->output(), 'receipt-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
+        });
+
+        return response()->json(['message' => 'Payment receipt sent.', 'data' => $invoice]);
     }
 
     private function owned(Request $request, int $id): BusinessInvoice

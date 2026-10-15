@@ -23,6 +23,7 @@
             'items' => [
                 ['route' => 'financial-planner.index', 'pattern' => 'financial-planner.*', 'icon' => 'fa-solid fa-chart-line', 'label' => 'Financial Planner'],
                 ['route' => 'incomes.index', 'pattern' => 'incomes.*', 'icon' => 'fa-solid fa-money-bill-trend-up', 'label' => 'Income'],
+                ['route' => 'business-invoices.index', 'pattern' => 'business-invoices.*', 'icon' => 'fa-solid fa-file-invoice-dollar', 'label' => 'Business Invoices'],
                 ['route' => 'budgets.index', 'pattern' => 'budgets.*', 'icon' => 'fa-solid fa-wallet', 'label' => 'Budgets'],
                 ['route' => 'expenses.index', 'pattern' => 'expenses.*', 'icon' => 'fa-solid fa-receipt', 'label' => 'Expenses'],
                 ['route' => 'debts.index', 'pattern' => 'debts.*', 'icon' => 'fa-solid fa-hand-holding-dollar', 'label' => 'Debts'],

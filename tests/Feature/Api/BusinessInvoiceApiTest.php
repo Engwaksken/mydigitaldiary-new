@@ -86,4 +86,29 @@ class BusinessInvoiceApiTest extends TestCase
         $this->getJson("/api/business-invoices/{$invoice->id}/download")->assertNotFound();
         $this->assertNull($invoice->fresh()->sent_at);
     }
+
+    public function test_mobile_can_mark_invoice_paid_and_send_the_matching_receipt(): void
+    {
+        \Illuminate\Support\Facades\Mail::shouldReceive('send')->once();
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $invoice = BusinessInvoice::create([
+            'user_id' => $user->id, 'invoice_number' => 'BI-2026-PAID1234',
+            'business_name' => 'Acme Studio', 'customer_name' => 'Jane Customer',
+            'customer_email' => 'jane@example.com',
+            'line_items' => [['description' => 'Design work', 'quantity' => 1, 'unit_price' => 125, 'amount' => 125]],
+            'currency' => 'UGX', 'total' => 125, 'issue_date' => today(), 'status' => 'unpaid',
+        ]);
+
+        $this->postJson("/api/business-invoices/{$invoice->id}/paid", [
+            'received_at' => today()->toDateString(),
+        ])->assertOk()->assertJsonPath('data.status', 'paid')->assertJsonPath('data.income.amount', '125.00');
+        $this->postJson("/api/business-invoices/{$invoice->id}/send-receipt")->assertOk();
+
+        $this->assertDatabaseHas('incomes', [
+            'user_id' => $user->id,
+            'business_invoice_id' => $invoice->id,
+            'amount' => 125,
+        ]);
+    }
 }

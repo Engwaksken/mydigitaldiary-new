@@ -85,4 +85,45 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
         $this->assertSame('Starter', $plan->fresh()->name);
         $this->assertSame(60, $plan->fresh()->monthly_transcription_minutes);
     }
+
+    public function test_super_admin_can_edit_and_save_an_existing_individual_plan(): void
+    {
+        $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
+        $plan = SubscriptionPlan::query()->create([
+            'key' => 'starter-plan',
+            'name' => 'Starter',
+            'category' => 'individual',
+            'individual_tier' => 'starter',
+            'duration_months' => 1,
+            'discount_percent' => 0,
+            'flat_price' => 1000,
+            'monthly_transcription_minutes' => 60,
+            'transcription_capacity_mb' => 30,
+            'color' => '#475569',
+            'is_enabled' => true,
+        ]);
+
+        $this->actingAs($superAdmin)->put(route('admin.subscription-plans.update', $plan), [
+            'key' => 'starter-plan',
+            'name' => 'Starter Plus',
+            'category' => 'individual',
+            'individual_tier' => 'starter',
+            'pricing_type' => 'flat',
+            'duration_months_flat' => 1,
+            'flat_price' => 1500,
+            'monthly_transcription_minutes' => 90,
+            'transcription_capacity_mb' => 40,
+            'color' => '#475569',
+            'sort_order' => 1,
+            'is_enabled' => 1,
+        ])->assertRedirect(route('admin.subscription-plans.index'));
+
+        $this->assertDatabaseHas('subscription_plans', [
+            'id' => $plan->id,
+            'name' => 'Starter Plus',
+            'flat_price' => 1500,
+            'monthly_transcription_minutes' => 90,
+            'transcription_capacity_mb' => 40,
+        ]);
+    }
 }

@@ -145,6 +145,10 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
         ->name('business-invoices.store');
     Route::post('business-invoices/{id}/send', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'send'])
         ->whereNumber('id')->name('business-invoices.send');
+    Route::post('business-invoices/{id}/paid', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'markPaid'])
+        ->whereNumber('id')->name('business-invoices.paid');
+    Route::post('business-invoices/{id}/send-receipt', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'sendReceipt'])
+        ->whereNumber('id')->name('business-invoices.send-receipt');
     Route::get('business-invoices/{id}/download', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'download'])
         ->whereNumber('id')->name('business-invoices.download');
     Route::post('debts/{debt}/reminders/send', [DebtReminderController::class, 'send']);

@@ -190,6 +190,12 @@
                     'label' => 'Income',
                 ],
                 [
+                    'route' => 'business-invoices.index',
+                    'pattern' => 'business-invoices.*',
+                    'icon' => 'fa-solid fa-file-invoice-dollar',
+                    'label' => 'Business Invoices',
+                ],
+                [
                     'route' => 'expenses.index',
                     'pattern' => 'expenses.*',
                     'icon' => 'fa-solid fa-receipt',

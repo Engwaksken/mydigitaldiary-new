@@ -4,6 +4,7 @@ use App\Http\Controllers\AiPlanController;
 use App\Http\Controllers\Api\EngagementController;
 use App\Http\Controllers\ApiCredentialController;
 use App\Http\Controllers\BusinessCardController;
+use App\Http\Controllers\BusinessInvoiceController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DailyPlannerController;
@@ -442,6 +443,17 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::post('budgets/extract', [BudgetController::class, 'extractImport'])->middleware('throttle:5,1')->name('budgets.extract');
     Route::post('budgets/import/confirm', [BudgetController::class, 'confirmImport'])->name('budgets.import.confirm');
     Route::post('budgets/{budget}/expense-status', [BudgetController::class, 'setExpenseStatus'])->name('budgets.expense-status');
+
+    Route::get('business-invoices/templates/sample', [BusinessInvoiceController::class, 'sampleTemplate'])->name('business-invoices.templates.sample');
+    Route::get('business-invoices', [BusinessInvoiceController::class, 'index'])->name('business-invoices.index');
+    Route::post('business-invoices', [BusinessInvoiceController::class, 'store'])->name('business-invoices.store');
+    Route::post('business-invoices/templates', [BusinessInvoiceController::class, 'uploadTemplate'])->name('business-invoices.templates.store');
+    Route::post('business-invoices/templates/{id}/default', [BusinessInvoiceController::class, 'setDefaultTemplate'])->whereNumber('id')->name('business-invoices.templates.default');
+    Route::delete('business-invoices/templates/{id}', [BusinessInvoiceController::class, 'deleteTemplate'])->whereNumber('id')->name('business-invoices.templates.destroy');
+    Route::get('business-invoices/{id}/download', [BusinessInvoiceController::class, 'download'])->whereNumber('id')->name('business-invoices.download');
+    Route::post('business-invoices/{id}/send', [BusinessInvoiceController::class, 'send'])->whereNumber('id')->name('business-invoices.send');
+    Route::post('business-invoices/{id}/send-receipt', [BusinessInvoiceController::class, 'sendReceipt'])->whereNumber('id')->name('business-invoices.send-receipt');
+    Route::post('business-invoices/{id}/paid', [BusinessInvoiceController::class, 'markPaid'])->whereNumber('id')->name('business-invoices.paid');
 
     Route::resource('incomes', IncomeController::class);
     Route::resource('budgets', BudgetController::class);
