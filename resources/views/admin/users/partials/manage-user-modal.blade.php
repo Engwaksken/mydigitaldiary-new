@@ -207,6 +207,44 @@
                         Save Subscription
                     </button>
                 </form>
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.users.transcription-capacity.update', $managedUser) }}"
+                    class="mt-5 space-y-3 rounded-2xl border border-teal-100 bg-teal-50/50 p-4"
+                >
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="_managed_user_id" value="{{ $managedUser->id }}">
+                    <div>
+                        <h4 class="text-sm font-black text-slate-900">Meeting transcription capacity</h4>
+                        <p class="mt-1 text-xs leading-5 text-slate-600">Override the plan's per-recording MB limit for this user. Leave blank to use the assigned plan's limit ({{ $managedUser->subscriptionPlan?->transcription_capacity_mb ?? 30 }} MB).</p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                        <div class="min-w-0">
+                            <label for="transcription-capacity-{{ $managedUser->id }}" class="text-xs font-bold text-slate-700">User limit (MB)</label>
+                            <input
+                                id="transcription-capacity-{{ $managedUser->id }}"
+                                type="number"
+                                name="transcription_capacity_mb"
+                                min="50"
+                                max="10240"
+                                step="1"
+                                value="{{ (string) old('_managed_user_id') === (string) $managedUser->id ? old('transcription_capacity_mb', $managedUser->transcription_capacity_mb) : $managedUser->transcription_capacity_mb }}"
+                                class="pm-input mt-1 w-full"
+                                placeholder="Plan default"
+                            >
+                            @if ((string) old('_managed_user_id') === (string) $managedUser->id)
+                                @error('transcription_capacity_mb') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            @endif
+                        </div>
+                        <button class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white sm:w-auto">
+                            <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
+                            Save capacity
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Effective now: {{ $managedUser->effectiveTranscriptionCapacityMb() }} MB per recording. A paid recording-quota top-up allows recordings above this cap.</p>
+                </form>
             </section>
 
             {{-- ROLE --}}

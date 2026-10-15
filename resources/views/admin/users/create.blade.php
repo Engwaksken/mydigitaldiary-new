@@ -323,6 +323,27 @@
                         class="pm-input mt-1 w-full"
                     >
                 </div>
+
+                <div class="sm:col-span-2">
+                    <label for="transcription_capacity_mb" class="text-xs font-bold text-slate-700">
+                        Meeting transcription capacity override (MB, optional)
+                    </label>
+                    <input
+                        id="transcription_capacity_mb"
+                        type="number"
+                        name="transcription_capacity_mb"
+                        min="50"
+                        max="10240"
+                        step="1"
+                        value="{{ old('transcription_capacity_mb') }}"
+                        class="pm-input mt-1 w-full"
+                        placeholder="Leave blank to use the assigned plan limit"
+                    >
+                    <p class="mt-1 text-xs text-slate-500">The plan's recording-size limit applies unless you set an override.</p>
+                    @error('transcription_capacity_mb')
+                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
         </section>
 

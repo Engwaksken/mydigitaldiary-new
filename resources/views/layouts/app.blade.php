@@ -46,7 +46,7 @@
 
     {{-- Extracted CSS files --}}
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
-    <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/responsive.css') }}?v={{ filemtime(public_path('css/responsive.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/modals.css') }}">
     <link rel="stylesheet" href="{{ asset('css/modal-responsive.css') }}">
     <link rel="stylesheet" href="{{ asset('css/professional-forms.css') }}">

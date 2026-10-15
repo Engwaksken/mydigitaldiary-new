@@ -45,6 +45,42 @@ class AdminUserTranscriptionCapacityTest extends TestCase
         $this->assertNull($user->fresh()->transcription_capacity_mb);
     }
 
+    public function test_capacity_can_be_saved_from_the_manage_user_modal_and_reopens_it(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create();
+
+        $this->actingAs($admin)
+            ->from(route('admin.users.index'))
+            ->patch(route('admin.users.transcription-capacity.update', $user), [
+                '_managed_user_id' => $user->id,
+                'transcription_capacity_mb' => 120,
+            ])
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('open_manage_user', $user->id);
+
+        $this->assertSame(120, $user->fresh()->transcription_capacity_mb);
+    }
+
+    public function test_admin_can_set_capacity_when_creating_a_user(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post(route('admin.users.store'), [
+            'name' => 'Capacity Test User',
+            'email' => 'capacity-user@example.test',
+            'role' => 'user',
+            'password' => 'temporary-password-123',
+            'subscription_status' => 'inactive',
+            'transcription_capacity_mb' => 240,
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'capacity-user@example.test',
+            'transcription_capacity_mb' => 240,
+        ]);
+    }
+
     public function test_capacity_must_be_an_integer_of_at_least_fifty_or_null(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

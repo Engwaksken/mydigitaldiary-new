@@ -511,6 +511,40 @@ img, video, canvas, svg {
    4. ADMIN HORIZONTAL TABLES (#pm-admin-horizontal-tables-20260819)
    ========================================================================== */
 
+/* Keep every admin page within the device viewport; wide data stays inside
+   its dedicated scroll container instead of widening the whole page. */
+.pm-admin-page,
+.pm-admin-page #main-content,
+.pm-admin-page #main-content > *,
+.pm-admin-page #main-content section,
+.pm-admin-page #main-content form,
+.pm-admin-page #main-content [class*="grid-cols-"] {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.pm-admin-page #main-content img,
+.pm-admin-page #main-content svg,
+.pm-admin-page #main-content canvas {
+    max-width: 100%;
+}
+
+@media (max-width: 767.98px) {
+    .pm-admin-page #main-content {
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    .pm-admin-page #main-content .pm-admin-table-scroll,
+    .pm-admin-page #main-content .admin-user-table-wrap {
+        max-width: 100%;
+    }
+
+    .pm-admin-page dialog[open] {
+        max-width: calc(100vw - 16px);
+    }
+}
+
 /*
  * ALL ADMIN TABLES — PHONE HORIZONTAL MODE
  * This rule is intentionally global for admin.* routes. It overrides any

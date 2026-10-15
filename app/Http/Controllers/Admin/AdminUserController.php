@@ -208,6 +208,7 @@ class AdminUserController extends Controller
                 'nullable',
                 'date',
             ],
+            'transcription_capacity_mb' => ['nullable', 'integer', 'min:50', 'max:10240'],
         ]);
 
         $sendSetup = $request->boolean('send_password_setup');
@@ -271,6 +272,13 @@ class AdminUserController extends Controller
                     ! empty($data['subscription_plan_id'])
                         ? (int) $data['subscription_plan_id']
                         : $this->monthlyPlanId();
+            }
+
+            if (
+                Schema::hasColumn('users', 'transcription_capacity_mb')
+                && array_key_exists('transcription_capacity_mb', $data)
+            ) {
+                $user->transcription_capacity_mb = $data['transcription_capacity_mb'] ?: null;
             }
 
             if (Schema::hasColumn('users', 'subscription_status')) {
@@ -899,7 +907,8 @@ class AdminUserController extends Controller
         $user->save();
 
         if (! $request->expectsJson()) {
-            return back()->with('success', 'Transcription capacity updated.');
+            return back()->with('success', 'Transcription capacity updated.')
+                ->with('open_manage_user', $user->id);
         }
 
         return response()->json([

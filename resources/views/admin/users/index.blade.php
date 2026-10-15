@@ -169,6 +169,14 @@
                 -webkit-overflow-scrolling: touch;
             }
 
+            .pm-admin-page #main-content,
+            .pm-admin-page #main-content > *,
+            .pm-admin-page #main-content section,
+            .pm-admin-page #main-content form {
+                min-width: 0;
+                max-width: 100%;
+            }
+
             #admin-user-list table {
                 min-width: 1120px;
                 width: 100%;
@@ -1024,6 +1032,12 @@
                         if (!dialog.open) dialog.showModal();
                         pmSelectAdminUserTab(managedUserId, 'subscription');
                     }
+                }
+            @endif
+            @if (session('open_manage_user'))
+                var reopenUserDialog = document.getElementById('manage-user-modal-' + {{ (int) session('open_manage_user') }});
+                if (reopenUserDialog && typeof reopenUserDialog.showModal === 'function') {
+                    reopenUserDialog.showModal();
                 }
             @endif
         }
