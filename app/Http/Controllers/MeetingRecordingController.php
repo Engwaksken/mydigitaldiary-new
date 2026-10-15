@@ -131,7 +131,8 @@ class MeetingRecordingController extends Controller
 
         $this->validateRecordingFile(
             $audioFile,
-            $request->user()->effectiveTranscriptionCapacityBytes()
+            $request->user()->effectiveTranscriptionCapacityBytes(),
+            $request->user()->availableExtraRecordingQuotaMinutes() > 0
         );
 
         $audioPath =
@@ -312,7 +313,8 @@ class MeetingRecordingController extends Controller
 
         $this->validateRecordingFile(
             $audioFile,
-            $request->user()->effectiveTranscriptionCapacityBytes()
+            $request->user()->effectiveTranscriptionCapacityBytes(),
+            $request->user()->availableExtraRecordingQuotaMinutes() > 0
         );
 
         $audioPath =
@@ -383,7 +385,7 @@ class MeetingRecordingController extends Controller
 
         $user = $request->user();
         $hasActive = $user->hasActiveAccess();
-        $extraMinutes = (int) ($user->extra_recording_quota_minutes ?? 0);
+        $extraMinutes = $user->availableExtraRecordingQuotaMinutes();
         $extraExpires = $user->extra_quota_expires_at;
         $hasExtraQuota = $extraMinutes > 0 && (is_null($extraExpires) || $extraExpires->isFuture());
         $canTranscribe = $hasActive || $hasExtraQuota;
@@ -1985,9 +1987,10 @@ class MeetingRecordingController extends Controller
 
     private function validateRecordingFile(
         UploadedFile $file,
-        int $capacityBytes
+        int $capacityBytes,
+        bool $hasTopUp = false
     ): void {
-        if (($file->getSize() ?? 0) > $capacityBytes) {
+        if (! $hasTopUp && ($file->getSize() ?? 0) > $capacityBytes) {
             abort(422, 'The recording exceeds your transcription capacity.');
         }
         if (

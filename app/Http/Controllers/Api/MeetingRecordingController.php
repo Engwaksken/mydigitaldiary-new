@@ -94,7 +94,11 @@ class MeetingRecordingController extends Controller
         ]);
 
         $audioFile = $request->file('audio');
-        $this->validateRecordingFile($audioFile, $request->user()->effectiveTranscriptionCapacityBytes());
+        $this->validateRecordingFile(
+            $audioFile,
+            $request->user()->effectiveTranscriptionCapacityBytes(),
+            $request->user()->availableExtraRecordingQuotaMinutes() > 0
+        );
         $audioPath = $this->storeRecordingFile($audioFile);
 
         $recording->update([
@@ -514,9 +518,9 @@ class MeetingRecordingController extends Controller
         return $file->storeAs('meeting-recordings', $name, 'public');
     }
 
-    private function validateRecordingFile(\Illuminate\Http\UploadedFile $file, int $capacityBytes): void
+    private function validateRecordingFile(\Illuminate\Http\UploadedFile $file, int $capacityBytes, bool $hasTopUp = false): void
     {
-        if (($file->getSize() ?? 0) > $capacityBytes) {
+        if (! $hasTopUp && ($file->getSize() ?? 0) > $capacityBytes) {
             abort(422, 'The recording exceeds your transcription capacity.');
         }
         if (($file->getSize() ?? 0) < 1024) {

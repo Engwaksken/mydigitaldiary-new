@@ -179,7 +179,7 @@
                 <form method="POST" action="{{ route('admin.users.transcription-capacity.update', $user) }}" class="mt-5 border-t pt-5 space-y-3">
                     @csrf @method('PATCH')
                     <h3 class="font-semibold text-slate-800">Transcription capacity override</h3>
-                    <div class="flex gap-3"><input type="number" name="transcription_capacity_mb" min="1" max="102400" value="{{ old('transcription_capacity_mb', $user->transcription_capacity_mb) }}" class="pm-input" placeholder="MB; blank means plan default"><button class="btn-primary text-white px-4 py-2 rounded-lg text-sm">Save capacity</button></div>
+                    <div class="flex gap-3"><input type="number" name="transcription_capacity_mb" min="50" max="10240" value="{{ old('transcription_capacity_mb', $user->transcription_capacity_mb) }}" class="pm-input" placeholder="MB; blank means plan default"><button class="btn-primary text-white px-4 py-2 rounded-lg text-sm">Save capacity</button></div>
                     <p class="text-xs text-slate-500">Effective limit: {{ $user->effectiveTranscriptionCapacityMb() }} MB. Leave blank to use the plan limit.</p>
                 </form>
             </div>

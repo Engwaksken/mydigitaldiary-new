@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -41,8 +42,18 @@ class PwaController extends Controller
         ]);
     }
 
-    public function favicon(): RedirectResponse
+    public function favicon(): Response|RedirectResponse
     {
+        $settings = SiteSetting::current();
+        $disk = Storage::disk('public');
+        if ($settings->favicon_path && $disk->exists($settings->favicon_path)) {
+            return response($disk->get($settings->favicon_path), 200, [
+                'Content-Type' => $disk->mimeType($settings->favicon_path) ?: 'image/png',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
         return redirect($this->icons->url('icon-192'))
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }

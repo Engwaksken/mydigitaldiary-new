@@ -139,25 +139,26 @@ class PwaManifestTest extends TestCase
         $this->get('/pwa-icons/0000000000000000/invalid.png')->assertNotFound();
     }
 
-    public function test_browser_favicon_uses_logo_instead_of_separately_uploaded_favicon(): void
+    public function test_browser_favicon_prefers_separately_uploaded_favicon(): void
     {
         Storage::fake('public');
         $this->uploadLogo();
-        SiteSetting::current()->forceFill(['favicon_path' => 'branding/old-default.png'])->save();
-        $url = $this->get('/manifest.webmanifest')->json('icons.0.src');
+        Storage::disk('public')->put('branding/custom-favicon.png', 'custom favicon bytes');
+        SiteSetting::current()->forceFill(['favicon_path' => 'branding/custom-favicon.png'])->save();
+        $this->get('/manifest.webmanifest')->assertOk();
 
         foreach ([route('login'), route('user-guide')] as $page) {
             $html = $this->get($page)->assertOk()->getContent();
-            $this->assertStringContainsString('rel="icon" type="image/png" sizes="192x192" href="'.$url.'"', $html);
+            $this->assertStringContainsString('href="'.route('branding.asset', 'favicon').'?v=', $html);
             $this->assertStringNotContainsString('old-default.png', $html);
         }
 
         $html = $this->actingAs(User::factory()->create())->get('/profile')->assertOk()->getContent();
-        $this->assertStringContainsString('rel="icon" type="image/png" sizes="192x192" href="'.$url.'"', $html);
+        $this->assertStringContainsString('href="'.route('branding.asset', 'favicon').'?v=', $html);
         $this->assertSame(1, substr_count($html, 'rel="icon"'));
     }
 
-    public function test_root_favicon_url_redirects_to_current_logo_and_revalidates(): void
+    public function test_root_favicon_serves_uploaded_file_and_falls_back_to_current_logo(): void
     {
         Storage::fake('public');
         $this->uploadLogo();
@@ -170,6 +171,11 @@ class PwaManifestTest extends TestCase
         $newUrl = $this->get('/manifest.webmanifest')->json('icons.0.src');
         $this->assertNotSame($url, $newUrl);
         $this->get('/favicon.ico')->assertRedirect($newUrl);
+
+        Storage::disk('public')->put('branding/custom-favicon.png', 'uploaded favicon');
+        SiteSetting::current()->forceFill(['favicon_path' => 'branding/custom-favicon.png'])->save();
+        $this->get('/favicon.ico')->assertOk()->assertSee('uploaded favicon', false)
+            ->assertHeader('Content-Type', 'image/png');
     }
 
     public function test_transparent_logo_is_composited_onto_an_opaque_install_icon(): void

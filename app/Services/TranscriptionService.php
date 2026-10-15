@@ -131,6 +131,15 @@ class TranscriptionService
             );
         }
 
+        if (
+            $sourceSize > $user->effectiveTranscriptionCapacityBytes()
+            && $user->availableExtraRecordingQuotaMinutes() === 0
+        ) {
+            throw new RuntimeException(
+                'This recording exceeds your transcription capacity. Please top up recording quota or upload a shorter recording.'
+            );
+        }
+
         /*
         |--------------------------------------------------------------------------
         | Prepare audio
@@ -464,10 +473,12 @@ class TranscriptionService
             if (
                 $user
                 && (
-                    $user->extra_recording_quota_minutes ?? 0 > 0
+                    $fileSize <= $user->effectiveTranscriptionCapacityBytes()
+                    || $user->availableExtraRecordingQuotaMinutes() > 0
                 )
             ) {
-                // User has extra minutes; allow FFmpeg compression to proceed
+                // The plan/override capacity or an active top-up authorizes
+                // this upload; compress it below the transcription provider's limit.
                 return $this->convertToMp3(
                     $sourcePath,
                     $user

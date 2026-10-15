@@ -145,12 +145,20 @@
         var lastFocus = null;
 
         function show(element) {
-            if (element) { element.hidden = false; }
+            if (element) {
+                element.hidden = false;
+                element.style.removeProperty('display');
+            }
             root.hidden = false;
         }
 
         function hide(element) {
-            if (element) { element.hidden = true; }
+            if (element) {
+                element.hidden = true;
+                // Tailwind's display utilities can override the browser's
+                // default [hidden] rule (the dialog has `flex`).
+                element.style.display = 'none';
+            }
         }
 
         function render(state) {

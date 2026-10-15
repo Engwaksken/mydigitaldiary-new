@@ -84,6 +84,8 @@ Route::get('/', function () {
 */
 Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
 Route::get('/favicon.ico', [PwaController::class, 'favicon'])->name('pwa.favicon');
+Route::get('/branding/{asset}', [\App\Http\Controllers\BrandingAssetController::class, 'show'])
+    ->where('asset', 'logo|favicon')->name('branding.asset');
 Route::get('/pwa-icons/{version}/{variant}.png', [PwaController::class, 'icon'])
     ->where('version', '[a-f0-9]{16}')
     ->where('variant', 'icon-192|icon-512|maskable-512|apple-touch-icon')
