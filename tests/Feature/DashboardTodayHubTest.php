@@ -65,6 +65,19 @@ class DashboardTodayHubTest extends TestCase
             ->assertSee('Add a task');
     }
 
+    public function test_dashboard_layout_adapts_to_available_width_for_tablet_and_split_screen(): void
+    {
+        $user = $this->subscriber();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('container-type:inline-size', false)
+            ->assertSee('@container (max-width:900px)', false)
+            ->assertSee('@container (max-width:620px)', false)
+            ->assertSee('minmax(0,1fr)', false);
+    }
+
     public function test_planner_toggle_returns_json_for_dashboard_check_off(): void
     {
         $user = $this->subscriber();

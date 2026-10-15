@@ -296,7 +296,7 @@
     /* ------------------------------------------------------------------
        Today hub — calm, glanceable, one clear next step per card.
        ------------------------------------------------------------------ */
-    .td{--td-brand:var(--brand-1,#0f766e);--td-ink:#0f172a;--td-muted:#64748b;--td-line:#e7ecf3;--td-soft:#f6f8fb;width:min(1120px,100%);margin:0 auto;padding:2px 0 24px;color:var(--td-ink)}
+    .td{--td-brand:var(--brand-1,#0f766e);--td-ink:#0f172a;--td-muted:#64748b;--td-line:#e7ecf3;--td-soft:#f6f8fb;width:100%;max-width:1120px;min-width:0;margin:0 auto;padding:2px 0 24px;color:var(--td-ink);container-type:inline-size}
     .td *{box-sizing:border-box}
     html:not(.pm-a11y-underline-links) .td a{text-decoration:none!important}
     .td-card{background:#fff;border:1px solid var(--td-line);border-radius:20px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.04)}
@@ -489,6 +489,15 @@
     .md-growth-action.violet{background:#6d28d9}.md-growth-action.sky{background:#0369a1}
     .td-private{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11px;color:#047857;font-weight:600}
 
+    /* Base every breakpoint on the dashboard's available width, not the
+       device viewport. This also handles tablets while the desktop sidebar
+       is open and narrow split-screen windows. */
+    .td-section,.td-card,.td-hero,.td-more,.td-grid>*{min-width:0;max-width:100%}
+    .td a,.td button,.td h1,.td h2,.td p{overflow-wrap:anywhere}
+    .td-hero-top,.td-hero-body,.td-head,.td-more>summary{min-width:0}
+    .td-hero-top>* ,.td-hero-body>*{min-width:0}
+    .td-more-badge{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
     /* Steps card (compact) */
     #md-live-steps-card{margin-bottom:0}
 
@@ -533,6 +542,38 @@
     @media (max-width:380px){
         .td-dot{width:19px}
         .td-start-list{grid-template-columns:1fr}
+    }
+    @container (max-width:900px){
+        .td-grid{grid-template-columns:minmax(0,1fr)}
+        .td-rings{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .td-growth{grid-template-columns:minmax(0,1fr)}
+        .td-start-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+        .td-launcher{grid-template-columns:repeat(6,minmax(0,1fr))}
+        .md-finance-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+    @container (max-width:620px){
+        .td-hero{padding:18px 16px 16px;border-radius:20px}
+        .td-hello{font-size:22px}
+        .td-hero-body{gap:14px}
+        .td-hero .td-ring{--size:76px}
+        .td-ring-num{font-size:18px}
+        .td-start-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .td-launcher{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+        .td-ring-card{padding:10px;gap:8px}
+        .td-ring-card .td-ring{--size:44px}
+        .md-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .td-pad{padding:14px}
+        .td-dots{gap:3px}
+        .td-dot{width:20px}
+        .td-head{align-items:flex-start;flex-wrap:wrap}
+        .td-more>summary{gap:8px;padding:12px}
+    }
+    @container (max-width:360px){
+        .td-start-list{grid-template-columns:minmax(0,1fr)}
+        .td-hero-body{grid-template-columns:minmax(0,1fr);justify-items:start}
+        .td-streak{gap:8px}
+        .td-dot{width:18px}
+        .td-more-badge{display:none}
     }
 </style>
 

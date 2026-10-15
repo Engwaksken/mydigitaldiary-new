@@ -126,4 +126,44 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'transcription_capacity_mb' => 40,
         ]);
     }
+
+    public function test_super_admin_can_change_an_existing_plan_between_individual_and_team_categories(): void
+    {
+        $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
+        $plan = SubscriptionPlan::query()->create([
+            'key' => 'convertible-plan',
+            'name' => 'Convertible',
+            'category' => 'individual',
+            'individual_tier' => 'gold',
+            'duration_months' => 1,
+            'discount_percent' => 0,
+            'flat_price' => 1500,
+            'monthly_transcription_minutes' => 300,
+            'transcription_capacity_mb' => 30,
+            'color' => '#475569',
+            'is_enabled' => true,
+        ]);
+
+        $this->actingAs($superAdmin)->put(route('admin.subscription-plans.update', $plan), [
+            'key' => 'convertible-plan',
+            'name' => 'Team Convertible',
+            'category' => 'family_team',
+            'individual_tier' => 'gold',
+            'pricing_type' => 'flat',
+            'duration_months_flat' => 1,
+            'flat_price' => 5000,
+            'monthly_transcription_minutes' => 300,
+            'transcription_capacity_mb' => 30,
+            'included_seats' => 5,
+            'color' => '#475569',
+            'is_enabled' => 1,
+        ])->assertRedirect(route('admin.subscription-plans.index'));
+
+        $this->assertDatabaseHas('subscription_plans', [
+            'id' => $plan->id,
+            'category' => 'family_team',
+            'individual_tier' => null,
+            'included_seats' => 5,
+        ]);
+    }
 }
