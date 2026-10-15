@@ -26,10 +26,10 @@ use Illuminate\Support\Facades\Storage;
 class MeetingRecordingController extends Controller
 {
     private const TRANSCRIPTION_FAILURE_MESSAGE =
-        'We could not transcribe this recording. Please try again with a supported audio file under 30 MB.';
+        'We could not transcribe this recording. Please try again with a supported audio file within your transcription capacity.';
 
     private const TRANSCRIPTION_TOO_LARGE_MESSAGE =
-        'This recording is too large to transcribe. Please top up your extra recording quota or record a shorter meeting under 30 MB.';
+        'This recording is too large to transcribe. Please top up your extra recording quota or record a shorter meeting.';
 
     private const TRANSCRIPTION_QUOTA_REQUIRED_MESSAGE =
         'Transcription needs an active subscription or extra recording minutes. Please top up your extra recording quota to continue.';
@@ -94,7 +94,7 @@ class MeetingRecordingController extends Controller
         ]);
 
         $audioFile = $request->file('audio');
-        $this->validateRecordingFile($audioFile);
+        $this->validateRecordingFile($audioFile, $request->user()->effectiveTranscriptionCapacityBytes());
         $audioPath = $this->storeRecordingFile($audioFile);
 
         $recording->update([
@@ -514,8 +514,11 @@ class MeetingRecordingController extends Controller
         return $file->storeAs('meeting-recordings', $name, 'public');
     }
 
-    private function validateRecordingFile(\Illuminate\Http\UploadedFile $file): void
+    private function validateRecordingFile(\Illuminate\Http\UploadedFile $file, int $capacityBytes): void
     {
+        if (($file->getSize() ?? 0) > $capacityBytes) {
+            abort(422, 'The recording exceeds your transcription capacity.');
+        }
         if (($file->getSize() ?? 0) < 1024) {
             abort(422, 'The recording is empty or too short. Record at least a few seconds and try again.');
         }
@@ -552,7 +555,7 @@ class MeetingRecordingController extends Controller
     private function transform(MeetingRecording $recording, User $user): array
     {
         $fileSizeBytes = $this->recordingFileSizeBytes($recording);
-        $transcriptionLimitMb = 30;
+        $transcriptionLimitMb = $user->effectiveTranscriptionCapacityMb();
         $hasActiveAccess = (bool) $user->hasActiveAccess();
         $extraMinutes = $user->availableExtraRecordingQuotaMinutes();
         $canTranscribe = $hasActiveAccess || $extraMinutes > 0;

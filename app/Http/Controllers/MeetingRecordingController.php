@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Log;
 class MeetingRecordingController extends Controller
 {
     private const TRANSCRIPTION_FAILURE_MESSAGE =
-        'We could not transcribe this recording. Please try again with a supported audio file under 30 MB.';
+            'We could not transcribe this recording. Please try again with a supported audio file within your transcription capacity.';
 
     private function authorizeMeeting(Request $request, Meeting $meeting): void
     {
@@ -130,7 +130,8 @@ class MeetingRecordingController extends Controller
             $request->file('audio');
 
         $this->validateRecordingFile(
-            $audioFile
+            $audioFile,
+            $request->user()->effectiveTranscriptionCapacityBytes()
         );
 
         $audioPath =
@@ -310,7 +311,8 @@ class MeetingRecordingController extends Controller
         }
 
         $this->validateRecordingFile(
-            $audioFile
+            $audioFile,
+            $request->user()->effectiveTranscriptionCapacityBytes()
         );
 
         $audioPath =
@@ -419,11 +421,12 @@ class MeetingRecordingController extends Controller
             ]);
         }
 
-        if ($fileSizeBytes > 30 * 1024 * 1024 && $extraMinutes === 0) {
+        $capacityMb = $user->effectiveTranscriptionCapacityMb();
+        if ($fileSizeBytes > $user->effectiveTranscriptionCapacityBytes() && $extraMinutes === 0) {
             return response()->json([
                 'can_transcribe' => false,
                 'reason' => 'file_too_large',
-                'message' => "The recording is {$fileSizeMb} MB, which exceeds the 30 MB limit. Please top up your recording quota to transcribe larger files.",
+                'message' => "The recording is {$fileSizeMb} MB, which exceeds your {$capacityMb} MB limit. Please top up your recording quota to transcribe larger files.",
                 'has_active_access' => $hasActive,
                 'extra_minutes_remaining' => $extraMinutes,
                 'file_size_mb' => $fileSizeMb,
@@ -1981,8 +1984,12 @@ class MeetingRecordingController extends Controller
     }
 
     private function validateRecordingFile(
-        UploadedFile $file
+        UploadedFile $file,
+        int $capacityBytes
     ): void {
+        if (($file->getSize() ?? 0) > $capacityBytes) {
+            abort(422, 'The recording exceeds your transcription capacity.');
+        }
         if (
             ($file->getSize() ?? 0)
             < 1024

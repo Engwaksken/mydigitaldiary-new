@@ -24,6 +24,11 @@ class DebtController extends Controller
             $query->where('is_archived', $request->boolean('archived'));
         }
 
+        $type = $request->query('type');
+        if (in_array($type, ['borrowed', 'lent'], true)) {
+            $query->where('type', $type);
+        }
+
         $search = trim((string) $request->query('search', $request->query('q', '')));
 
         if ($search !== '') {

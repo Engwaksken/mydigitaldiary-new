@@ -104,6 +104,9 @@ class DebtController extends CrudController
         $this->syncOverdueStatuses($request);
 
         $query = Debt::where('user_id', $request->user()->id);
+        if (in_array($request->query('type'), ['borrowed', 'lent'], true)) {
+            $query->where('type', $request->query('type'));
+        }
 
         return $this->renderIndex($request, $query, [
             // Pass statistics explicitly so the generic CRUD view always
@@ -220,4 +223,3 @@ class DebtController extends CrudController
         ];
     }
 }
-

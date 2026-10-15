@@ -639,8 +639,9 @@ class SubscriptionController extends Controller
         }
 
         $settings = SiteSetting::current();
-        $price = $plan->computedPrice((float) $settings->monthly_price);
-        $currencyCode = strtolower($settings->default_currency_code);
+        $personalPrice = $beneficiary?->subscription_plan_id === $plan->id ? $beneficiary->effectiveSubscriptionPrice() : null;
+        $price = $personalPrice['price'] ?? $plan->computedPrice((float) $settings->monthly_price);
+        $currencyCode = strtolower($personalPrice['currency_code'] ?? $settings->default_currency_code);
 
         // Stripe expects amounts in the currency's SMALLEST unit — cents
         // for USD, but for a handful of currencies Stripe treats as
@@ -734,7 +735,8 @@ class SubscriptionController extends Controller
         }
 
         $settings = SiteSetting::current();
-        $price = $plan->computedPrice((float) $settings->monthly_price);
+        $personalPrice = $beneficiary?->subscription_plan_id === $plan->id ? $beneficiary->effectiveSubscriptionPrice() : null;
+        $price = $personalPrice['price'] ?? $plan->computedPrice((float) $settings->monthly_price);
         $reference = 'sub_' . $request->user()->id . '_' . now()->format('YmdHis') . '_' . random_int(1000, 9999);
 
         $payment = Payment::create([
@@ -744,7 +746,7 @@ class SubscriptionController extends Controller
             'subscription_plan_id' => $plan->id,
             'method' => 'mobile_money',
             'amount' => $price,
-            'currency' => $settings->default_currency_code,
+            'currency' => $personalPrice['currency_code'] ?? $settings->default_currency_code,
             'status' => 'pending',
             'reference' => $reference,
         ]);
@@ -1025,7 +1027,8 @@ class SubscriptionController extends Controller
 
         $plan = $this->findEnabledPlan($data['plan_id']);
         $settings = SiteSetting::current();
-        $price = $plan->computedPrice((float) $settings->monthly_price);
+        $personalPrice = $beneficiary?->subscription_plan_id === $plan->id ? $beneficiary->effectiveSubscriptionPrice() : null;
+        $price = $personalPrice['price'] ?? $plan->computedPrice((float) $settings->monthly_price);
 
         $payment = Payment::create([
             'user_id' => $request->user()->id,
@@ -1034,7 +1037,7 @@ class SubscriptionController extends Controller
             'subscription_plan_id' => $plan->id,
             'method' => $gateway->type,
             'amount' => $price,
-            'currency' => $settings->default_currency_code,
+            'currency' => $personalPrice['currency_code'] ?? $settings->default_currency_code,
             'status' => 'pending',
             'reference' => $data['reference'],
         ]);

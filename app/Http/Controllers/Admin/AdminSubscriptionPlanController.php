@@ -112,6 +112,7 @@ class AdminSubscriptionPlanController extends Controller
             'included_seats' => ['nullable', 'integer', 'min:1'],
             'additional_user_price' => ['nullable', 'numeric', 'min:0'],
             'included_extra_recording_minutes' => ['nullable', 'integer', 'min:0'],
+            'transcription_capacity_mb' => ['nullable', 'integer', 'min:1', 'max:102400'],
             'color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'badge' => ['nullable', 'string', 'max:50'],
             'is_recommended' => ['nullable', 'boolean'],
@@ -156,6 +157,7 @@ class AdminSubscriptionPlanController extends Controller
             'included_extra_recording_minutes' => $data['included_extra_recording_minutes']
                 ?? $existingPlan?->included_extra_recording_minutes
                 ?? 0,
+            'transcription_capacity_mb' => $data['transcription_capacity_mb'] ?? $existingPlan?->transcription_capacity_mb ?? 30,
             'color' => strtoupper($data['color']),
             'badge' => array_key_exists('badge', $data)
                 ? $data['badge']

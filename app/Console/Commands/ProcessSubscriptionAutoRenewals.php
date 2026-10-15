@@ -124,7 +124,9 @@ class ProcessSubscriptionAutoRenewals extends Command
             }
 
             $settings = SiteSetting::current();
-            $price = $plan->computedPrice((float) $settings->monthly_price);
+            $personalPrice = $user->effectiveSubscriptionPrice();
+            $price = $personalPrice['price'] ?? $plan->computedPrice((float) $settings->monthly_price);
+            $currency = $personalPrice['currency_code'] ?? $settings->default_currency_code;
             $reference = sprintf(
                 'autorenew_%d_%s_%04d',
                 $user->id,
@@ -138,7 +140,7 @@ class ProcessSubscriptionAutoRenewals extends Command
                 'subscription_plan_id' => $plan->id,
                 'method' => 'mobile_money',
                 'amount' => $price,
-                'currency' => $settings->default_currency_code,
+                'currency' => $currency,
                 'status' => 'pending',
                 'reference' => $reference,
             ]);
@@ -150,7 +152,7 @@ class ProcessSubscriptionAutoRenewals extends Command
             $driver->initiateCollection(
                 $reference,
                 $price,
-                $settings->default_currency_code,
+                $currency,
                 $phone,
                 $network,
                 $user->id,

@@ -15,7 +15,7 @@ class MeetingRecordingTranscriptionErrorTest extends TestCase
     use RefreshDatabase;
 
     private const USER_MESSAGE =
-        'We could not transcribe this recording. Please try again with a supported audio file under 30 MB.';
+        'We could not transcribe this recording. Please try again with a supported audio file within your transcription capacity.';
 
     private const PROVIDER_MESSAGE =
         'OpenAI transcription failed. gpt-4o-transcribe: Audio file might be corrupted or unsupported | whisper-1: 413: Maximum content size limit exceeded.';

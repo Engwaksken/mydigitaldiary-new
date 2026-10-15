@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Site-wide, admin-managed pricing tiers — NOT scoped to a user (unlike
@@ -19,7 +20,7 @@ class SubscriptionPlan extends Model
     protected $fillable = [
         'key', 'name', 'category', 'duration_months', 'discount_percent', 'flat_price',
         'included_seats', 'additional_user_price', 'included_extra_recording_minutes', 'is_enabled', 'sort_order', 'features',
-        'color', 'badge', 'is_recommended', 'is_best_value',
+        'color', 'badge', 'is_recommended', 'is_best_value', 'transcription_capacity_mb',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class SubscriptionPlan extends Model
         'features' => 'array',
         'is_recommended' => 'boolean',
         'is_best_value' => 'boolean',
+        'transcription_capacity_mb' => 'integer',
     ];
 
     public function isIndividual(): bool
@@ -150,12 +152,12 @@ class SubscriptionPlan extends Model
         return preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : '#475569';
     }
 
-    public function payments()
+    public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
     }
 
-    public function recordingExtraGrants()
+    public function recordingExtraGrants(): HasMany
     {
         return $this->hasMany(SubscriptionRecordingExtraGrant::class, 'subscription_plan_id');
     }

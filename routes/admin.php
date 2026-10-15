@@ -135,6 +135,15 @@ Route::middleware([
             [AdminUserController::class, 'show']
         )->name('users.show');
 
+        Route::patch(
+            'users/{user}/transcription-capacity',
+            [AdminUserController::class, 'updateTranscriptionCapacity']
+        )->whereNumber('user')
+          ->name('users.transcription-capacity.update');
+
+        Route::patch('users/{user}/subscription-price', [AdminUserController::class, 'updateSubscriptionPrice'])
+            ->whereNumber('user')->name('users.subscription-price.update');
+
         Route::post(
             'users/{user}/suspend',
             [AdminUserController::class, 'suspend']

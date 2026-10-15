@@ -166,6 +166,22 @@
                         Update subscription
                     </button>
                 </form>
+                <form method="POST" action="{{ route('admin.users.subscription-price.update', $user) }}" class="mt-6 border-t pt-5 space-y-3">
+                    @csrf @method('PATCH')
+                    <h3 class="font-semibold text-slate-800">Personal recurring price override</h3>
+                    <p class="text-xs text-slate-500">Applies only to this user's individual-plan checkout and renewals. Leave price blank to return to plan pricing.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <input type="number" name="price" min="0" step="0.01" value="{{ old('price', $user->effectiveSubscriptionPrice()['price'] ?? '') }}" class="pm-input" placeholder="Price">
+                        <input type="text" name="currency_code" minlength="3" maxlength="3" value="{{ old('currency_code', $user->effectiveSubscriptionPrice()['currency_code'] ?? 'UGX') }}" class="pm-input" aria-label="Currency code">
+                        <button type="submit" class="btn-primary text-white px-4 py-2 rounded-lg text-sm">Save personal price</button>
+                    </div>
+                </form>
+                <form method="POST" action="{{ route('admin.users.transcription-capacity.update', $user) }}" class="mt-5 border-t pt-5 space-y-3">
+                    @csrf @method('PATCH')
+                    <h3 class="font-semibold text-slate-800">Transcription capacity override</h3>
+                    <div class="flex gap-3"><input type="number" name="transcription_capacity_mb" min="1" max="102400" value="{{ old('transcription_capacity_mb', $user->transcription_capacity_mb) }}" class="pm-input" placeholder="MB; blank means plan default"><button class="btn-primary text-white px-4 py-2 rounded-lg text-sm">Save capacity</button></div>
+                    <p class="text-xs text-slate-500">Effective limit: {{ $user->effectiveTranscriptionCapacityMb() }} MB. Leave blank to use the plan limit.</p>
+                </form>
             </div>
 
             <div role="tabpanel" id="pm-user-panel-role" aria-labelledby="pm-user-tab-role" tabindex="0" class="pm-user-panel pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6" hidden>

@@ -211,6 +211,12 @@
 
         <div class="pm-form-panel" role="tabpanel" id="plan-panel-3" aria-labelledby="plan-tab-3" data-pm-form-panel="3" @if ($planTab !== 3) hidden @endif>
             <div>
+                <label for="transcription_capacity_mb" class="block text-sm font-medium text-slate-700 mb-1">Maximum transcription recording size (MB)</label>
+                <input type="number" id="transcription_capacity_mb" name="transcription_capacity_mb" min="1" max="102400" required value="{{ old('transcription_capacity_mb', $plan->transcription_capacity_mb ?? 30) }}" class="pm-input">
+                <p class="text-xs text-slate-500 mt-1">Per-recording limit for users on this plan; an admin per-user override takes precedence.</p>
+                @error('transcription_capacity_mb') <p role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p> @enderror
+            </div>
+            <div>
                 <span class="block text-sm font-medium text-slate-700 mb-3">Included Features <span class="font-normal text-slate-400">(none ticked = all features)</span></span>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     @php $selectedFeatures = old('features', $plan->features ?? []); @endphp

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -83,6 +84,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'subscription_plan_id',
         'subscription_expires_at',
         'extra_recording_quota_minutes',
+        'transcription_capacity_mb',
         'extra_quota_expires_at',
         'last_expiry_reminder_days',
         'last_expiry_reminder_at',
@@ -111,6 +113,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'hydration_reminders_enabled' => 'boolean',
             'subscription_expires_at' => 'datetime',
             'extra_recording_quota_minutes' => 'integer',
+            'transcription_capacity_mb' => 'integer',
             'extra_quota_expires_at' => 'datetime',
             'deletion_requested_at' => 'datetime',
             'scheduled_deletion_at' => 'datetime',
@@ -211,6 +214,23 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(SubscriptionPlan::class);
     }
 
+    /** Full audit history of manually assigned subscription prices. */
+    public function subscriptionPriceOverrides(): HasMany
+    {
+        return $this->hasMany(UserSubscriptionPriceOverride::class)->orderByDesc('effective_from');
+    }
+
+    /** Overrides authored by this user. */
+    public function createdSubscriptionPriceOverrides(): HasMany
+    {
+        return $this->hasMany(UserSubscriptionPriceOverride::class, 'changed_by_user_id');
+    }
+
+    public function businessInvoices(): HasMany
+    {
+        return $this->hasMany(BusinessInvoice::class);
+    }
+
     public function availableExtraRecordingQuotaMinutes(): int
     {
         if ($this->extra_quota_expires_at && $this->extra_quota_expires_at->isPast()) {
@@ -218,6 +238,43 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return max(0, (int) $this->extra_recording_quota_minutes);
+    }
+
+    /** Effective transcription storage capacity, using the assigned plan's limit when unset. */
+    public function effectiveTranscriptionCapacityMb(): int
+    {
+        return (int) ($this->transcription_capacity_mb ?? $this->subscriptionPlan?->transcription_capacity_mb ?? 30);
+    }
+
+    /** Return the active override's price and currency, or the assigned plan's fallback price. */
+    public function effectiveSubscriptionPrice(): ?array
+    {
+        $now = now();
+        $override = $this->subscriptionPriceOverrides()
+            ->where('effective_from', '<=', $now)
+            ->where(function ($query) use ($now) {
+                $query->whereNull('effective_until')->orWhere('effective_until', '>', $now);
+            })
+            ->orderByDesc('effective_from')
+            ->first();
+
+        if ($override && $this->subscriptionPlan?->category === 'individual') {
+            return ['price' => (float) $override->price, 'currency_code' => $override->currency_code];
+        }
+
+        $plan = $this->subscriptionPlan;
+        if (! $plan) {
+            return null;
+        }
+
+        $monthlyPrice = (float) (SiteSetting::current()->monthly_price ?? 0);
+
+        return ['price' => $plan->computedPrice($monthlyPrice), 'currency_code' => $this->preferredCurrencyCode()];
+    }
+
+    public function effectiveTranscriptionCapacityBytes(): int
+    {
+        return $this->effectiveTranscriptionCapacityMb() * 1024 * 1024;
     }
 
     public function isAdmin(): bool

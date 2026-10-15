@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkUserRequest;
 use App\Http\Requests\Admin\UpdateUserSubscriptionRequest;
+use App\Http\Requests\Admin\UpdateTranscriptionCapacityRequest;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -888,6 +889,48 @@ class AdminUserController extends Controller
         return redirect()
             ->route('admin.users.index')
             ->with('success', 'User deleted.');
+    }
+
+    public function updateTranscriptionCapacity(
+        UpdateTranscriptionCapacityRequest $request,
+        User $user
+    ): \Illuminate\Http\JsonResponse|RedirectResponse {
+        $user->transcription_capacity_mb = $request->validated('transcription_capacity_mb');
+        $user->save();
+
+        if (! $request->expectsJson()) {
+            return back()->with('success', 'Transcription capacity updated.');
+        }
+
+        return response()->json([
+            'transcription_capacity_mb' => $user->transcription_capacity_mb,
+            'effective_transcription_capacity_mb' => $user->effectiveTranscriptionCapacityMb(),
+        ]);
+    }
+
+    public function updateSubscriptionPrice(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate([
+            'price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'currency_code' => ['required_with:price', 'string', 'size:3'],
+            'effective_from' => ['nullable', 'date'],
+        ]);
+
+        DB::transaction(function () use ($data, $user, $request): void {
+            $now = now();
+            $user->subscriptionPriceOverrides()->whereNull('effective_until')
+                ->where('effective_from', '<=', $now)->update(['effective_until' => $now]);
+            if (array_key_exists('price', $data) && $data['price'] !== null) {
+                $user->subscriptionPriceOverrides()->create([
+                    'price' => $data['price'],
+                    'currency_code' => strtoupper($data['currency_code']),
+                    'effective_from' => $data['effective_from'] ?? $now,
+                    'changed_by_user_id' => $request->user()->id,
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Personal subscription price updated.');
     }
 
     private function setRole(

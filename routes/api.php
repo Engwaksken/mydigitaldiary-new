@@ -139,6 +139,14 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::get('dashboard/recent-activity', [DashboardController::class, 'recentActivityFull']);
     Route::get('dashboard/today-hub', [DashboardController::class, 'todayHub'])->name('dashboard.today-hub');
     Route::get('savings', [SavingsOverviewController::class, 'index']);
+    Route::get('business-invoices', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'index'])
+        ->name('business-invoices.index');
+    Route::post('business-invoices', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'store'])
+        ->name('business-invoices.store');
+    Route::post('business-invoices/{id}/send', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'send'])
+        ->whereNumber('id')->name('business-invoices.send');
+    Route::get('business-invoices/{id}/download', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'download'])
+        ->whereNumber('id')->name('business-invoices.download');
     Route::post('debts/{debt}/reminders/send', [DebtReminderController::class, 'send']);
     Route::get('debts/{debt}/reminders/history', [DebtReminderController::class, 'history']);
     Route::get('daily-routine/start', [DailyRoutineController::class, 'start']);
@@ -366,8 +374,10 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
         ->name('subscription.pay.iotec.status');
 
     // Meeting recordings
-    Route::get('meetings/{meeting}/recordings', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'index']);
-    Route::post('meetings/{meeting}/recordings', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'store']);
+    Route::get('meetings/{meeting}/recordings', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'index'])
+        ->whereNumber('meeting')->name('meetings.recordings.index');
+    Route::post('meetings/{meeting}/recordings', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'store'])
+        ->whereNumber('meeting')->middleware('throttle:5,1')->name('meetings.recordings.store');
     Route::patch('meeting-recordings/{recording}/status', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'updateStatus']);
     Route::post('meeting-recordings/{recording}/stop', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'stop']);
     Route::post('meeting-recordings/{recording}/transcribe', [\App\Http\Controllers\Api\MeetingRecordingController::class, 'transcribe'])->middleware('throttle:5,1');

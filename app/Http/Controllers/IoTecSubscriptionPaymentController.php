@@ -87,14 +87,14 @@ class IoTecSubscriptionPaymentController extends Controller
             $settings->monthly_price ?? 0
         );
 
-        $amount = (float) $plan->computedPrice(
-            $baseMonthlyPrice
-        );
+        $personalPrice = $beneficiary?->subscription_plan_id === $plan->id ? $beneficiary->effectiveSubscriptionPrice() : null;
+        $amount = (float) ($personalPrice['price'] ?? $plan->computedPrice($baseMonthlyPrice));
 
         $currency = strtoupper(
             trim(
                 (string) (
                     $settings->default_currency_code
+                    ?? $personalPrice['currency_code']
                     ?? 'UGX'
                 )
             )
