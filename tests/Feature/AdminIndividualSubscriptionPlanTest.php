@@ -25,6 +25,29 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             ->assertSee('Flat price');
     }
 
+    public function test_super_admin_can_open_the_legacy_plan_edit_url(): void
+    {
+        $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
+        $plan = SubscriptionPlan::query()->create([
+            'key' => 'legacy-edit-plan',
+            'name' => 'Legacy Edit Plan',
+            'category' => 'individual',
+            'individual_tier' => 'starter',
+            'duration_months' => 1,
+            'discount_percent' => 0,
+            'monthly_transcription_minutes' => 60,
+            'transcription_capacity_mb' => 30,
+            'color' => '#475569',
+            'is_enabled' => true,
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->get('/admin/subscription-plans/'.$plan->id)
+            ->assertOk()
+            ->assertSee('Edit Subscription Plan')
+            ->assertSee('Legacy Edit Plan');
+    }
+
     public function test_super_admin_can_create_priced_individual_tier_with_monthly_minutes(): void
     {
         $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);

@@ -595,6 +595,13 @@ Route::middleware([
             'show',
         ]);
 
+        // Keep the historical plan URL working for existing bookmarks and
+        // links that point to /admin/subscription-plans/{id} for editing.
+        Route::get(
+            'subscription-plans/{subscriptionPlan}',
+            [AdminSubscriptionPlanController::class, 'edit']
+        )->whereNumber('subscriptionPlan')->name('subscription-plans.edit-legacy');
+
         Route::post(
             'subscription-plans/{subscriptionPlan}/toggle',
             [AdminSubscriptionPlanController::class, 'toggle']
