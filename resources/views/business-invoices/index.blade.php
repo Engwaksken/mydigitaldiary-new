@@ -33,19 +33,26 @@
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_default" value="1" @checked(old('is_default'))> Make this the default template</label>
                     <button class="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-upload mr-1" aria-hidden="true"></i> Upload template</button>
                 </form>
-                @if ($templates->isNotEmpty())
-                    <div class="mt-5 space-y-2 border-t border-slate-100 pt-4">
-                        @foreach ($templates as $template)
-                            <div class="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-slate-50 p-3">
-                                <div class="min-w-0"><p class="truncate text-sm font-semibold text-slate-800">{{ $template->name }}</p><p class="text-xs text-slate-500">{{ strtolower(pathinfo($template->storage_path, PATHINFO_EXTENSION)) === 'pdf' ? 'PDF stationery' : 'HTML layout' }}{{ $template->is_default ? ' · Default' : '' }}</p></div>
-                                <div class="flex shrink-0 items-center gap-3">
-                                    @unless ($template->is_default)<form method="POST" action="{{ route('business-invoices.templates.default', $template->id) }}">@csrf<button class="text-xs font-semibold text-[var(--brand-1)]">Set default</button></form>@endunless
-                                    <form method="POST" action="{{ route('business-invoices.templates.destroy', $template->id) }}" data-confirm="Delete this template? Invoices using it will use the standard layout." data-confirm-title="Delete template?" data-confirm-text="Delete">@csrf @method('DELETE')<button class="text-rose-600" aria-label="Delete {{ $template->name }}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></form>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
+                <div class="mt-5 overflow-x-auto border-t border-slate-100 pt-4">
+                    <table class="w-full min-w-[600px] text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-3 py-3">Template</th><th class="px-3 py-3">Format</th><th class="px-3 py-3">Default</th><th class="px-3 py-3">Actions</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @forelse ($templates as $template)
+                                <tr>
+                                    <td class="max-w-64 truncate px-3 py-3 font-semibold text-slate-800">{{ $template->name }}</td>
+                                    <td class="whitespace-nowrap px-3 py-3 text-slate-600">{{ strtolower(pathinfo($template->storage_path, PATHINFO_EXTENSION)) === 'pdf' ? 'PDF stationery' : 'HTML layout' }}</td>
+                                    <td class="whitespace-nowrap px-3 py-3">{{ $template->is_default ? 'Yes' : 'No' }}</td>
+                                    <td class="whitespace-nowrap px-3 py-3"><div class="flex items-center gap-4">
+                                        @unless ($template->is_default)<form method="POST" action="{{ route('business-invoices.templates.default', $template->id) }}">@csrf<button class="text-xs font-semibold text-[var(--brand-1)]">Set default</button></form>@endunless
+                                        <form method="POST" action="{{ route('business-invoices.templates.destroy', $template->id) }}" data-confirm="Delete this template? Invoices using it will use the standard layout." data-confirm-title="Delete template?" data-confirm-text="Delete">@csrf @method('DELETE')<button class="text-rose-600" aria-label="Delete {{ $template->name }}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></form>
+                                    </div></td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="px-3 py-6 text-center text-slate-500">No invoice templates yet.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
                 <details class="mt-4 rounded-xl border border-slate-200 p-3">
                     <summary class="cursor-pointer text-sm font-semibold text-slate-700">HTML placeholders</summary>
                     <p class="mt-2 break-words text-xs leading-5 text-slate-500">@{{business_name}}, @{{business_address}}, @{{business_email}}, @{{business_phone}}, @{{customer_name}}, @{{customer_email}}, @{{invoice_number}}, @{{issue_date}}, @{{due_date}}, @{{currency}}, @{{total}}, @{{status}}, @{{document_title}}, @{{line_items_table}}</p>
@@ -55,14 +62,14 @@
 
         <section id="invoice-page-panel-list" role="tabpanel" aria-labelledby="invoice-page-tab-list" data-page-panel="list" class="pm-card-bg overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
             <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><h2 class="text-lg font-bold text-slate-800">Your invoices</h2><p class="text-sm text-slate-500">Paid invoice amounts appear in Finance <i class="fa-solid fa-arrow-right mx-1" aria-hidden="true"></i> Income.</p></div><button type="button" data-open-create class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white"><i class="fa-solid fa-plus" aria-hidden="true"></i> New invoice</button></div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+            <div class="w-full overflow-x-auto">
+                <table class="w-full min-w-[850px] text-sm">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3">Invoice</th><th class="px-4 py-3">Customer</th><th class="px-4 py-3">Dates</th><th class="px-4 py-3">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Actions</th></tr></thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse ($invoices as $invoice)
                             <tr class="align-top">
                                 <td class="px-4 py-4"><strong>{{ $invoice->invoice_number }}</strong><span class="mt-1 block text-xs text-slate-500">{{ $invoice->template?->name ?? 'Standard layout' }}</span></td>
-                                <td class="px-4 py-4">{{ $invoice->customer_name }}<span class="mt-1 block break-all text-xs text-slate-500">{{ $invoice->customer_email }}</span></td>
+                                <td class="whitespace-nowrap px-4 py-4">{{ $invoice->customer_name }}<span class="mt-1 block max-w-56 truncate text-xs text-slate-500" title="{{ $invoice->customer_email }}">{{ $invoice->customer_email }}</span></td>
                                 <td class="whitespace-nowrap px-4 py-4">Issued {{ $invoice->issue_date->format('d M Y') }}<span class="mt-1 block text-xs text-slate-500">Due {{ $invoice->due_date?->format('d M Y') ?? 'on receipt' }}@if($invoice->paid_at) · Paid {{ $invoice->paid_at->format('d M Y') }}@endif</span></td>
                                 <td class="whitespace-nowrap px-4 py-4 font-semibold">{{ $invoice->currency }} {{ number_format((float) $invoice->total, 2) }}</td>
                                 <td class="px-4 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $invoice->status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800' }}">{{ ucfirst($invoice->status) }}</span>@if($invoice->income)<span class="mt-2 block text-xs text-emerald-700"><i class="fa-solid fa-link" aria-hidden="true"></i> In Finance</span>@endif</td>
