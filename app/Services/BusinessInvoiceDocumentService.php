@@ -37,7 +37,7 @@ class BusinessInvoiceDocumentService
         ])->setPaper('a4');
     }
 
-    /** Return the final PDF bytes, prepending uploaded PDF stationery pages. */
+    /** Return the final PDF bytes, using uploaded PDF pages as invoice backgrounds. */
     public function output(BusinessInvoice $invoice, string $title = 'INVOICE'): string
     {
         $basePdf = $this->pdf($invoice, $title)->output();
@@ -49,8 +49,26 @@ class BusinessInvoiceDocumentService
         }
 
         $merged = new Fpdi;
-        $this->appendPdfFile($merged, Storage::disk('local')->path($templatePath));
-        $this->appendPdfStream($merged, $basePdf);
+        $templateFile = Storage::disk('local')->path($templatePath);
+        $templatePageCount = $merged->setSourceFile($templateFile);
+        $invoicePageCount = $merged->setSourceFile(StreamReader::createByString($basePdf));
+
+        for ($page = 1; $page <= $invoicePageCount; $page++) {
+            // Reuse the last stationery page for invoices that span more pages
+            // than the uploaded template provides.
+            $stationeryPage = min($page, $templatePageCount);
+            $merged->setSourceFile($templateFile);
+            $backgroundId = $merged->importPage($stationeryPage);
+            $backgroundSize = $merged->getTemplateSize($backgroundId);
+
+            $merged->setSourceFile(StreamReader::createByString($basePdf));
+            $invoicePageId = $merged->importPage($page);
+            $merged->AddPage($backgroundSize['orientation'], [$backgroundSize['width'], $backgroundSize['height']]);
+            $merged->useTemplate($backgroundId);
+            // Scale generated invoice content to the uploaded page dimensions
+            // and draw it over the stationery instead of creating another page.
+            $merged->useTemplate($invoicePageId, 0, 0, $backgroundSize['width'], $backgroundSize['height']);
+        }
 
         return $merged->Output('S');
     }
@@ -76,28 +94,6 @@ class BusinessInvoiceDocumentService
     private function isPdfTemplate(string $path): bool
     {
         return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'pdf';
-    }
-
-    private function appendPdfFile(Fpdi $target, string $path): void
-    {
-        $pageCount = $target->setSourceFile($path);
-        for ($page = 1; $page <= $pageCount; $page++) {
-            $templateId = $target->importPage($page);
-            $size = $target->getTemplateSize($templateId);
-            $target->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $target->useTemplate($templateId);
-        }
-    }
-
-    private function appendPdfStream(Fpdi $target, string $contents): void
-    {
-        $pageCount = $target->setSourceFile(StreamReader::createByString($contents));
-        for ($page = 1; $page <= $pageCount; $page++) {
-            $templateId = $target->importPage($page);
-            $size = $target->getTemplateSize($templateId);
-            $target->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $target->useTemplate($templateId);
-        }
     }
 
     public function validateTemplate(string $html): ?string

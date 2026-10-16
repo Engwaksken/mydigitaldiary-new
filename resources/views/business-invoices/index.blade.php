@@ -24,7 +24,7 @@
 
         <section id="invoice-page-panel-templates" role="tabpanel" aria-labelledby="invoice-page-tab-templates" data-page-panel="templates" hidden style="display: none" class="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,.8fr)]">
             <aside class="pm-card-bg min-w-0 rounded-2xl border border-slate-100 p-4 shadow-sm sm:p-6">
-                <div class="flex items-start gap-3"><i class="fa-solid fa-file-pdf mt-1 text-xl text-rose-600" aria-hidden="true"></i><div><h2 class="text-lg font-bold text-slate-800">Invoice templates</h2><p class="mt-1 text-sm text-slate-500">Upload safe HTML templates or PDF stationery (up to 10 MB). PDF template pages are included before the generated invoice.</p></div></div>
+                <div class="flex items-start gap-3"><i class="fa-solid fa-file-pdf mt-1 text-xl text-rose-600" aria-hidden="true"></i><div><h2 class="text-lg font-bold text-slate-800">Invoice templates</h2><p class="mt-1 text-sm text-slate-500">Upload safe HTML templates or PDF stationery (up to 10 MB). Invoice details are overlaid on your PDF pages.</p></div></div>
                 <a class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-1)] underline" href="{{ route('business-invoices.templates.sample') }}"><i class="fa-solid fa-download" aria-hidden="true"></i> Download HTML starter</a>
                 <form method="POST" action="{{ route('business-invoices.templates.store') }}" enctype="multipart/form-data" class="mt-4 space-y-3">
                     @csrf

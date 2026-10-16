@@ -155,7 +155,7 @@ class BusinessInvoiceWorkflowTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $pdf);
     }
 
-    public function test_user_can_upload_a_pdf_stationery_template_used_before_invoice_pages(): void
+    public function test_invoice_details_are_overlaid_on_uploaded_pdf_template_pages(): void
     {
         Storage::fake('local');
         $user = User::factory()->create(['subscription_status' => 'active']);
@@ -175,7 +175,11 @@ class BusinessInvoiceWorkflowTest extends TestCase
         $response = $this->actingAs($user)->get(route('business-invoices.download', $invoice->id));
         $response->assertOk()->assertHeader('content-type', 'application/pdf');
         $reader = new Fpdi;
-        $this->assertSame(2, $reader->setSourceFile(StreamReader::createByString($response->streamedContent())));
+        $pdfBytes = $response->streamedContent();
+        $this->assertSame(1, $reader->setSourceFile(StreamReader::createByString($pdfBytes)));
+        $text = (new \Smalot\PdfParser\Parser)->parseContent($pdfBytes)->getText();
+        $this->assertStringContainsString('Company stationery', $text);
+        $this->assertStringContainsString('Brand design', $text);
     }
 
     public function test_paid_invoice_cannot_be_edited_or_deleted(): void
