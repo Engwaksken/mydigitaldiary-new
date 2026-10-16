@@ -149,6 +149,10 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
         ->name('business-invoices.preview');
     Route::post('business-invoices', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'store'])
         ->name('business-invoices.store');
+    Route::put('business-invoices/{id}', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'update'])
+        ->whereNumber('id')->name('business-invoices.update');
+    Route::post('business-invoices/bulk-delete', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'bulkDestroy'])
+        ->name('business-invoices.bulk-delete');
     Route::post('business-invoices/{id}/send', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'send'])
         ->whereNumber('id')->name('business-invoices.send');
     Route::post('business-invoices/{id}/paid', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'markPaid'])

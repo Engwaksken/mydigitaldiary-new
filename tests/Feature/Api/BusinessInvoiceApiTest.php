@@ -87,7 +87,74 @@ class BusinessInvoiceApiTest extends TestCase
         ]);
         Sanctum::actingAs($user);
 
-        $this->getJson('/api/business-invoices')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/business-invoices')->assertOk()->assertJsonCount(0, 'data')
+            ->assertJsonPath('stats.total', 0)->assertJsonPath('stats.unpaid', 0);
+    }
+
+    public function test_mobile_can_bulk_delete_only_its_unpaid_invoices(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        Sanctum::actingAs($user);
+        $invoice = BusinessInvoice::create([
+            'user_id' => $user->id, 'invoice_number' => 'BI-2026-BULK1234',
+            'business_name' => 'Acme Studio', 'customer_name' => 'Jane Customer',
+            'customer_email' => 'jane@example.com', 'line_items' => [],
+            'currency' => 'UGX', 'total' => 0, 'issue_date' => today(), 'status' => 'unpaid',
+        ]);
+        $paidInvoice = BusinessInvoice::create([
+            'user_id' => $user->id, 'invoice_number' => 'BI-2026-PAID5678',
+            'business_name' => 'Acme Studio', 'customer_name' => 'Jane Customer',
+            'customer_email' => 'jane@example.com', 'line_items' => [],
+            'currency' => 'UGX', 'total' => 0, 'issue_date' => today(), 'status' => 'paid',
+        ]);
+        $foreignInvoice = BusinessInvoice::create([
+            'user_id' => $other->id, 'invoice_number' => 'BI-2026-FOREIGN',
+            'business_name' => 'Other Studio', 'customer_name' => 'Other Customer',
+            'customer_email' => 'other@example.com', 'line_items' => [],
+            'currency' => 'UGX', 'total' => 0, 'issue_date' => today(), 'status' => 'unpaid',
+        ]);
+
+        $this->postJson('/api/business-invoices/bulk-delete', ['invoice_ids' => [$invoice->id]])
+            ->assertOk()->assertJsonPath('deleted', 1);
+        $this->postJson('/api/business-invoices/bulk-delete', ['invoice_ids' => [$paidInvoice->id]])
+            ->assertStatus(422);
+        $this->postJson('/api/business-invoices/bulk-delete', ['invoice_ids' => [$foreignInvoice->id]])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('business_invoices', ['id' => $invoice->id]);
+        $this->assertDatabaseHas('business_invoices', ['id' => $paidInvoice->id]);
+        $this->assertDatabaseHas('business_invoices', ['id' => $foreignInvoice->id]);
+    }
+
+    public function test_mobile_can_edit_unpaid_invoice_and_summary_counts_are_returned(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $invoice = BusinessInvoice::create([
+            'user_id' => $user->id, 'invoice_number' => 'BI-2026-EDIT1234',
+            'business_name' => 'Old Studio', 'customer_name' => 'Old Customer',
+            'customer_email' => 'old@example.com', 'line_items' => [],
+            'currency' => 'UGX', 'total' => 0, 'issue_date' => today(), 'status' => 'unpaid',
+        ]);
+
+        $this->putJson("/api/business-invoices/{$invoice->id}", [
+            'business_name' => 'Updated Studio',
+            'customer_name' => 'Updated Customer',
+            'customer_email' => 'updated@example.com',
+            'line_items' => [['description' => 'Consulting', 'quantity' => 2, 'unit_price' => 75]],
+            'currency' => 'USD',
+            'issue_date' => today()->toDateString(),
+        ])->assertOk()->assertJsonPath('data.total', '150.00')
+            ->assertJsonPath('data.customer_name', 'Updated Customer');
+
+        $this->getJson('/api/business-invoices')->assertOk()
+            ->assertJsonPath('stats.total', 1)
+            ->assertJsonPath('stats.unpaid', 1)
+            ->assertJsonPath('stats.paid', 0);
+
+        $invoice->update(['status' => 'paid']);
+        $this->putJson("/api/business-invoices/{$invoice->id}", [])->assertStatus(422);
     }
 
     public function test_owner_can_send_and_download_an_invoice(): void

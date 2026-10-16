@@ -48,6 +48,8 @@ class BusinessInvoiceWorkflowTest extends TestCase
             ->assertSee('Finance')
             ->assertSee('invoice-modal')
             ->assertSee('data-edit-invoice', false)
+            ->assertSee('Total invoices')
+            ->assertSee('Delete selected')
             ->assertSee('fa-arrow-right', false);
     }
 
@@ -78,6 +80,29 @@ class BusinessInvoiceWorkflowTest extends TestCase
         $this->delete(route('business-invoices.destroy', $invoice->id))
             ->assertRedirect(route('business-invoices.index'));
         $this->assertDatabaseMissing('business_invoices', ['id' => $invoice->id]);
+    }
+
+    public function test_user_can_bulk_delete_unpaid_invoices_but_cannot_delete_paid_or_foreign_invoices(): void
+    {
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $other = User::factory()->create(['subscription_status' => 'active']);
+        $unpaid = $this->invoiceFor($user);
+        $paid = $this->invoiceFor($user, ['status' => 'paid']);
+        $foreign = $this->invoiceFor($other);
+
+        $this->actingAs($user)->post(route('business-invoices.bulk-delete'), [
+            'invoice_ids' => [$unpaid->id],
+        ])->assertRedirect(route('business-invoices.index'));
+        $this->assertDatabaseMissing('business_invoices', ['id' => $unpaid->id]);
+
+        $this->post(route('business-invoices.bulk-delete'), [
+            'invoice_ids' => [$paid->id],
+        ])->assertStatus(422);
+        $this->post(route('business-invoices.bulk-delete'), [
+            'invoice_ids' => [$foreign->id],
+        ])->assertNotFound();
+        $this->assertDatabaseHas('business_invoices', ['id' => $paid->id]);
+        $this->assertDatabaseHas('business_invoices', ['id' => $foreign->id]);
     }
 
     public function test_marking_invoice_paid_creates_one_linked_finance_income_and_receipt_can_be_emailed(): void

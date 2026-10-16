@@ -22,9 +22,16 @@ class BusinessInvoiceController extends Controller
     public function index(Request $request): View
     {
         $userId = $request->user()->id;
+        $userInvoices = BusinessInvoice::query()->where('user_id', $userId);
 
         return view('business-invoices.index', [
-            'invoices' => BusinessInvoice::query()->where('user_id', $userId)->with(['template', 'income'])->latest()->paginate(12),
+            'invoices' => (clone $userInvoices)->with(['template', 'income'])->latest()->paginate(12),
+            'invoiceStats' => [
+                'total' => (clone $userInvoices)->count(),
+                'unpaid' => (clone $userInvoices)->where('status', 'unpaid')->count(),
+                'paid' => (clone $userInvoices)->where('status', 'paid')->count(),
+                'overdue' => (clone $userInvoices)->where('status', 'unpaid')->whereNotNull('due_date')->whereDate('due_date', '<', today())->count(),
+            ],
             'templates' => BusinessInvoiceTemplate::query()->where('user_id', $userId)->orderByDesc('is_default')->orderBy('name')->get(),
             'businessCard' => BusinessCard::query()->where('user_id', $userId)->first(),
         ]);
@@ -66,6 +73,23 @@ class BusinessInvoiceController extends Controller
         $invoice->delete();
 
         return redirect()->route('business-invoices.index')->with('success', 'Invoice deleted.');
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'invoice_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'invoice_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+        $invoices = BusinessInvoice::query()->where('user_id', $request->user()->id)
+            ->whereIn('id', $data['invoice_ids'])->with('income')->get();
+        abort_if($invoices->count() !== count($data['invoice_ids']), 404);
+        abort_if($invoices->contains(fn (BusinessInvoice $invoice): bool => $invoice->status === 'paid' || $invoice->income !== null), 422,
+            'Paid invoices linked to Finance income cannot be deleted.');
+
+        DB::transaction(static fn () => $invoices->each->delete());
+
+        return redirect()->route('business-invoices.index')->with('success', $invoices->count().' invoices deleted.');
     }
 
     private function validatedInvoice(Request $request): array

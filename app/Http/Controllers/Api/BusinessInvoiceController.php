@@ -17,8 +17,17 @@ class BusinessInvoiceController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        return response()->json(['data' => BusinessInvoice::where('user_id', $request->user()->id)
-            ->latest()->limit(100)->get()]);
+        $invoices = BusinessInvoice::query()->where('user_id', $request->user()->id);
+
+        return response()->json([
+            'data' => (clone $invoices)->latest()->limit(100)->get(),
+            'stats' => [
+                'total' => (clone $invoices)->count(),
+                'unpaid' => (clone $invoices)->where('status', 'unpaid')->count(),
+                'paid' => (clone $invoices)->where('status', 'paid')->count(),
+                'overdue' => (clone $invoices)->where('status', 'unpaid')->whereNotNull('due_date')->whereDate('due_date', '<', today())->count(),
+            ],
+        ]);
     }
 
     public function templates(Request $request): JsonResponse
@@ -107,6 +116,32 @@ class BusinessInvoiceController extends Controller
 
         $invoice = BusinessInvoice::create($data);
         return response()->json(['data' => $invoice], 201);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $invoice = $this->owned($request, $id);
+        abort_unless($invoice->status !== 'paid', 422, 'Paid invoices cannot be edited.');
+        $invoice->update($this->validatedInvoiceData($request));
+
+        return response()->json(['message' => 'Invoice updated.', 'data' => $invoice->fresh()]);
+    }
+
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'invoice_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'invoice_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+        $invoices = BusinessInvoice::query()->where('user_id', $request->user()->id)
+            ->whereIn('id', $data['invoice_ids'])->with('income')->get();
+        abort_if($invoices->count() !== count($data['invoice_ids']), 404);
+        abort_if($invoices->contains(fn (BusinessInvoice $invoice): bool => $invoice->status === 'paid' || $invoice->income !== null), 422,
+            'Paid invoices linked to Finance income cannot be deleted.');
+
+        DB::transaction(static fn () => $invoices->each->delete());
+
+        return response()->json(['message' => $invoices->count().' invoices deleted.', 'deleted' => $invoices->count()]);
     }
 
     private function validatedInvoiceData(Request $request): array

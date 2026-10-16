@@ -17,6 +17,12 @@
             <button type="button" data-open-create class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"><i class="fa-solid fa-plus" aria-hidden="true"></i> Create invoice</button>
         </header>
 
+        <section aria-label="Invoice statistics" class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            @foreach ([['Total invoices', $invoiceStats['total'], 'fa-file-invoice', 'text-slate-700'], ['Unpaid', $invoiceStats['unpaid'], 'fa-hourglass-half', 'text-amber-700'], ['Paid', $invoiceStats['paid'], 'fa-circle-check', 'text-emerald-700'], ['Overdue', $invoiceStats['overdue'], 'fa-triangle-exclamation', 'text-rose-700']] as [$label, $value, $icon, $color])
+                <article class="pm-card-bg rounded-xl border border-slate-100 p-4 shadow-sm sm:p-5"><div class="flex items-center justify-between gap-2"><p class="text-sm font-medium text-slate-500">{{ $label }}</p><i class="fa-solid {{ $icon }} {{ $color }}" aria-hidden="true"></i></div><p class="mt-2 text-2xl font-bold {{ $color }}">{{ $value }}</p></article>
+            @endforeach
+        </section>
+
         <div role="tablist" aria-label="Business invoice sections" class="flex gap-2 overflow-x-auto border-b border-slate-200" data-invoice-page-tabs>
             <button type="button" role="tab" id="invoice-page-tab-list" aria-controls="invoice-page-panel-list" aria-selected="true" tabindex="0" data-page-tab="list" class="whitespace-nowrap border-b-2 border-[var(--brand-1)] px-4 py-3 text-sm font-semibold text-[var(--brand-1)]">Your Invoices</button>
             <button type="button" role="tab" id="invoice-page-tab-templates" aria-controls="invoice-page-panel-templates" aria-selected="false" tabindex="-1" data-page-tab="templates" class="whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-slate-500">Invoice templates</button>
@@ -63,12 +69,18 @@
 
         <section id="invoice-page-panel-list" role="tabpanel" aria-labelledby="invoice-page-tab-list" data-page-panel="list" class="pm-card-bg overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
             <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><h2 class="text-lg font-bold text-slate-800">Your invoices</h2><p class="text-sm text-slate-500">Paid invoice amounts appear in Finance <i class="fa-solid fa-arrow-right mx-1" aria-hidden="true"></i> Income.</p></div><button type="button" data-open-create class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white"><i class="fa-solid fa-plus" aria-hidden="true"></i> New invoice</button></div>
+            <form id="invoice-bulk-delete-form" method="POST" action="{{ route('business-invoices.bulk-delete') }}" class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 p-3 sm:px-5">
+                @csrf
+                <p class="text-sm text-slate-600"><span id="invoice-selection-count">0</span> selected <span class="text-xs text-slate-500">· Paid invoices cannot be bulk deleted</span></p>
+                <button id="invoice-bulk-delete-button" type="submit" disabled class="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 enabled:hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"><i class="fa-solid fa-trash mr-1" aria-hidden="true"></i> Delete selected</button>
+            </form>
             <div class="w-full overflow-x-auto">
                 <table class="w-full min-w-[850px] text-sm">
-                    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3">Invoice</th><th class="px-4 py-3">Customer</th><th class="px-4 py-3">Dates</th><th class="px-4 py-3">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Actions</th></tr></thead>
+                    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500"><tr><th class="w-10 px-4 py-3"><input type="checkbox" id="select-visible-invoices" aria-label="Select all deletable invoices on this page" class="rounded border-slate-300"></th><th class="px-4 py-3">Invoice</th><th class="px-4 py-3">Customer</th><th class="px-4 py-3">Dates</th><th class="px-4 py-3">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Actions</th></tr></thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse ($invoices as $invoice)
                             <tr class="align-top">
+                                <td class="px-4 py-4"><input type="checkbox" name="invoice_ids[]" value="{{ $invoice->id }}" form="invoice-bulk-delete-form" data-invoice-select @disabled($invoice->status === 'paid' || $invoice->income) aria-label="Select {{ $invoice->invoice_number }}" class="rounded border-slate-300"></td>
                                 <td class="px-4 py-4"><strong>{{ $invoice->invoice_number }}</strong><span class="mt-1 block text-xs text-slate-500">{{ $invoice->template?->name ?? 'Standard layout' }}</span></td>
                                 <td class="whitespace-nowrap px-4 py-4">{{ $invoice->customer_name }}<span class="mt-1 block max-w-56 truncate text-xs text-slate-500" title="{{ $invoice->customer_email }}">{{ $invoice->customer_email }}</span></td>
                                 <td class="whitespace-nowrap px-4 py-4">Issued {{ $invoice->issue_date->format('d M Y') }}<span class="mt-1 block text-xs text-slate-500">Due {{ $invoice->due_date?->format('d M Y') ?? 'on receipt' }}@if($invoice->paid_at) · Paid {{ $invoice->paid_at->format('d M Y') }}@endif</span></td>
@@ -87,7 +99,7 @@
                                 </div></td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">No invoices yet. Use Create invoice to get started.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-10 text-center text-slate-500">No invoices yet. Use Create invoice to get started.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -282,6 +294,31 @@
                 deleteModal.showModal();
             }));
             document.getElementById('cancel-invoice-delete').addEventListener('click', () => deleteModal.close());
+
+            const bulkForm = document.getElementById('invoice-bulk-delete-form');
+            const selectVisible = document.getElementById('select-visible-invoices');
+            const bulkButton = document.getElementById('invoice-bulk-delete-button');
+            const selectionCount = document.getElementById('invoice-selection-count');
+            const selectableInvoices = Array.from(document.querySelectorAll('[data-invoice-select]:not(:disabled)'));
+            function refreshInvoiceSelection() {
+                const checkedCount = selectableInvoices.filter(input => input.checked).length;
+                selectionCount.textContent = checkedCount;
+                bulkButton.disabled = checkedCount === 0;
+                selectVisible.checked = selectableInvoices.length > 0 && checkedCount === selectableInvoices.length;
+                selectVisible.indeterminate = checkedCount > 0 && checkedCount < selectableInvoices.length;
+            }
+            selectVisible.addEventListener('change', () => {
+                selectableInvoices.forEach(input => input.checked = selectVisible.checked);
+                refreshInvoiceSelection();
+            });
+            selectableInvoices.forEach(input => input.addEventListener('change', refreshInvoiceSelection));
+            bulkForm.addEventListener('submit', event => {
+                if (!selectableInvoices.some(input => input.checked)) {
+                    event.preventDefault();
+                    return;
+                }
+                if (!window.confirm('Delete the selected unpaid invoices? This cannot be undone.')) event.preventDefault();
+            });
 
             @if ($errors->any() && in_array($restoreMode, ['create', 'edit'], true))
                 modal.showModal();
