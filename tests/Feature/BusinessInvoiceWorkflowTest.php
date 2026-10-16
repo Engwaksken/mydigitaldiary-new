@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BusinessInvoice;
+use App\Models\BusinessCard;
 use App\Models\BusinessInvoiceTemplate;
 use App\Models\Income;
 use App\Models\User;
@@ -126,6 +127,34 @@ class BusinessInvoiceWorkflowTest extends TestCase
             ->assertHeader('content-type', 'application/pdf');
     }
 
+    public function test_html_template_can_render_the_business_logo_and_watermark_placeholders(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $logoPath = 'business-card-logos/'.$user->id.'/logo.png';
+        Storage::disk('public')->put($logoPath, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j4XcAAAAASUVORK5CYII='));
+        BusinessCard::query()->create([
+            'user_id' => $user->id,
+            'slug' => 'logo-test-'.$user->id,
+            'logo_path' => $logoPath,
+            'name' => 'Logo Test',
+        ]);
+        $html = '<html><body>{{business_logo_watermark}}<header>{{business_logo}}</header><p>{{invoice_number}}</p>{{line_items_table}}</body></html>';
+
+        $this->actingAs($user)->from(route('business-invoices.index'))->post(route('business-invoices.templates.store'), [
+            'name' => 'Branded template',
+            'template_file' => UploadedFile::fake()->createWithContent('invoice.html', $html),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $invoice = $this->invoiceFor($user, [
+            'template_id' => BusinessInvoiceTemplate::query()->where('user_id', $user->id)->value('id'),
+        ]);
+        $pdf = app(BusinessInvoiceDocumentService::class)->output($invoice);
+
+        $this->assertStringStartsWith('%PDF-', $pdf);
+    }
+
     public function test_user_can_upload_a_pdf_stationery_template_used_before_invoice_pages(): void
     {
         Storage::fake('local');
@@ -170,6 +199,8 @@ class BusinessInvoiceWorkflowTest extends TestCase
 
         $this->assertStringContainsString('{{invoice_number}}', app(BusinessInvoiceDocumentService::class)->sampleTemplate());
         $this->assertStringContainsString('{{line_items_table}}', app(BusinessInvoiceDocumentService::class)->sampleTemplate());
+        $this->assertStringContainsString('{{business_logo}}', app(BusinessInvoiceDocumentService::class)->sampleTemplate());
+        $this->assertStringContainsString('{{business_logo_watermark}}', app(BusinessInvoiceDocumentService::class)->sampleTemplate());
     }
 
     public function test_template_rejects_scripts_and_another_users_cannot_mark_an_invoice_paid(): void

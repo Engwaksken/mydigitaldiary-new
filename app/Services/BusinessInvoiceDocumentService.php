@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\BusinessInvoice;
+use App\Models\BusinessCard;
 use Barryvdh\DomPDF\PDF;
 use Barryvdh\DomPDF\Facade\Pdf as DomPdfFacade;
 use setasign\Fpdi\Fpdi;
@@ -139,12 +140,14 @@ h1{color:#047857;margin:0 0 6px}.muted{color:#64748b}
 table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left}
 th{background:#f1f5f9}.right{text-align:right}.total{font-size:17px;font-weight:bold;color:#047857}
 </style></head><body>
-<div class="brand"><h1>{{business_name}}</h1><div>{{business_address}}</div><div>{{business_email}} · {{business_phone}}</div></div>
+{{business_logo_watermark}}
+<div class="brand">{{business_logo}}<h1>{{business_name}}</h1><div>{{business_address}}</div><div>{{business_email}} · {{business_phone}}</div></div>
 <h2>{{document_title}}</h2><p>Invoice {{invoice_number}}</p>
 <table class="columns"><tr><td><strong>Bill to</strong><br>{{customer_name}}<br>{{customer_email}}</td><td class="right"><strong>Issued</strong><br>{{issue_date}}<br><strong>Due</strong><br>{{due_date}}</td></tr></table>
 {{line_items_table}}
 <p class="total right">Total: {{currency}} {{total}}</p>
 <p class="muted">Status: {{status}}</p>
+<p class="muted">Use {{business_logo}} for your business logo and {{business_logo_watermark}} for a faint page watermark.</p>
 </body></html>
 HTML;
     }
@@ -162,8 +165,18 @@ HTML;
         }
         $table = '<table><thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Unit price</th><th class="right">Amount</th></tr></thead><tbody>'.$rows.'</tbody></table>';
 
+        $logoDataUri = $this->businessLogoDataUri($invoice);
+        $businessLogo = $logoDataUri
+            ? '<img alt="Business logo" src="'.$logoDataUri.'" style="display:block;max-width:180px;max-height:80px;margin:0 0 12px">'
+            : '';
+        $businessLogoWatermark = $logoDataUri
+            ? '<img alt="" src="'.$logoDataUri.'" style="position:fixed;top:25%;left:15%;width:70%;opacity:.08;z-index:-1">'
+            : '';
+
         $values = [
             '{{document_title}}' => $escape($title),
+            '{{business_logo}}' => $businessLogo,
+            '{{business_logo_watermark}}' => $businessLogoWatermark,
             '{{invoice_number}}' => $escape($invoice->invoice_number),
             '{{business_name}}' => $escape($invoice->business_name),
             '{{business_address}}' => $escape($invoice->business_address),
@@ -180,5 +193,15 @@ HTML;
         ];
 
         return str_replace(array_keys($values), array_values($values), $html);
+    }
+
+    private function businessLogoDataUri(BusinessInvoice $invoice): string
+    {
+        $logo = BusinessCard::query()->where('user_id', $invoice->user_id)->first()?->logoDataUri();
+        if (! $logo || ! preg_match('#^data:image/(png|jpeg);base64,([A-Za-z0-9+/=]+)$#', $logo, $matches)) {
+            return '';
+        }
+
+        return $logo;
     }
 }

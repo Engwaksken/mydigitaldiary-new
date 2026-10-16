@@ -55,7 +55,8 @@
                 </div>
                 <details class="mt-4 rounded-xl border border-slate-200 p-3">
                     <summary class="cursor-pointer text-sm font-semibold text-slate-700">HTML placeholders</summary>
-                    <p class="mt-2 break-words text-xs leading-5 text-slate-500">@{{business_name}}, @{{business_address}}, @{{business_email}}, @{{business_phone}}, @{{customer_name}}, @{{customer_email}}, @{{invoice_number}}, @{{issue_date}}, @{{due_date}}, @{{currency}}, @{{total}}, @{{status}}, @{{document_title}}, @{{line_items_table}}</p>
+                    <p class="mt-2 break-words text-xs leading-5 text-slate-500">@{{business_logo}}, @{{business_logo_watermark}}, @{{business_name}}, @{{business_address}}, @{{business_email}}, @{{business_phone}}, @{{customer_name}}, @{{customer_email}}, @{{invoice_number}}, @{{issue_date}}, @{{due_date}}, @{{currency}}, @{{total}}, @{{status}}, @{{document_title}}, @{{line_items_table}}</p>
+                    <p class="mt-2 text-xs leading-5 text-slate-500">Add your logo in Business Card first. Put @{{business_logo}} where the logo should appear and @{{business_logo_watermark}} where the faint watermark should appear. Both placeholders safely render your own logo in the PDF.</p>
                 </details>
             </aside>
         </section>
