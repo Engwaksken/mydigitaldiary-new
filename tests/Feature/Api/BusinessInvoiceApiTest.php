@@ -6,7 +6,9 @@ use App\Models\BusinessInvoice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class BusinessInvoiceApiTest extends TestCase
@@ -32,6 +34,45 @@ class BusinessInvoiceApiTest extends TestCase
             ->assertJsonPath('data.line_items.0.amount', 25000);
 
         $this->assertDatabaseHas('business_invoices', ['user_id' => $user->id, 'total' => 30000]);
+    }
+
+    public function test_mobile_can_preview_invoice_without_saving_it(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/business-invoices/preview', [
+            'business_name' => 'Acme Studio',
+            'customer_name' => 'Jane Customer',
+            'customer_email' => 'jane@example.com',
+            'line_items' => [['description' => 'Design work', 'quantity' => 2, 'unit_price' => 125]],
+            'issue_date' => today()->toDateString(),
+        ])->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+        $this->assertDatabaseCount('business_invoices', 0);
+    }
+
+    public function test_mobile_can_upload_and_select_its_invoice_templates(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->post('/api/business-invoices/templates', [
+            'name' => 'My stationery',
+            'is_default' => '1',
+            'template_file' => UploadedFile::fake()->createWithContent(
+                'stationery.html',
+                '<html><body>{{invoice_number}}{{line_items_table}}</body></html>'
+            ),
+        ])->assertCreated()->assertJsonPath('data.name', 'My stationery');
+
+        $this->getJson('/api/business-invoices/templates')
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'My stationery')
+            ->assertJsonPath('data.0.format', 'html')
+            ->assertJsonPath('data.0.is_default', true);
     }
 
     public function test_business_invoice_lists_are_scoped_to_the_authenticated_user(): void

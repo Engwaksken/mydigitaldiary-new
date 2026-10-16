@@ -141,6 +141,12 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
     Route::get('savings', [SavingsOverviewController::class, 'index']);
     Route::get('business-invoices', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'index'])
         ->name('business-invoices.index');
+    Route::get('business-invoices/templates', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'templates'])
+        ->name('business-invoices.templates.index');
+    Route::post('business-invoices/templates', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'uploadTemplate'])
+        ->name('business-invoices.templates.store');
+    Route::post('business-invoices/preview', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'preview'])
+        ->name('business-invoices.preview');
     Route::post('business-invoices', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'store'])
         ->name('business-invoices.store');
     Route::post('business-invoices/{id}/send', [\App\Http\Controllers\Api\BusinessInvoiceController::class, 'send'])

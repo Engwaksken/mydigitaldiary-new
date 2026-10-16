@@ -9,7 +9,9 @@ use App\Services\BusinessInvoiceDocumentService;
 use App\Services\BusinessInvoicePaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class BusinessInvoiceController extends Controller
 {
@@ -19,7 +21,95 @@ class BusinessInvoiceController extends Controller
             ->latest()->limit(100)->get()]);
     }
 
+    public function templates(Request $request): JsonResponse
+    {
+        return response()->json(['data' => BusinessInvoiceTemplate::query()
+            ->where('user_id', $request->user()->id)
+            ->orderByDesc('is_default')->orderBy('name')
+            ->get(['id', 'name', 'storage_path', 'is_default'])
+            ->map(fn (BusinessInvoiceTemplate $template): array => [
+                'id' => $template->id,
+                'name' => $template->name,
+                'format' => strtolower(pathinfo($template->storage_path, PATHINFO_EXTENSION)),
+                'is_default' => $template->is_default,
+            ])]);
+    }
+
+    public function uploadTemplate(Request $request, BusinessInvoiceDocumentService $documents): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'template_file' => ['required', 'file', 'mimes:html,htm,pdf', 'max:10240'],
+            'is_default' => ['nullable', 'boolean'],
+        ]);
+        $file = $request->file('template_file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        abort_unless(in_array($extension, ['html', 'htm', 'pdf'], true), 422, 'Upload an HTML or PDF invoice template.');
+        $content = $file->get();
+        $error = $extension === 'pdf'
+            ? $documents->validatePdfTemplate($content)
+            : $documents->validateTemplate($content);
+        if ($error) {
+            return response()->json(['message' => $error, 'errors' => ['template_file' => [$error]]], 422);
+        }
+
+        $path = $file->storeAs('business-invoice-templates/'.$request->user()->id, Str::uuid().'.'.$extension, 'local');
+        $template = DB::transaction(function () use ($request, $data, $path): BusinessInvoiceTemplate {
+            if ($request->boolean('is_default')) {
+                BusinessInvoiceTemplate::query()->where('user_id', $request->user()->id)->update(['is_default' => false]);
+            }
+
+            return BusinessInvoiceTemplate::query()->create([
+                'user_id' => $request->user()->id,
+                'name' => $data['name'],
+                'storage_path' => $path,
+                'is_default' => $request->boolean('is_default'),
+            ]);
+        });
+
+        return response()->json(['message' => 'Invoice template uploaded.', 'data' => [
+            'id' => $template->id,
+            'name' => $template->name,
+            'format' => $extension,
+            'is_default' => $template->is_default,
+        ]], 201);
+    }
+
+    public function preview(Request $request, BusinessInvoiceDocumentService $documents)
+    {
+        $data = $this->validatedInvoiceData($request);
+        $data['template_id'] ??= BusinessInvoiceTemplate::query()
+            ->where('user_id', $request->user()->id)->where('is_default', true)->value('id');
+        $invoice = new BusinessInvoice([
+            ...$data,
+            'user_id' => $request->user()->id,
+            'invoice_number' => 'PREVIEW-'.now()->format('Y'),
+            'status' => 'unpaid',
+        ]);
+        $invoice->load('template');
+
+        return response($documents->output($invoice))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="invoice-preview.pdf"');
+    }
+
     public function store(Request $request): JsonResponse
+    {
+        $data = $this->validatedInvoiceData($request);
+
+        $data['template_id'] = $data['template_id'] ?? BusinessInvoiceTemplate::query()
+            ->where('user_id', $request->user()->id)
+            ->where('is_default', true)
+            ->value('id');
+        $data['user_id'] = $request->user()->id;
+        $data['invoice_number'] = 'BI-'.now()->format('Y').'-'.strtoupper(bin2hex(random_bytes(4)));
+        $data['status'] = 'unpaid';
+
+        $invoice = BusinessInvoice::create($data);
+        return response()->json(['data' => $invoice], 201);
+    }
+
+    private function validatedInvoiceData(Request $request): array
     {
         $data = $request->validate([
             'business_name' => ['required', 'string', 'max:255'],
@@ -50,16 +140,8 @@ class BusinessInvoiceController extends Controller
         }, $data['line_items']);
         $data['total'] = round(array_sum(array_column($data['line_items'], 'amount')), 2);
         $data['currency'] = strtoupper($data['currency'] ?? 'UGX');
-        $data['user_id'] = $request->user()->id;
-        $data['template_id'] = $data['template_id'] ?? BusinessInvoiceTemplate::query()
-            ->where('user_id', $request->user()->id)
-            ->where('is_default', true)
-            ->value('id');
-        $data['invoice_number'] = 'BI-'.now()->format('Y').'-'.strtoupper(bin2hex(random_bytes(4)));
-        $data['status'] = 'unpaid';
 
-        $invoice = BusinessInvoice::create($data);
-        return response()->json(['data' => $invoice], 201);
+        return $data;
     }
 
     public function send(Request $request, int $id, BusinessInvoiceDocumentService $documents): JsonResponse
