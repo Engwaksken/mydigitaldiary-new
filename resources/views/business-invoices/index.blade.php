@@ -22,7 +22,7 @@
             <button type="button" role="tab" id="invoice-page-tab-templates" aria-controls="invoice-page-panel-templates" aria-selected="false" tabindex="-1" data-page-tab="templates" class="whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-slate-500">Invoice templates</button>
         </div>
 
-        <section id="invoice-page-panel-templates" role="tabpanel" aria-labelledby="invoice-page-tab-templates" data-page-panel="templates" hidden class="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,.8fr)]">
+        <section id="invoice-page-panel-templates" role="tabpanel" aria-labelledby="invoice-page-tab-templates" data-page-panel="templates" hidden style="display: none" class="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,.8fr)]">
             <aside class="pm-card-bg min-w-0 rounded-2xl border border-slate-100 p-4 shadow-sm sm:p-6">
                 <div class="flex items-start gap-3"><i class="fa-solid fa-file-pdf mt-1 text-xl text-rose-600" aria-hidden="true"></i><div><h2 class="text-lg font-bold text-slate-800">Invoice templates</h2><p class="mt-1 text-sm text-slate-500">Upload safe HTML templates or PDF stationery (up to 10 MB). PDF template pages are included before the generated invoice.</p></div></div>
                 <a class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-1)] underline" href="{{ route('business-invoices.templates.sample') }}"><i class="fa-solid fa-download" aria-hidden="true"></i> Download HTML starter</a>
@@ -115,7 +115,7 @@
                 <div><label for="due_date" class="mb-1 block text-sm font-medium">Due date</label><input id="due_date" name="due_date" type="date" class="pm-input" value="{{ old('due_date', $restoreInvoice?->due_date?->toDateString()) }}"></div>
             </div>
             </section>
-            <section id="invoice-form-panel-items" role="tabpanel" aria-labelledby="invoice-form-tab-items" data-form-panel="items" hidden class="space-y-5">
+            <section id="invoice-form-panel-items" role="tabpanel" aria-labelledby="invoice-form-tab-items" data-form-panel="items" hidden style="display: none" class="space-y-5">
             <div>
                 <div class="mb-2 flex items-center justify-between gap-3"><h3 class="font-semibold text-slate-800">Items</h3><button type="button" id="add-invoice-line" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i>Add item</button></div>
                 <div id="invoice-line-items" class="space-y-3">
@@ -179,7 +179,9 @@
                     tab.classList.toggle('text-slate-500', !active);
                 });
                 document.querySelectorAll(`[${panelSelector}]`).forEach(panel => {
-                    panel.hidden = panel.dataset[selector.replace('tab', 'panel')] !== value;
+                    const active = panel.dataset[selector.replace('tab', 'panel')] === value;
+                    panel.hidden = !active;
+                    panel.style.display = active ? '' : 'none';
                 });
             }
 
