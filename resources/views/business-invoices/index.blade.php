@@ -144,7 +144,6 @@
             const mode = document.getElementById('invoice-form-mode');
             const lines = document.getElementById('invoice-line-items');
             const deleteModal = document.getElementById('invoice-delete-modal');
-            let nextLine = lines.querySelectorAll('.invoice-line').length;
             const defaults = {
                 business_name: @json($businessCard?->company ?: $businessCard?->name ?: ''),
                 business_email: @json($businessCard?->email ?: ''),
@@ -161,11 +160,11 @@
 
             function setLines(items) {
                 lines.replaceChildren();
-                (items?.length ? items : [{description: '', quantity: 1, unit_price: ''}]).forEach((item) => {
+                (items?.length ? items : [{description: '', quantity: 1, unit_price: ''}]).forEach((item, index) => {
                     const row = document.getElementById('invoice-line-template').content.firstElementChild.cloneNode(true);
                     row.querySelectorAll('[data-field]').forEach((input) => {
                         const field = input.dataset.field;
-                        input.name = `line_items[${nextLine++}][${field}]`;
+                        input.name = `line_items[${index}][${field}]`;
                         input.value = item[field] ?? (field === 'quantity' ? 1 : '');
                     });
                     lines.appendChild(row);
@@ -208,7 +207,17 @@
             })), {description: '', quantity: 1, unit_price: ''}]));
             lines.addEventListener('click', event => {
                 const remove = event.target.closest('.remove-invoice-line');
-                if (remove && lines.querySelectorAll('.invoice-line').length > 1) remove.closest('.invoice-line').remove();
+                if (remove && lines.querySelectorAll('.invoice-line').length > 1) {
+                    const rowToRemove = remove.closest('.invoice-line');
+                    const remainingItems = Array.from(lines.querySelectorAll('.invoice-line'))
+                        .filter(row => row !== rowToRemove)
+                        .map(row => ({
+                            description: row.querySelector('[data-field="description"]')?.value ?? '',
+                            quantity: row.querySelector('[data-field="quantity"]')?.value ?? 1,
+                            unit_price: row.querySelector('[data-field="unit_price"]')?.value ?? '',
+                        }));
+                    setLines(remainingItems);
+                }
             });
 
             document.querySelectorAll('[data-delete-invoice]').forEach(button => button.addEventListener('click', function () {
