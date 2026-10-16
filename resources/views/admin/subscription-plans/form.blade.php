@@ -33,7 +33,7 @@
             $planTab = $errors->hasAny(['category', 'individual_tier']) ? 0
                 : ($errors->hasAny(['pricing_type', 'duration_months', 'discount_percent', 'duration_months_flat', 'flat_price', 'included_seats', 'additional_user_price', 'included_extra_recording_minutes']) ? 1
                     : ($errors->hasAny(['color', 'badge']) ? 2
-                        : ($errors->hasAny(['features', 'monthly_transcription_minutes', 'transcription_capacity_mb']) ? 3 : 0)));
+                        : ($errors->hasAny(['features', 'max_transcription_minutes_per_meeting', 'transcription_capacity_mb']) ? 3 : 0)));
         @endphp
 
         <div class="pm-form-tabs" role="tablist" aria-label="Plan sections" data-pm-form-tabs>
@@ -225,10 +225,10 @@
 
         <div class="pm-form-panel" role="tabpanel" id="plan-panel-3" aria-labelledby="plan-tab-3" data-pm-form-panel="3" @if ($planTab !== 3) hidden @endif>
             <div>
-                <label for="monthly_transcription_minutes" class="block text-sm font-medium text-slate-700 mb-1">Included transcription minutes per month</label>
-                <input type="number" id="monthly_transcription_minutes" name="monthly_transcription_minutes" min="0" max="1000000" value="{{ old('monthly_transcription_minutes', $plan->monthly_transcription_minutes ?? 60) }}" class="pm-input" aria-describedby="monthly-transcription-hint">
-                <p id="monthly-transcription-hint" class="text-xs text-slate-500 mt-1">Required. Allowance refreshes monthly. Unused minutes do not roll over. Failed transcriptions do not consume minutes.</p>
-                @error('monthly_transcription_minutes') <p role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p> @enderror
+                <label for="max_transcription_minutes_per_meeting" class="block text-sm font-medium text-slate-700 mb-1">Maximum transcription length per meeting (minutes)</label>
+                <input type="number" id="max_transcription_minutes_per_meeting" name="max_transcription_minutes_per_meeting" min="0" max="1000000" value="{{ old('max_transcription_minutes_per_meeting', $plan->max_transcription_minutes_per_meeting ?? 60) }}" class="pm-input" aria-describedby="meeting-transcription-limit-hint">
+                <p id="meeting-transcription-limit-hint" class="text-xs text-slate-500 mt-1">Maximum duration allowed for a single meeting recording. Extra recording minutes can extend this limit for an individual meeting.</p>
+                @error('max_transcription_minutes_per_meeting') <p role="alert" class="text-sm text-rose-600 mt-1">{{ $message }}</p> @enderror
             </div>
             <div>
                 <label for="transcription_capacity_mb" class="block text-sm font-medium text-slate-700 mb-1">Maximum transcription recording size (MB)</label>

@@ -31,10 +31,10 @@
     <p class="text-xs mt-0.5 text-slate-600">
         {{ $plan->isLifetime() ? 'One-time payment' : 'every ' . $plan->duration_months . ' month(s)' }}
     </p>
-    @if (($plan->monthly_transcription_minutes ?? 0) > 0)
+    @if (($plan->max_transcription_minutes_per_meeting ?? 0) > 0)
         <p class="text-xs mt-2 pt-2 border-t text-slate-600" style="border-color: {{ $plan->normalizedHex() }}40;">
             <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
-            {{ number_format($plan->monthly_transcription_minutes) }} meeting transcription minutes/month per member
+            Up to {{ number_format($plan->max_transcription_minutes_per_meeting) }} minutes per meeting recording
         </p>
     @endif
     @if ($plan->category !== 'individual')

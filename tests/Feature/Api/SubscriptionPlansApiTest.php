@@ -25,7 +25,7 @@ class SubscriptionPlansApiTest extends TestCase
             'duration_months' => 1,
             'discount_percent' => 0,
             'flat_price' => 10000,
-            'monthly_transcription_minutes' => 240,
+            'max_transcription_minutes_per_meeting' => 240,
             'transcription_capacity_mb' => 80,
             'color' => '#475569',
             'is_enabled' => true,
@@ -36,7 +36,7 @@ class SubscriptionPlansApiTest extends TestCase
             ->assertJsonFragment([
                 'name' => 'Gold',
                 'individual_tier_label' => 'Gold',
-                'monthly_transcription_minutes' => 240,
+                'max_transcription_minutes_per_meeting' => 240,
                 'transcription_capacity_mb' => 80,
             ]);
     }

@@ -527,17 +527,11 @@ class MeetingRecordingController extends Controller
 
             $errorMessage = self::TRANSCRIPTION_FAILURE_MESSAGE;
 
-            if (
-                str_contains(
-                    strtolower(
-                        (string) $e->getMessage()
-                    ),
-                    'top up'
-                )
-            ) {
-                $errorMessage = str_contains(strtolower((string) $e->getMessage()), 'monthly transcription')
-                    ? 'Your monthly transcription allowance is used. Top up your recording quota or try again after it resets.'
-                    : 'The recording is too large. Please top up your recording quota to complete full transcription.';
+            $rawMessage = strtolower((string) $e->getMessage());
+            if (str_contains($rawMessage, 'per-meeting transcription limit')) {
+                $errorMessage = $e->getMessage();
+            } elseif (str_contains($rawMessage, 'top up')) {
+                $errorMessage = 'The recording is too large. Please top up your recording quota to complete full transcription.';
             }
 
             $recording->update([
@@ -788,8 +782,9 @@ class MeetingRecordingController extends Controller
                 $recording->transcription_status
                 === 'processing'
             ) {
-                $message = str_contains(strtolower((string) $e->getMessage()), 'monthly transcription')
-                    ? 'Your monthly transcription allowance is used. Top up your recording quota or try again after it resets.'
+                $rawMessage = strtolower((string) $e->getMessage());
+                $message = str_contains($rawMessage, 'per-meeting transcription limit')
+                    ? $e->getMessage()
                     : self::TRANSCRIPTION_FAILURE_MESSAGE;
                 $recording->update([
                     'transcription_status' =>
@@ -1573,15 +1568,11 @@ class MeetingRecordingController extends Controller
 
             $errorMessage = self::TRANSCRIPTION_FAILURE_MESSAGE;
 
-            if (
-                str_contains(
-                    strtolower((string) $e->getMessage()),
-                    'top up'
-                )
-            ) {
-                $errorMessage = str_contains(strtolower((string) $e->getMessage()), 'monthly transcription')
-                    ? 'Your monthly transcription allowance is used. Top up your recording quota or try again after it resets.'
-                    : 'The recording is too large. Please top up your recording quota to complete full transcription.';
+            $rawMessage = strtolower((string) $e->getMessage());
+            if (str_contains($rawMessage, 'per-meeting transcription limit')) {
+                $errorMessage = $e->getMessage();
+            } elseif (str_contains($rawMessage, 'top up')) {
+                $errorMessage = 'The recording is too large. Please top up your recording quota to complete full transcription.';
             }
 
             $segment->update([

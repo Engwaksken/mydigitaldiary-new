@@ -169,7 +169,7 @@ class TranscriptionService
         $temporary =
             $prepared['temporary'];
 
-        $usageService = app(MonthlyTranscriptionUsageService::class);
+        $usageService = app(MeetingTranscriptionLimitService::class);
         $usageReservation = null;
 
         try {

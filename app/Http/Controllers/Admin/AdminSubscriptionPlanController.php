@@ -68,7 +68,7 @@ class AdminSubscriptionPlanController extends Controller
         $request->merge([
             'category' => $request->input('category', $subscriptionPlan->category ?: 'individual'),
             'individual_tier' => $request->input('individual_tier', $subscriptionPlan->individual_tier ?: 'starter'),
-            'monthly_transcription_minutes' => $request->input('monthly_transcription_minutes', $subscriptionPlan->monthly_transcription_minutes ?? 60),
+            'max_transcription_minutes_per_meeting' => $request->input('max_transcription_minutes_per_meeting', $subscriptionPlan->max_transcription_minutes_per_meeting ?? 60),
             'pricing_type' => $request->input('pricing_type', $this->pricingTypeFor($subscriptionPlan)),
             'color' => $request->input('color', $subscriptionPlan->color ?: '#475569'),
         ]);
@@ -147,7 +147,7 @@ class AdminSubscriptionPlanController extends Controller
             'additional_user_price' => ['nullable', 'numeric', 'min:0'],
             'included_extra_recording_minutes' => ['nullable', 'integer', 'min:0'],
             'transcription_capacity_mb' => ['nullable', 'integer', 'min:1', 'max:102400'],
-            'monthly_transcription_minutes' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'max_transcription_minutes_per_meeting' => ['required', 'integer', 'min:0', 'max:1000000'],
             'color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'badge' => ['nullable', 'string', 'max:50'],
             'is_recommended' => ['nullable', 'boolean'],
@@ -196,7 +196,7 @@ class AdminSubscriptionPlanController extends Controller
                 ?? $existingPlan?->included_extra_recording_minutes
                 ?? 0,
             'transcription_capacity_mb' => $data['transcription_capacity_mb'] ?? $existingPlan?->transcription_capacity_mb ?? 30,
-            'monthly_transcription_minutes' => $data['monthly_transcription_minutes'],
+            'max_transcription_minutes_per_meeting' => $data['max_transcription_minutes_per_meeting'],
             'color' => strtoupper($data['color']),
             'badge' => array_key_exists('badge', $data)
                 ? $data['badge']

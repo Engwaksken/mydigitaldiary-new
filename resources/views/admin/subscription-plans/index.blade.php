@@ -24,7 +24,7 @@
         Plans may use a price calculated from the site's base monthly price or a super-admin-set flat price.
         The current base is <strong>{{ format_money($monthlyPrice) }}</strong> (set at
         <a href="{{ route('admin.settings.edit') }}" class="text-[var(--brand-1)] hover:underline">Admin &rarr; Settings</a>).
-        Individual plans are grouped into Starter, Gold, Premium, and Custom tiers, each with a monthly transcription allowance.
+        Individual plans are grouped into Starter, Gold, Premium, and Custom tiers, each with a per-meeting transcription duration limit.
     </p>
 
     <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl overflow-x-auto pm-admin-table-scroll" role="region" aria-label="Subscription plans table" tabindex="0">
@@ -63,7 +63,7 @@
                                     <span class="block text-xs text-slate-400 mt-1">{{ $plan->includedExtraRecordingMinutes() }} extra min</span>
                                 @endif
                             @endif
-                            <span class="block text-xs text-slate-500 mt-1">{{ number_format($plan->monthly_transcription_minutes ?? 0) }} min transcription/month</span>
+                            <span class="block text-xs text-slate-500 mt-1">{{ number_format($plan->max_transcription_minutes_per_meeting ?? 60) }} min per meeting</span>
                         </td>
                         <td class="px-4 py-3 text-slate-600">
                             {{ $plan->isLifetime() ? 'Never expires' : $plan->duration_months . ' month(s)' }}

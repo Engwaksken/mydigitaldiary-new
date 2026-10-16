@@ -11,7 +11,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_super_admin_plan_form_exposes_tiers_manual_price_and_monthly_allowance(): void
+    public function test_super_admin_plan_form_exposes_tiers_manual_price_and_per_meeting_duration_limit(): void
     {
         $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
 
@@ -21,7 +21,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             ->assertSee('Gold')
             ->assertSee('Premium')
             ->assertSee('Custom')
-            ->assertSee('monthly_transcription_minutes')
+            ->assertSee('max_transcription_minutes_per_meeting')
             ->assertSee('Flat price');
     }
 
@@ -35,7 +35,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'individual_tier' => 'starter',
             'duration_months' => 1,
             'discount_percent' => 0,
-            'monthly_transcription_minutes' => 60,
+            'max_transcription_minutes_per_meeting' => 60,
             'transcription_capacity_mb' => 30,
             'color' => '#475569',
             'is_enabled' => true,
@@ -48,7 +48,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             ->assertSee('Legacy Edit Plan');
     }
 
-    public function test_super_admin_can_create_priced_individual_tier_with_monthly_minutes(): void
+    public function test_super_admin_can_create_priced_individual_tier_with_per_meeting_duration_limit(): void
     {
         $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
 
@@ -60,7 +60,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'pricing_type' => 'flat',
             'duration_months_flat' => 1,
             'flat_price' => 25000,
-            'monthly_transcription_minutes' => 300,
+            'max_transcription_minutes_per_meeting' => 300,
             'transcription_capacity_mb' => 30,
             'color' => '#D97706',
             'sort_order' => 2,
@@ -70,7 +70,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
         $this->assertDatabaseHas('subscription_plans', [
             'key' => 'gold-individual',
             'individual_tier' => 'gold',
-            'monthly_transcription_minutes' => 300,
+            'max_transcription_minutes_per_meeting' => 300,
             'flat_price' => 25000,
             'duration_months' => 1,
         ]);
@@ -87,7 +87,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'duration_months' => 1,
             'discount_percent' => 0,
             'flat_price' => 1000,
-            'monthly_transcription_minutes' => 60,
+            'max_transcription_minutes_per_meeting' => 60,
             'transcription_capacity_mb' => 30,
             'color' => '#475569',
             'is_enabled' => true,
@@ -101,12 +101,12 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
                 'individual_tier' => 'starter',
                 'pricing_type' => 'flat',
                 'flat_price' => 1,
-                'monthly_transcription_minutes' => 1,
+                'max_transcription_minutes_per_meeting' => 1,
                 'color' => '#475569',
             ])->assertForbidden();
 
         $this->assertSame('Starter', $plan->fresh()->name);
-        $this->assertSame(60, $plan->fresh()->monthly_transcription_minutes);
+        $this->assertSame(60, $plan->fresh()->max_transcription_minutes_per_meeting);
     }
 
     public function test_super_admin_can_edit_and_save_an_existing_individual_plan(): void
@@ -120,7 +120,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'duration_months' => 1,
             'discount_percent' => 0,
             'flat_price' => 1000,
-            'monthly_transcription_minutes' => 60,
+            'max_transcription_minutes_per_meeting' => 60,
             'transcription_capacity_mb' => 30,
             'color' => '#475569',
             'is_enabled' => true,
@@ -134,7 +134,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'pricing_type' => 'flat',
             'duration_months_flat' => 1,
             'flat_price' => 1500,
-            'monthly_transcription_minutes' => 90,
+            'max_transcription_minutes_per_meeting' => 90,
             'transcription_capacity_mb' => 40,
             'color' => '#475569',
             'sort_order' => 1,
@@ -145,7 +145,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'id' => $plan->id,
             'name' => 'Starter Plus',
             'flat_price' => 1500,
-            'monthly_transcription_minutes' => 90,
+            'max_transcription_minutes_per_meeting' => 90,
             'transcription_capacity_mb' => 40,
         ]);
     }
@@ -161,7 +161,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'duration_months' => 1,
             'discount_percent' => 0,
             'flat_price' => 1000,
-            'monthly_transcription_minutes' => 60,
+            'max_transcription_minutes_per_meeting' => 60,
             'transcription_capacity_mb' => 30,
             'color' => '#475569',
             'is_enabled' => true,
@@ -175,7 +175,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'duration_months' => 1,
             'discount_percent' => 0,
             'flat_price' => 1500,
-            'monthly_transcription_minutes' => 60,
+            'max_transcription_minutes_per_meeting' => 60,
             'transcription_capacity_mb' => 30,
             'color' => '#475569',
             'is_enabled' => true,
@@ -191,7 +191,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
                 'pricing_type' => 'flat',
                 'duration_months_flat' => 1,
                 'flat_price' => 1200,
-                'monthly_transcription_minutes' => 60,
+                'max_transcription_minutes_per_meeting' => 60,
                 'transcription_capacity_mb' => 30,
                 'color' => '#475569',
             ])
@@ -216,7 +216,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'duration_months' => 1,
             'discount_percent' => 0,
             'flat_price' => 1500,
-            'monthly_transcription_minutes' => 300,
+            'max_transcription_minutes_per_meeting' => 300,
             'transcription_capacity_mb' => 30,
             'color' => '#475569',
             'is_enabled' => true,
@@ -230,7 +230,7 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
             'pricing_type' => 'flat',
             'duration_months_flat' => 1,
             'flat_price' => 5000,
-            'monthly_transcription_minutes' => 300,
+            'max_transcription_minutes_per_meeting' => 300,
             'transcription_capacity_mb' => 30,
             'included_seats' => 5,
             'color' => '#475569',
