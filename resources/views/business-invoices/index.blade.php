@@ -17,7 +17,12 @@
             <button type="button" data-open-create class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"><i class="fa-solid fa-plus" aria-hidden="true"></i> Create invoice</button>
         </header>
 
-        <section class="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,.8fr)]">
+        <div role="tablist" aria-label="Business invoice sections" class="flex gap-2 overflow-x-auto border-b border-slate-200" data-invoice-page-tabs>
+            <button type="button" role="tab" id="invoice-page-tab-list" aria-controls="invoice-page-panel-list" aria-selected="true" tabindex="0" data-page-tab="list" class="whitespace-nowrap border-b-2 border-[var(--brand-1)] px-4 py-3 text-sm font-semibold text-[var(--brand-1)]">Your Invoices</button>
+            <button type="button" role="tab" id="invoice-page-tab-templates" aria-controls="invoice-page-panel-templates" aria-selected="false" tabindex="-1" data-page-tab="templates" class="whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-slate-500">Invoice templates</button>
+        </div>
+
+        <section id="invoice-page-panel-templates" role="tabpanel" aria-labelledby="invoice-page-tab-templates" data-page-panel="templates" hidden class="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,.8fr)]">
             <aside class="pm-card-bg min-w-0 rounded-2xl border border-slate-100 p-4 shadow-sm sm:p-6">
                 <div class="flex items-start gap-3"><i class="fa-solid fa-file-pdf mt-1 text-xl text-rose-600" aria-hidden="true"></i><div><h2 class="text-lg font-bold text-slate-800">Invoice templates</h2><p class="mt-1 text-sm text-slate-500">Upload safe HTML templates or PDF stationery (up to 10 MB). PDF template pages are included before the generated invoice.</p></div></div>
                 <a class="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-1)] underline" href="{{ route('business-invoices.templates.sample') }}"><i class="fa-solid fa-download" aria-hidden="true"></i> Download HTML starter</a>
@@ -48,7 +53,7 @@
             </aside>
         </section>
 
-        <section class="pm-card-bg overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
+        <section id="invoice-page-panel-list" role="tabpanel" aria-labelledby="invoice-page-tab-list" data-page-panel="list" class="pm-card-bg overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
             <div class="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><h2 class="text-lg font-bold text-slate-800">Your invoices</h2><p class="text-sm text-slate-500">Paid invoice amounts appear in Finance <i class="fa-solid fa-arrow-right mx-1" aria-hidden="true"></i> Income.</p></div><button type="button" data-open-create class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white"><i class="fa-solid fa-plus" aria-hidden="true"></i> New invoice</button></div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
@@ -93,6 +98,11 @@
                 <div><h2 id="invoice-modal-title" class="text-lg font-bold text-slate-900">{{ $restoreMode === 'edit' ? 'Edit invoice' : 'Create invoice' }}</h2><p class="text-xs text-slate-500">Amounts are calculated from the line items.</p></div>
                 <button type="button" data-close-invoice class="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Close invoice form"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
             </div>
+            <div role="tablist" aria-label="Invoice form sections" class="-mx-4 flex gap-2 overflow-x-auto border-b border-slate-200 px-4 sm:-mx-6 sm:px-6" data-invoice-form-tabs>
+                <button type="button" role="tab" id="invoice-form-tab-details" aria-controls="invoice-form-panel-details" aria-selected="true" tabindex="0" data-form-tab="details" class="whitespace-nowrap border-b-2 border-[var(--brand-1)] px-3 py-3 text-sm font-semibold text-[var(--brand-1)]">Business &amp; customer</button>
+                <button type="button" role="tab" id="invoice-form-tab-items" aria-controls="invoice-form-panel-items" aria-selected="false" tabindex="-1" data-form-tab="items" class="whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-semibold text-slate-500">Items &amp; template</button>
+            </div>
+            <section id="invoice-form-panel-details" role="tabpanel" aria-labelledby="invoice-form-tab-details" data-form-panel="details" class="space-y-4">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div><label for="business_name" class="mb-1 block text-sm font-medium">Your business name</label><input id="business_name" name="business_name" required maxlength="255" class="pm-input" value="{{ old('business_name', $restoreInvoice?->business_name ?? ($businessCard?->company ?: $businessCard?->name)) }}">@error('business_name')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
                 <div><label for="business_email" class="mb-1 block text-sm font-medium">Business email</label><input id="business_email" name="business_email" type="email" class="pm-input" value="{{ old('business_email', $restoreInvoice?->business_email ?? $businessCard?->email) }}"></div>
@@ -104,6 +114,8 @@
                 <div><label for="issue_date" class="mb-1 block text-sm font-medium">Issue date</label><input id="issue_date" name="issue_date" type="date" required class="pm-input" value="{{ old('issue_date', $restoreInvoice?->issue_date?->toDateString() ?? now()->toDateString()) }}"></div>
                 <div><label for="due_date" class="mb-1 block text-sm font-medium">Due date</label><input id="due_date" name="due_date" type="date" class="pm-input" value="{{ old('due_date', $restoreInvoice?->due_date?->toDateString()) }}"></div>
             </div>
+            </section>
+            <section id="invoice-form-panel-items" role="tabpanel" aria-labelledby="invoice-form-tab-items" data-form-panel="items" hidden class="space-y-5">
             <div>
                 <div class="mb-2 flex items-center justify-between gap-3"><h3 class="font-semibold text-slate-800">Items</h3><button type="button" id="add-invoice-line" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i>Add item</button></div>
                 <div id="invoice-line-items" class="space-y-3">
@@ -122,6 +134,7 @@
                 @error('line_items.*.unit_price')<p role="alert" class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
             </div>
             <div><label for="invoice-template-id" class="mb-1 block text-sm font-medium">Invoice template</label><select id="invoice-template-id" name="template_id" class="pm-input"><option value="">Standard invoice layout</option>@foreach ($templates as $template)<option value="{{ $template->id }}" @selected((string) old('template_id', $restoreInvoice?->template_id ?? ($template->is_default ? $template->id : '')) === (string) $template->id)>{{ $template->name }}{{ $template->is_default ? ' (default)' : '' }}</option>@endforeach</select>@error('template_id')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
+            </section>
             <div class="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row"><button type="button" data-close-invoice class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button><button type="submit" class="btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-white"><i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i><span id="invoice-submit-label">{{ $restoreMode === 'edit' ? 'Save changes' : 'Create invoice' }}</span></button></div>
         </form>
     </dialog>
@@ -144,6 +157,8 @@
             const mode = document.getElementById('invoice-form-mode');
             const lines = document.getElementById('invoice-line-items');
             const deleteModal = document.getElementById('invoice-delete-modal');
+            const pageTabs = document.querySelector('[data-invoice-page-tabs]');
+            const formTabs = document.querySelector('[data-invoice-form-tabs]');
             const defaults = {
                 business_name: @json($businessCard?->company ?: $businessCard?->name ?: ''),
                 business_email: @json($businessCard?->email ?: ''),
@@ -152,6 +167,36 @@
                 currency: 'UGX', issue_date: @json(now()->toDateString()), due_date: '',
                 customer_name: '', customer_email: '', template_id: @json($templates->firstWhere('is_default', true)?->id ?: ''),
             };
+
+            function activateTab(tabList, selector, panelSelector, value, attribute) {
+                tabList.querySelectorAll(`[${attribute}]`).forEach(tab => {
+                    const active = tab.dataset[selector] === value;
+                    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                    tab.tabIndex = active ? 0 : -1;
+                    tab.classList.toggle('border-[var(--brand-1)]', active);
+                    tab.classList.toggle('text-[var(--brand-1)]', active);
+                    tab.classList.toggle('border-transparent', !active);
+                    tab.classList.toggle('text-slate-500', !active);
+                });
+                document.querySelectorAll(`[${panelSelector}]`).forEach(panel => {
+                    panel.hidden = panel.dataset[selector.replace('tab', 'panel')] !== value;
+                });
+            }
+
+            pageTabs.addEventListener('click', event => {
+                const tab = event.target.closest('[data-page-tab]');
+                if (tab) activateTab(pageTabs, 'pageTab', 'data-page-panel', tab.dataset.pageTab, 'data-page-tab');
+            });
+            formTabs.addEventListener('click', event => {
+                const tab = event.target.closest('[data-form-tab]');
+                if (tab) activateTab(formTabs, 'formTab', 'data-form-panel', tab.dataset.formTab, 'data-form-tab');
+            });
+            @if ($errors->has('line_items') || $errors->has('template_id'))
+                activateTab(formTabs, 'formTab', 'data-form-panel', 'items', 'data-form-tab');
+            @endif
+            @if ($errors->has('template_file') || $errors->has('name') || $errors->has('is_default'))
+                activateTab(pageTabs, 'pageTab', 'data-page-panel', 'templates', 'data-page-tab');
+            @endif
 
             function setValue(name, value) {
                 const input = form.elements.namedItem(name);
@@ -173,6 +218,7 @@
 
             function openCreate() {
                 form.reset();
+                activateTab(formTabs, 'formTab', 'data-form-panel', 'details', 'data-form-tab');
                 form.action = @json(route('business-invoices.store'));
                 method.disabled = true;
                 mode.value = 'create';
