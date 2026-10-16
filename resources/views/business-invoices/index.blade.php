@@ -17,9 +17,9 @@
             <button type="button" data-open-create class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"><i class="fa-solid fa-plus" aria-hidden="true"></i> Create invoice</button>
         </header>
 
-        <section aria-label="Invoice statistics" class="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            @foreach ([['Total invoices', $invoiceStats['total'], 'fa-file-invoice', 'text-slate-700'], ['Unpaid', $invoiceStats['unpaid'], 'fa-hourglass-half', 'text-amber-700'], ['Paid', $invoiceStats['paid'], 'fa-circle-check', 'text-emerald-700'], ['Overdue', $invoiceStats['overdue'], 'fa-triangle-exclamation', 'text-rose-700']] as [$label, $value, $icon, $color])
-                <article class="pm-card-bg rounded-xl border border-slate-100 p-4 shadow-sm sm:p-5"><div class="flex items-center justify-between gap-2"><p class="text-sm font-medium text-slate-500">{{ $label }}</p><i class="fa-solid {{ $icon }} {{ $color }}" aria-hidden="true"></i></div><p class="mt-2 text-2xl font-bold {{ $color }}">{{ $value }}</p></article>
+        <section aria-label="Invoice statistics" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ([['Total invoices', $invoiceStats['total'], 'fa-solid fa-file-invoice', 'blue'], ['Unpaid', $invoiceStats['unpaid'], 'fa-solid fa-hourglass-half', 'amber'], ['Paid', $invoiceStats['paid'], 'fa-solid fa-circle-check', 'green'], ['Overdue', $invoiceStats['overdue'], 'fa-solid fa-triangle-exclamation', 'red']] as [$label, $value, $icon, $color])
+                <x-stat-card :label="$label" :value="number_format($value)" :icon="$icon" :color="$color" />
             @endforeach
         </section>
 
