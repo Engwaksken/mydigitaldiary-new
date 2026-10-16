@@ -17,9 +17,12 @@
             <button type="button" data-open-create class="btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"><i class="fa-solid fa-plus" aria-hidden="true"></i> Create invoice</button>
         </header>
 
-        <section aria-label="Invoice statistics" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            @foreach ([['Total invoices', $invoiceStats['total'], 'fa-solid fa-file-invoice', 'blue'], ['Unpaid', $invoiceStats['unpaid'], 'fa-solid fa-hourglass-half', 'amber'], ['Paid', $invoiceStats['paid'], 'fa-solid fa-circle-check', 'green'], ['Overdue', $invoiceStats['overdue'], 'fa-solid fa-triangle-exclamation', 'red']] as [$label, $value, $icon, $color])
-                <x-stat-card :label="$label" :value="number_format($value)" :icon="$icon" :color="$color" />
+        <section aria-label="Invoice statistics" class="grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:grid-cols-4">
+            @foreach ([['Total invoices', $invoiceStats['total'], 'fa-file-invoice', 'bg-emerald-50 text-emerald-600'], ['Unpaid', $invoiceStats['unpaid'], 'fa-hourglass-half', 'bg-teal-50 text-teal-600'], ['Paid', $invoiceStats['paid'], 'fa-circle-check', 'bg-indigo-50 text-indigo-600'], ['Overdue', $invoiceStats['overdue'], 'fa-triangle-exclamation', 'bg-amber-50 text-amber-600']] as $index => [$label, $value, $icon, $iconColor])
+                <article class="flex min-w-0 items-center gap-3 p-3 sm:p-4 {{ $index % 2 === 0 ? 'border-r border-slate-100' : '' }} {{ $index < 2 ? 'border-b border-slate-100 xl:border-b-0' : '' }} {{ $index < 3 ? 'xl:border-r xl:border-slate-100' : '' }}">
+                    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl {{ $iconColor }}" aria-hidden="true"><i class="fa-solid {{ $icon }}"></i></span>
+                    <div class="min-w-0"><p class="truncate text-xs font-semibold text-slate-500">{{ $label }}</p><p class="mt-0.5 truncate text-base font-extrabold tracking-tight text-slate-900 tabular-nums sm:text-lg">{{ number_format($value) }}</p></div>
+                </article>
             @endforeach
         </section>
 
