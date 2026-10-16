@@ -3,6 +3,16 @@
 @section('title', 'Business Invoices')
 
 @section('content')
+    @push('styles')
+        <style>
+            /* modal-responsive.css zeroes padding on direct dialog forms globally; restore this form's intended spacing. */
+            dialog#invoice-modal[open] > form.invoice-modal-form { padding: 1rem !important; }
+            @media (min-width: 640px) {
+                dialog#invoice-modal[open] > form.invoice-modal-form { padding: 1.5rem !important; }
+            }
+        </style>
+    @endpush
+
     @php
         $restoreMode = old('_form_mode', 'create');
         $restoreInvoice = $restoreMode === 'edit' ? $invoices->firstWhere('id', old('_invoice_id')) : null;
@@ -112,7 +122,7 @@
     </div>
 
     <dialog id="invoice-modal" aria-labelledby="invoice-modal-title" class="w-[min(94vw,900px)] max-h-[92dvh] max-w-none overflow-y-auto rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/60">
-        <form id="invoice-form" method="POST" action="{{ $restoreMode === 'edit' && $restoreInvoice ? route('business-invoices.update', $restoreInvoice->id) : route('business-invoices.store') }}" class="space-y-5 p-4 sm:p-6">
+        <form id="invoice-form" method="POST" action="{{ $restoreMode === 'edit' && $restoreInvoice ? route('business-invoices.update', $restoreInvoice->id) : route('business-invoices.store') }}" class="invoice-modal-form space-y-5 p-4 sm:p-6">
             @csrf
             <input type="hidden" name="_form_mode" id="invoice-form-mode" value="{{ $restoreMode }}">
             <input type="hidden" name="_invoice_id" id="invoice-id" value="{{ old('_invoice_id', $restoreInvoice?->id) }}">

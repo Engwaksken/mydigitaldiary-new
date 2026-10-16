@@ -47,6 +47,8 @@ class BusinessInvoiceWorkflowTest extends TestCase
             ->assertSee('Business invoices')
             ->assertSee('Finance')
             ->assertSee('invoice-modal')
+            ->assertSee('invoice-modal-form', false)
+            ->assertSee('padding: 1rem !important', false)
             ->assertSee('data-edit-invoice', false)
             ->assertSee('Total invoices')
             ->assertSee('Delete selected')
