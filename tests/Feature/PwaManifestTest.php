@@ -6,6 +6,7 @@ use App\Http\Controllers\PwaController;
 use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -90,6 +91,22 @@ class PwaManifestTest extends TestCase
         foreach ($manifest['shortcuts'] as $shortcut) {
             $this->assertSame($manifest['icons'][0]['src'], $shortcut['icons'][0]['src']);
         }
+    }
+
+    public function test_generated_icons_are_safe_to_store_in_the_database_cache(): void
+    {
+        config(['cache.default' => 'database']);
+        Storage::fake('public');
+        $this->uploadLogo();
+
+        $iconUrl = $this->get('/manifest.webmanifest')->json('icons.0.src');
+        $response = $this->get($iconUrl)->assertOk()->assertHeader('Content-Type', 'image/png');
+        $version = basename(dirname($iconUrl));
+        $cached = Cache::get('pwa-icon-v2:'.$version.':icon-192');
+
+        $this->assertIsString($cached);
+        $this->assertStringNotContainsString("\x89PNG", $cached);
+        $this->assertSame($response->getContent(), base64_decode($cached, true));
     }
 
     public function test_login_page_uses_uploaded_logo_for_ios_and_install_banner(): void

@@ -49,7 +49,7 @@ class PwaIconService
         abort_unless($logo && hash_equals($logo['version'], $version), 404);
         abort_unless(function_exists('imagecreatefromstring'), 503, 'PHP GD is required to generate PWA icons.');
 
-        return Cache::remember('pwa-icon:'.$version.':'.$variant, 86400, function () use ($logo, $variant): string {
+        $encoded = Cache::remember('pwa-icon-v2:'.$version.':'.$variant, 86400, function () use ($logo, $variant): string {
             $source = imagecreatefromstring($logo['contents']);
             abort_if($source === false, 422, 'The uploaded logo could not be decoded.');
             $size = self::VARIANTS[$variant][0];
@@ -70,7 +70,7 @@ class PwaIconService
                 try {
                     imagepng($canvas);
 
-                    return (string) ob_get_contents();
+                    return base64_encode((string) ob_get_contents());
                 } finally {
                     ob_end_clean();
                 }
@@ -79,6 +79,11 @@ class PwaIconService
                 imagedestroy($canvas);
             }
         });
+
+        $png = base64_decode($encoded, true);
+        abort_if($png === false, 500, 'The cached PWA icon is invalid.');
+
+        return $png;
     }
 
     private function logo(): ?array
