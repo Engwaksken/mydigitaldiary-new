@@ -175,9 +175,9 @@
                 customer_name: '', customer_email: '', template_id: @json($templates->firstWhere('is_default', true)?->id ?: ''),
             };
 
-            function activateTab(tabList, selector, panelSelector, value, attribute) {
-                tabList.querySelectorAll(`[${attribute}]`).forEach(tab => {
-                    const active = tab.dataset[selector] === value;
+            function activateTab(tabList, tabAttribute, panelAttribute, value) {
+                tabList.querySelectorAll(`[${tabAttribute}]`).forEach(tab => {
+                    const active = tab.getAttribute(tabAttribute) === value;
                     tab.setAttribute('aria-selected', active ? 'true' : 'false');
                     tab.tabIndex = active ? 0 : -1;
                     tab.classList.toggle('border-[var(--brand-1)]', active);
@@ -185,26 +185,26 @@
                     tab.classList.toggle('border-transparent', !active);
                     tab.classList.toggle('text-slate-500', !active);
                 });
-                document.querySelectorAll(`[${panelSelector}]`).forEach(panel => {
-                    const active = panel.dataset[selector.replace('tab', 'panel')] === value;
+                document.querySelectorAll(`[${panelAttribute}]`).forEach(panel => {
+                    const active = panel.getAttribute(panelAttribute) === value;
                     panel.hidden = !active;
-                    panel.style.display = active ? '' : 'none';
+                    panel.style.display = active ? (panel.classList.contains('grid') ? 'grid' : 'block') : 'none';
                 });
             }
 
             pageTabs.addEventListener('click', event => {
                 const tab = event.target.closest('[data-page-tab]');
-                if (tab) activateTab(pageTabs, 'pageTab', 'data-page-panel', tab.dataset.pageTab, 'data-page-tab');
+                if (tab) activateTab(pageTabs, 'data-page-tab', 'data-page-panel', tab.dataset.pageTab);
             });
             formTabs.addEventListener('click', event => {
                 const tab = event.target.closest('[data-form-tab]');
-                if (tab) activateTab(formTabs, 'formTab', 'data-form-panel', tab.dataset.formTab, 'data-form-tab');
+                if (tab) activateTab(formTabs, 'data-form-tab', 'data-form-panel', tab.dataset.formTab);
             });
             @if ($errors->has('line_items') || $errors->has('template_id'))
-                activateTab(formTabs, 'formTab', 'data-form-panel', 'items', 'data-form-tab');
+                activateTab(formTabs, 'data-form-tab', 'data-form-panel', 'items');
             @endif
             @if ($errors->has('template_file') || $errors->has('name') || $errors->has('is_default'))
-                activateTab(pageTabs, 'pageTab', 'data-page-panel', 'templates', 'data-page-tab');
+                activateTab(pageTabs, 'data-page-tab', 'data-page-panel', 'templates');
             @endif
 
             function setValue(name, value) {
@@ -227,7 +227,7 @@
 
             function openCreate() {
                 form.reset();
-                activateTab(formTabs, 'formTab', 'data-form-panel', 'details', 'data-form-tab');
+                activateTab(formTabs, 'data-form-tab', 'data-form-panel', 'details');
                 form.action = @json(route('business-invoices.store'));
                 method.disabled = true;
                 mode.value = 'create';
