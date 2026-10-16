@@ -92,6 +92,7 @@ class SubscriptionController extends Controller
             'individual_tier' => $plan->individual_tier,
             'individual_tier_label' => $plan->individualTierLabel(),
             'monthly_transcription_minutes' => (int) ($plan->monthly_transcription_minutes ?? 0),
+            'transcription_capacity_mb' => (int) ($plan->transcription_capacity_mb ?? 30),
             'is_lifetime' => $plan->isLifetime(),
             'duration_months' => $plan->duration_months,
             'price' => $plan->computedPrice((float) $settings->monthly_price),
