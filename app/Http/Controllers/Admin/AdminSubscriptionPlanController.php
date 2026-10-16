@@ -7,6 +7,7 @@ use App\Models\SiteSetting;
 use App\Models\SubscriptionPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminSubscriptionPlanController extends Controller
@@ -127,8 +128,13 @@ class AdminSubscriptionPlanController extends Controller
 
     private function validated(Request $request, ?SubscriptionPlan $existingPlan = null): array
     {
+        $uniqueKey = Rule::unique('subscription_plans', 'key');
+        if ($existingPlan) {
+            $uniqueKey->ignore($existingPlan->getKey());
+        }
+
         $data = $request->validate([
-            'key' => ['required', 'string', 'max:255', 'alpha_dash'],
+            'key' => ['required', 'string', 'max:255', 'alpha_dash', $uniqueKey],
             'name' => ['required', 'string', 'max:255'],
             'category' => ['required', 'in:individual,family_team,organization'],
             'individual_tier' => ['nullable', 'required_if:category,individual', 'in:starter,gold,premium,custom'],

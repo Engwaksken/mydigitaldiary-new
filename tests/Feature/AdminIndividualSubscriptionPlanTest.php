@@ -150,6 +150,61 @@ class AdminIndividualSubscriptionPlanTest extends TestCase
         ]);
     }
 
+    public function test_editing_plan_with_another_plans_key_returns_validation_error(): void
+    {
+        $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
+        $plan = SubscriptionPlan::query()->create([
+            'key' => 'starter-plan',
+            'name' => 'Starter',
+            'category' => 'individual',
+            'individual_tier' => 'starter',
+            'duration_months' => 1,
+            'discount_percent' => 0,
+            'flat_price' => 1000,
+            'monthly_transcription_minutes' => 60,
+            'transcription_capacity_mb' => 30,
+            'color' => '#475569',
+            'is_enabled' => true,
+        ]);
+        $duplicateKey = 'edit-conflict-'.uniqid();
+        SubscriptionPlan::query()->create([
+            'key' => $duplicateKey,
+            'name' => 'Monthly',
+            'category' => 'individual',
+            'individual_tier' => 'gold',
+            'duration_months' => 1,
+            'discount_percent' => 0,
+            'flat_price' => 1500,
+            'monthly_transcription_minutes' => 60,
+            'transcription_capacity_mb' => 30,
+            'color' => '#475569',
+            'is_enabled' => true,
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->from(route('admin.subscription-plans.edit', $plan))
+            ->put(route('admin.subscription-plans.update', $plan), [
+                'key' => $duplicateKey,
+                'name' => 'Starter Updated',
+                'category' => 'individual',
+                'individual_tier' => 'starter',
+                'pricing_type' => 'flat',
+                'duration_months_flat' => 1,
+                'flat_price' => 1200,
+                'monthly_transcription_minutes' => 60,
+                'transcription_capacity_mb' => 30,
+                'color' => '#475569',
+            ])
+            ->assertRedirect(route('admin.subscription-plans.edit', $plan))
+            ->assertSessionHasErrors('key');
+
+        $this->assertDatabaseHas('subscription_plans', [
+            'id' => $plan->id,
+            'key' => 'starter-plan',
+            'name' => 'Starter',
+        ]);
+    }
+
     public function test_super_admin_can_change_an_existing_plan_between_individual_and_team_categories(): void
     {
         $superAdmin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
