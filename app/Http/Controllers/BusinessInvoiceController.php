@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessCard;
+use App\Mail\BusinessInvoiceMail;
 use App\Models\BusinessInvoice;
 use App\Models\BusinessInvoiceTemplate;
 use App\Services\BusinessInvoiceDocumentService;
+use App\Services\BusinessInvoiceNumberService;
 use App\Services\BusinessInvoicePaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,7 +39,7 @@ class BusinessInvoiceController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, BusinessInvoiceNumberService $numbers): RedirectResponse
     {
         $data = $this->validatedInvoice($request);
         $data['template_id'] = $data['template_id'] ?? BusinessInvoiceTemplate::query()
@@ -45,10 +47,8 @@ class BusinessInvoiceController extends Controller
             ->where('is_default', true)
             ->value('id');
 
-        $invoice = BusinessInvoice::query()->create([
+        $invoice = $numbers->createInvoice($request->user()->id, [
             ...$data,
-            'user_id' => $request->user()->id,
-            'invoice_number' => 'BI-'.now()->format('Y').'-'.strtoupper(Str::random(8)),
             'status' => 'unpaid',
         ]);
 
@@ -140,12 +140,7 @@ class BusinessInvoiceController extends Controller
         $invoice = $this->ownedInvoice($request, $id);
         $pdf = $documents->output($invoice);
 
-        Mail::send([], [], function ($message) use ($invoice, $pdf): void {
-            $message->to($invoice->customer_email, $invoice->customer_name)
-                ->subject('Invoice '.$invoice->invoice_number)
-                ->text('Please find attached invoice '.$invoice->invoice_number.' from '.$invoice->business_name.'.')
-                ->attachData($pdf, 'invoice-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
-        });
+        Mail::send((new BusinessInvoiceMail($invoice, $pdf))->to($invoice->customer_email, $invoice->customer_name));
 
         $invoice->forceFill(['sent_at' => now()])->save();
 
@@ -158,12 +153,7 @@ class BusinessInvoiceController extends Controller
         abort_unless($invoice->status === 'paid', 422, 'Mark the invoice paid before sending a receipt.');
         $pdf = $documents->output($invoice, 'PAYMENT RECEIPT');
 
-        Mail::send([], [], function ($message) use ($invoice, $pdf): void {
-            $message->to($invoice->customer_email, $invoice->customer_name)
-                ->subject('Receipt for invoice '.$invoice->invoice_number)
-                ->text('Thank you for your payment. Please find the receipt for invoice '.$invoice->invoice_number.' attached.')
-                ->attachData($pdf, 'receipt-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
-        });
+        Mail::send((new BusinessInvoiceMail($invoice, $pdf, BusinessInvoiceMail::KIND_RECEIPT))->to($invoice->customer_email, $invoice->customer_name));
 
         return back()->with('success', 'Payment receipt emailed to '.$invoice->customer_email.'.');
     }

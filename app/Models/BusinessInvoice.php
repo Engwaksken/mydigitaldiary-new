@@ -28,6 +28,18 @@ class BusinessInvoice extends Model
         return $this->hasOne(Income::class, 'business_invoice_id');
     }
 
+    /** Name the invoice is issued under: business, then owner, then the app. */
+    public function issuerName(): string
+    {
+        foreach ([$this->business_name, $this->user?->name, config('app.name')] as $name) {
+            if (is_string($name) && trim($name) !== '') {
+                return trim($name);
+            }
+        }
+
+        return 'Invoice';
+    }
+
     protected function casts(): array
     {
         return [

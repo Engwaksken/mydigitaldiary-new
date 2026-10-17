@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Mail\BusinessInvoiceMail;
 use App\Models\BusinessInvoice;
 use App\Models\BusinessCard;
 use App\Models\BusinessInvoiceTemplate;
 use App\Models\Income;
 use App\Models\User;
 use App\Services\BusinessInvoiceDocumentService;
+use App\Services\BusinessInvoiceNumberService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use setasign\Fpdi\Fpdi;
 use setasign\Fpdi\PdfParser\StreamReader;
@@ -280,6 +283,152 @@ class BusinessInvoiceWorkflowTest extends TestCase
         $this->assertStringContainsString('1,000.00', $html);
         $this->assertStringContainsString('Total (USD)', $html);
         $this->assertStringContainsString('1,800.00', $html);
+    }
+
+    public function test_emailed_invoice_is_branded_with_the_business_name(): void
+    {
+        Mail::fake();
+        config(['mail.from.address' => 'noreply@diary.test']);
+        $user = User::factory()->create(['subscription_status' => 'active', 'name' => 'Owner Person']);
+
+        foreach (range(1, 3) as $ignored) {
+            $this->actingAs($user)->post(route('business-invoices.store'), $this->invoicePayload(['business_name' => 'Acme Traders']))
+                ->assertRedirect(route('business-invoices.index'));
+        }
+        $invoice = BusinessInvoice::query()->where('user_id', $user->id)->where('invoice_number', '003')->firstOrFail();
+
+        $this->post(route('business-invoices.send', $invoice->id))->assertRedirect();
+
+        Mail::assertSent(BusinessInvoiceMail::class, function (BusinessInvoiceMail $mail) use ($invoice): bool {
+            $mail->assertHasSubject('Invoice 003 from Acme Traders');
+            $mail->assertFrom('noreply@diary.test', 'Acme Traders');
+            $mail->assertTo('customer@example.test', 'Customer One');
+            $mail->assertSeeInText('Hello Customer One');
+            $mail->assertSeeInText('invoice 003 from Acme Traders');
+            $mail->assertSeeInText('Kind regards,');
+            $mail->assertDontSeeInText('My Digital Diary');
+            $mail->assertDontSeeInText((string) config('app.name'));
+            $mail->assertHasAttachedData($mail->pdf, 'invoice-003.pdf', ['mime' => 'application/pdf']);
+
+            return $mail->invoice->is($invoice);
+        });
+    }
+
+    public function test_receipt_email_is_branded_with_the_business_name(): void
+    {
+        Mail::fake();
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $invoice = $this->invoiceFor($user, ['invoice_number' => '007', 'business_name' => 'Acme Traders', 'status' => 'paid']);
+
+        $this->actingAs($user)->post(route('business-invoices.send-receipt', $invoice->id))->assertRedirect();
+
+        Mail::assertSent(BusinessInvoiceMail::class, fn (BusinessInvoiceMail $mail): bool => $mail->hasSubject('Receipt for invoice 007 from Acme Traders')
+            && $mail->hasFrom(config('mail.from.address'), 'Acme Traders'));
+    }
+
+    public function test_email_subject_falls_back_to_owner_name_then_app_name(): void
+    {
+        config(['app.name' => 'Diary App']);
+        $owner = User::factory()->create(['name' => 'Jane Owner']);
+        $invoice = $this->invoiceFor($owner, ['invoice_number' => '004', 'business_name' => '  ']);
+
+        $mail = new BusinessInvoiceMail($invoice->fresh(), '%PDF-');
+        $mail->assertHasSubject('Invoice 004 from Jane Owner');
+        $mail->assertFrom(config('mail.from.address'), 'Jane Owner');
+        $mail->assertSeeInText('Jane Owner');
+
+        $owner->forceFill(['name' => ''])->save();
+        $mail = new BusinessInvoiceMail($invoice->fresh(), '%PDF-');
+        $mail->assertHasSubject('Invoice 004 from Diary App');
+    }
+
+    public function test_invoice_numbers_start_at_001_and_increment_per_business(): void
+    {
+        $first = User::factory()->create(['subscription_status' => 'active']);
+        $second = User::factory()->create(['subscription_status' => 'active']);
+
+        $this->actingAs($first)->post(route('business-invoices.store'), $this->invoicePayload())
+            ->assertSessionHas('success', 'Invoice 001 created.');
+        $this->actingAs($first)->post(route('business-invoices.store'), $this->invoicePayload());
+        $this->actingAs($second)->post(route('business-invoices.store'), $this->invoicePayload());
+        $this->actingAs($first)->post(route('business-invoices.store'), $this->invoicePayload());
+        $this->actingAs($second)->post(route('business-invoices.store'), $this->invoicePayload());
+
+        $this->assertSame(['001', '002', '003'], BusinessInvoice::query()->where('user_id', $first->id)->orderBy('id')->pluck('invoice_number')->all());
+        $this->assertSame(['001', '002'], BusinessInvoice::query()->where('user_id', $second->id)->orderBy('id')->pluck('invoice_number')->all());
+
+        $this->actingAs($first)->get(route('business-invoices.index'))->assertOk()->assertSee('<strong>003</strong>', false);
+        $invoice = BusinessInvoice::query()->where('user_id', $first->id)->where('invoice_number', '003')->firstOrFail();
+        $text = (new \Smalot\PdfParser\Parser)->parseContent(app(BusinessInvoiceDocumentService::class)->output($invoice))->getText();
+        $this->assertStringContainsString('Invoice 003', $text);
+    }
+
+    public function test_numbering_continues_after_existing_invoices_without_rewriting_them(): void
+    {
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $legacyRandom = $this->invoiceFor($user, ['invoice_number' => 'BI-2026-K3JD8X92']);
+        $legacySequential = $this->invoiceFor($user, ['invoice_number' => 'INV-2026-0007']);
+        $this->invoiceFor($user, ['invoice_number' => 'Custom ref']);
+        $this->invoiceFor(User::factory()->create(), ['invoice_number' => '050']);
+
+        $this->actingAs($user)->post(route('business-invoices.store'), $this->invoicePayload())
+            ->assertSessionHas('success', 'Invoice 008 created.');
+
+        $this->assertSame('BI-2026-K3JD8X92', $legacyRandom->fresh()->invoice_number);
+        $this->assertSame('INV-2026-0007', $legacySequential->fresh()->invoice_number);
+    }
+
+    public function test_deleted_invoice_numbers_are_never_reused(): void
+    {
+        $user = User::factory()->create();
+        $numbers = app(BusinessInvoiceNumberService::class);
+
+        $numbers->createInvoice($user->id, $this->invoiceAttributes());
+        $numbers->createInvoice($user->id, $this->invoiceAttributes())->delete();
+
+        $this->assertSame('003', $numbers->peekNext($user->id));
+        $this->assertSame('003', $numbers->createInvoice($user->id, $this->invoiceAttributes())->invoice_number);
+    }
+
+    public function test_invoice_numbers_grow_past_999_without_truncation(): void
+    {
+        $user = User::factory()->create();
+        $this->invoiceFor($user, ['invoice_number' => '999']);
+        $numbers = app(BusinessInvoiceNumberService::class);
+
+        $this->assertSame('1000', $numbers->peekNext($user->id));
+        $this->assertSame('1000', $numbers->createInvoice($user->id, $this->invoiceAttributes())->invoice_number);
+        $this->assertSame('1001', $numbers->createInvoice($user->id, $this->invoiceAttributes())->invoice_number);
+        $this->assertSame('001', $numbers->peekNext(User::factory()->create()->id));
+        $this->assertNull($numbers->parse('BI-2026-0A1B2C3D'));
+        $this->assertNull($numbers->parse('No digits'));
+        $this->assertSame(12, $numbers->parse('INV-2026-0012'));
+    }
+
+    private function invoicePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'business_name' => 'Studio North',
+            'customer_name' => 'Customer One',
+            'customer_email' => 'customer@example.test',
+            'line_items' => [['description' => 'Brand design', 'quantity' => 2, 'unit_price' => 150]],
+            'currency' => 'usd',
+            'issue_date' => today()->toDateString(),
+        ], $overrides);
+    }
+
+    private function invoiceAttributes(): array
+    {
+        return [
+            'business_name' => 'Studio North',
+            'customer_name' => 'Customer One',
+            'customer_email' => 'customer@example.test',
+            'line_items' => [['description' => 'Brand design', 'quantity' => 1, 'unit_price' => 10, 'amount' => 10]],
+            'currency' => 'USD',
+            'total' => 10,
+            'issue_date' => today(),
+            'status' => 'unpaid',
+        ];
     }
 
     private function invoiceFor(User $user, array $overrides = []): BusinessInvoice

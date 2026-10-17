@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\BusinessInvoiceMail;
 use App\Models\BusinessInvoice;
 use App\Models\BusinessInvoiceTemplate;
 use App\Services\BusinessInvoiceDocumentService;
+use App\Services\BusinessInvoiceNumberService;
 use App\Services\BusinessInvoicePaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,7 +86,7 @@ class BusinessInvoiceController extends Controller
         ]], 201);
     }
 
-    public function preview(Request $request, BusinessInvoiceDocumentService $documents)
+    public function preview(Request $request, BusinessInvoiceDocumentService $documents, BusinessInvoiceNumberService $numbers)
     {
         $data = $this->validatedInvoiceData($request);
         $data['template_id'] ??= BusinessInvoiceTemplate::query()
@@ -92,7 +94,7 @@ class BusinessInvoiceController extends Controller
         $invoice = new BusinessInvoice([
             ...$data,
             'user_id' => $request->user()->id,
-            'invoice_number' => 'PREVIEW-'.now()->format('Y'),
+            'invoice_number' => $numbers->peekNext($request->user()->id),
             'status' => 'unpaid',
         ]);
         $invoice->load('template');
@@ -102,7 +104,7 @@ class BusinessInvoiceController extends Controller
             ->header('Content-Disposition', 'inline; filename="invoice-preview.pdf"');
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, BusinessInvoiceNumberService $numbers): JsonResponse
     {
         $data = $this->validatedInvoiceData($request);
 
@@ -110,11 +112,9 @@ class BusinessInvoiceController extends Controller
             ->where('user_id', $request->user()->id)
             ->where('is_default', true)
             ->value('id');
-        $data['user_id'] = $request->user()->id;
-        $data['invoice_number'] = 'BI-'.now()->format('Y').'-'.strtoupper(bin2hex(random_bytes(4)));
         $data['status'] = 'unpaid';
 
-        $invoice = BusinessInvoice::create($data);
+        $invoice = $numbers->createInvoice($request->user()->id, $data);
         return response()->json(['data' => $invoice], 201);
     }
 
@@ -183,12 +183,7 @@ class BusinessInvoiceController extends Controller
     {
         $invoice = $this->owned($request, $id);
         $pdf = $documents->output($invoice);
-        Mail::send([], [], function ($message) use ($invoice, $pdf): void {
-            $message->to($invoice->customer_email, $invoice->customer_name)
-                ->subject('Invoice '.$invoice->invoice_number)
-                ->text('Please find attached invoice '.$invoice->invoice_number.' from '.$invoice->business_name.'.')
-                ->attachData($pdf, 'invoice-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
-        });
+        Mail::send((new BusinessInvoiceMail($invoice, $pdf))->to($invoice->customer_email, $invoice->customer_name));
         $invoice->forceFill(['sent_at' => now()])->save();
         return response()->json(['message' => 'Invoice sent.', 'data' => $invoice->fresh()]);
     }
@@ -218,12 +213,7 @@ class BusinessInvoiceController extends Controller
         abort_unless($invoice->status === 'paid', 422, 'Mark the invoice paid before sending a receipt.');
         $pdf = $documents->output($invoice, 'PAYMENT RECEIPT');
 
-        Mail::send([], [], function ($message) use ($invoice, $pdf): void {
-            $message->to($invoice->customer_email, $invoice->customer_name)
-                ->subject('Receipt for invoice '.$invoice->invoice_number)
-                ->text('Thank you for your payment. Please find the receipt for invoice '.$invoice->invoice_number.' attached.')
-                ->attachData($pdf, 'receipt-'.$invoice->invoice_number.'.pdf', ['mime' => 'application/pdf']);
-        });
+        Mail::send((new BusinessInvoiceMail($invoice, $pdf, BusinessInvoiceMail::KIND_RECEIPT))->to($invoice->customer_email, $invoice->customer_name));
 
         return response()->json(['message' => 'Payment receipt sent.', 'data' => $invoice]);
     }

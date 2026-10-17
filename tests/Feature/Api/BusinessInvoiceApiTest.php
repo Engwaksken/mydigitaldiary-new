@@ -31,7 +31,8 @@ class BusinessInvoiceApiTest extends TestCase
             'issue_date' => today()->toDateString(),
         ])->assertCreated()->assertJsonPath('data.total', '30000.00')
             ->assertJsonPath('data.currency', 'UGX')
-            ->assertJsonPath('data.line_items.0.amount', 25000);
+            ->assertJsonPath('data.line_items.0.amount', 25000)
+            ->assertJsonPath('data.invoice_number', '001');
 
         $this->assertDatabaseHas('business_invoices', ['user_id' => $user->id, 'total' => 30000]);
     }
