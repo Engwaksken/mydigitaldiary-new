@@ -34,6 +34,7 @@ class BusinessInvoiceDocumentService
         return DomPdfFacade::loadView('business-invoices.pdf', [
             'invoice' => $invoice,
             'documentTitle' => $title,
+            'onStationery' => $invoice->template && $this->isPdfTemplate($invoice->template->storage_path),
         ])->setPaper('a4');
     }
 
@@ -155,11 +156,7 @@ HTML;
         }
 
         $escape = static fn (mixed $value): string => htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $rows = '';
-        foreach ($invoice->line_items ?? [] as $item) {
-            $rows .= '<tr><td>'.$escape($item['description'] ?? '').'</td><td class="right">'.$escape($item['quantity'] ?? '').'</td><td class="right">'.$escape($invoice->currency).' '.number_format((float) ($item['unit_price'] ?? 0), 2).'</td><td class="right">'.$escape($invoice->currency).' '.number_format((float) ($item['amount'] ?? 0), 2).'</td></tr>';
-        }
-        $table = '<table><thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Unit price</th><th class="right">Amount</th></tr></thead><tbody>'.$rows.'</tbody></table>';
+        $table = view('business-invoices.partials.line-items-table', ['invoice' => $invoice])->render();
 
         $logoDataUri = $this->businessLogoDataUri($invoice);
         $businessLogo = $logoDataUri

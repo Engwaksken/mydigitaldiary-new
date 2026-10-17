@@ -5,10 +5,43 @@
 @section('content')
     @push('styles')
         <style>
-            /* modal-responsive.css zeroes padding on direct dialog forms globally; restore this form's intended spacing. */
-            dialog#invoice-modal[open] > form.invoice-modal-form { padding: 1rem !important; }
-            @media (min-width: 640px) {
-                dialog#invoice-modal[open] > form.invoice-modal-form { padding: 1.5rem !important; }
+            /* Invoice form: field sizing follows the shared dialog tokens; the rules below only fill the gaps for selects, dates and line items. */
+            #invoice-modal .invoice-form-tabs { flex: 0 0 auto; padding-inline: 20px; }
+            #invoice-modal :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { height: var(--pm-field-height, 46px) !important; line-height: 1.4 !important; }
+            #invoice-modal textarea { min-height: 96px !important; }
+            #invoice-modal select { padding-right: 2.6rem !important; text-overflow: ellipsis; }
+            #invoice-modal .invoice-number-input { text-align: right; font-variant-numeric: tabular-nums; }
+            #invoice-modal .invoice-line,
+            #invoice-modal .invoice-line-head,
+            #invoice-modal .invoice-line-total { display: grid !important; grid-template-columns: minmax(0, 1fr) 5rem 8rem 8rem 2.875rem !important; gap: .625rem !important; align-items: center; }
+            #invoice-modal .invoice-line-head { padding-inline: calc(.75rem + 1px); color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+            #invoice-modal .invoice-line-head > .text-right { padding-right: .875rem; }
+            #invoice-modal .invoice-line { padding: .75rem; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc; }
+            #invoice-modal .invoice-line-caption { display: none; }
+            #invoice-modal .invoice-line-amount { display: flex; align-items: center; justify-content: flex-end; height: var(--pm-field-height, 46px); padding-inline: .875rem; border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff; color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            #invoice-modal .remove-invoice-line { display: grid; place-items: center; width: 2.875rem; height: var(--pm-field-height, 46px); border-radius: 12px; }
+            #invoice-modal .invoice-line-total { padding: .25rem calc(.75rem + 1px) 0; font-variant-numeric: tabular-nums; }
+            #invoice-modal .invoice-line-total > span:first-child { grid-column: 1 / 4; text-align: right; color: #475569; font-weight: 600; }
+            #invoice-modal .invoice-line-total > strong { padding-inline: .875rem; text-align: right; white-space: nowrap; }
+            @media (max-width: 640px) {
+                #invoice-modal .invoice-form-tabs { padding-inline: 14px; }
+                #invoice-modal .pm-modal-footer [type="submit"] { order: -1; }
+            }
+            @media (max-width: 767.98px) {
+                #invoice-modal .invoice-line-head { display: none !important; }
+                /* Below tablet width: description beside the remove button, then qty / price, then the full-width amount. */
+                #invoice-modal .invoice-line { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.875rem !important; grid-template-areas: "description description remove" "quantity price price" "amount amount amount"; gap: .5rem .625rem !important; align-items: end; }
+                #invoice-modal .invoice-line > [data-cell="description"] { grid-area: description; }
+                #invoice-modal .invoice-line > [data-cell="quantity"] { grid-area: quantity; }
+                #invoice-modal .invoice-line > [data-cell="price"] { grid-area: price; }
+                #invoice-modal .invoice-line > [data-cell="amount"] { grid-area: amount; }
+                #invoice-modal .invoice-line > .remove-invoice-line { grid-area: remove; }
+                #invoice-modal .invoice-line-caption { display: block; margin-bottom: .25rem; color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+                #invoice-modal .invoice-line-total { display: flex !important; justify-content: space-between; padding-inline: .25rem calc(1.625rem + 1px); }
+                #invoice-modal .invoice-line-total > strong { padding-inline: 0; }
+            }
+            @media (max-width: 380px) {
+                #invoice-modal .invoice-form-tabs { padding-inline: 12px; }
             }
         </style>
     @endpush
@@ -49,7 +82,7 @@
                     @csrf
                     <div><label for="template-name" class="mb-1 block text-sm font-medium">Template name</label><input id="template-name" name="name" required maxlength="120" class="pm-input" value="{{ old('name') }}" placeholder="e.g. Company invoice"></div>
                     <div><label for="template-file" class="mb-1 block text-sm font-medium">HTML or PDF file</label><input id="template-file" name="template_file" type="file" accept=".html,.htm,.pdf,text/html,application/pdf" required class="pm-input">@error('template_file')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_default" value="1" @checked(old('is_default'))> Make this the default template</label>
+                    <div class="flex min-h-[2.75rem] items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5"><input id="template-is-default" type="checkbox" name="is_default" value="1" @checked(old('is_default')) class="h-4 w-4 shrink-0 rounded border-slate-300"><label for="template-is-default" class="cursor-pointer text-sm font-medium leading-5 text-slate-700">Make this the default template</label></div>
                     <button class="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-upload mr-1" aria-hidden="true"></i> Upload template</button>
                 </form>
                 <div class="mt-5 overflow-x-auto border-t border-slate-100 pt-4">
@@ -121,54 +154,59 @@
         </section>
     </div>
 
-    <dialog id="invoice-modal" aria-labelledby="invoice-modal-title" class="w-[min(94vw,900px)] max-h-[92dvh] max-w-none overflow-y-auto rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/60">
-        <form id="invoice-form" method="POST" action="{{ $restoreMode === 'edit' && $restoreInvoice ? route('business-invoices.update', $restoreInvoice->id) : route('business-invoices.store') }}" class="invoice-modal-form space-y-5 p-4 sm:p-6">
+    <dialog id="invoice-modal" aria-labelledby="invoice-modal-title" class="pm-dialog-lg rounded-2xl p-0 shadow-2xl backdrop:bg-slate-900/60">
+        <form id="invoice-form" method="POST" action="{{ $restoreMode === 'edit' && $restoreInvoice ? route('business-invoices.update', $restoreInvoice->id) : route('business-invoices.store') }}" class="invoice-modal-form">
             @csrf
             <input type="hidden" name="_form_mode" id="invoice-form-mode" value="{{ $restoreMode }}">
             <input type="hidden" name="_invoice_id" id="invoice-id" value="{{ old('_invoice_id', $restoreInvoice?->id) }}">
             <input type="hidden" name="_method" id="invoice-method" value="PUT" @disabled($restoreMode !== 'edit')>
-            <div class="sticky top-0 z-10 -mx-4 -mt-4 flex items-center justify-between gap-3 border-b border-slate-100 bg-white/95 p-4 backdrop-blur sm:-mx-6 sm:-mt-6 sm:px-6">
-                <div><h2 id="invoice-modal-title" class="text-lg font-bold text-slate-900">{{ $restoreMode === 'edit' ? 'Edit invoice' : 'Create invoice' }}</h2><p class="text-xs text-slate-500">Amounts are calculated from the line items.</p></div>
-                <button type="button" data-close-invoice class="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Close invoice form"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            <div class="pm-modal-header">
+                <div class="pm-modal-title-wrap"><h2 id="invoice-modal-title" class="pm-modal-title text-lg font-bold text-slate-900">{{ $restoreMode === 'edit' ? 'Edit invoice' : 'Create invoice' }}</h2><p class="pm-modal-description text-xs text-slate-500">Amounts are calculated from the line items.</p></div>
+                <button type="button" data-close-invoice class="pm-modal-close grid h-10 w-10 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Close invoice form"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
             </div>
-            <div role="tablist" aria-label="Invoice form sections" class="-mx-4 flex gap-2 overflow-x-auto border-b border-slate-200 px-4 sm:-mx-6 sm:px-6" data-invoice-form-tabs>
-                <button type="button" role="tab" id="invoice-form-tab-details" aria-controls="invoice-form-panel-details" aria-selected="true" tabindex="0" data-form-tab="details" class="whitespace-nowrap border-b-2 border-[var(--brand-1)] px-3 py-3 text-sm font-semibold text-[var(--brand-1)]">Business &amp; customer</button>
-                <button type="button" role="tab" id="invoice-form-tab-items" aria-controls="invoice-form-panel-items" aria-selected="false" tabindex="-1" data-form-tab="items" class="whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-semibold text-slate-500">Items &amp; template</button>
+            <div role="tablist" aria-label="Invoice form sections" class="invoice-form-tabs flex gap-2 overflow-x-auto border-b border-slate-200" data-invoice-form-tabs>
+                <button type="button" role="tab" id="invoice-form-tab-details" aria-controls="invoice-form-panel-details" aria-selected="true" tabindex="0" data-form-tab="details" class="shrink-0 whitespace-nowrap border-b-2 border-[var(--brand-1)] px-3 py-3 text-sm font-semibold text-[var(--brand-1)]">Business &amp; customer</button>
+                <button type="button" role="tab" id="invoice-form-tab-items" aria-controls="invoice-form-panel-items" aria-selected="false" tabindex="-1" data-form-tab="items" class="shrink-0 whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-semibold text-slate-500">Items &amp; template</button>
             </div>
-            <section id="invoice-form-panel-details" role="tabpanel" aria-labelledby="invoice-form-tab-details" data-form-panel="details" class="space-y-4">
+            <div class="pm-modal-body" data-modal-scroll>
+            <section id="invoice-form-panel-details" role="tabpanel" aria-labelledby="invoice-form-tab-details" data-form-panel="details">
             <div class="grid gap-4 sm:grid-cols-2">
-                <div><label for="business_name" class="mb-1 block text-sm font-medium">Your business name</label><input id="business_name" name="business_name" required maxlength="255" class="pm-input" value="{{ old('business_name', $restoreInvoice?->business_name ?? ($businessCard?->company ?: $businessCard?->name)) }}">@error('business_name')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
-                <div><label for="business_email" class="mb-1 block text-sm font-medium">Business email</label><input id="business_email" name="business_email" type="email" class="pm-input" value="{{ old('business_email', $restoreInvoice?->business_email ?? $businessCard?->email) }}"></div>
-                <div><label for="business_phone" class="mb-1 block text-sm font-medium">Business phone</label><input id="business_phone" name="business_phone" class="pm-input" value="{{ old('business_phone', $restoreInvoice?->business_phone ?? $businessCard?->phone) }}"></div>
-                <div><label for="currency" class="mb-1 block text-sm font-medium">Currency code</label><input id="currency" name="currency" maxlength="3" required class="pm-input uppercase" value="{{ old('currency', $restoreInvoice?->currency ?? 'UGX') }}"></div>
-                <div class="sm:col-span-2"><label for="business_address" class="mb-1 block text-sm font-medium">Business address</label><textarea id="business_address" name="business_address" rows="2" class="pm-input">{{ old('business_address', $restoreInvoice?->business_address ?? $businessCard?->address) }}</textarea></div>
-                <div><label for="customer_name" class="mb-1 block text-sm font-medium">Customer name</label><input id="customer_name" name="customer_name" required class="pm-input" value="{{ old('customer_name', $restoreInvoice?->customer_name) }}">@error('customer_name')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
-                <div><label for="customer_email" class="mb-1 block text-sm font-medium">Customer email</label><input id="customer_email" name="customer_email" type="email" required class="pm-input" value="{{ old('customer_email', $restoreInvoice?->customer_email) }}">@error('customer_email')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
+                <div><label for="business_name" class="mb-1 block text-sm font-medium">Your business name</label><input id="business_name" name="business_name" required maxlength="255" placeholder="e.g. Acme Supplies Ltd" class="pm-input" value="{{ old('business_name', $restoreInvoice?->business_name ?? ($businessCard?->company ?: $businessCard?->name)) }}">@error('business_name')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
+                <div><label for="business_email" class="mb-1 block text-sm font-medium">Business email</label><input id="business_email" name="business_email" type="email" placeholder="billing@business.com" class="pm-input" value="{{ old('business_email', $restoreInvoice?->business_email ?? $businessCard?->email) }}"></div>
+                <div><label for="business_phone" class="mb-1 block text-sm font-medium">Business phone</label><input id="business_phone" name="business_phone" type="tel" placeholder="e.g. +256 700 000000" class="pm-input" value="{{ old('business_phone', $restoreInvoice?->business_phone ?? $businessCard?->phone) }}"></div>
+                <div><label for="currency" class="mb-1 block text-sm font-medium">Currency code</label><input id="currency" name="currency" maxlength="3" required placeholder="e.g. UGX" class="pm-input uppercase" value="{{ old('currency', $restoreInvoice?->currency ?? 'UGX') }}"></div>
+                <div class="sm:col-span-2"><label for="business_address" class="mb-1 block text-sm font-medium">Business address</label><textarea id="business_address" name="business_address" rows="3" placeholder="Street, city, country" class="pm-input">{{ old('business_address', $restoreInvoice?->business_address ?? $businessCard?->address) }}</textarea></div>
+                <div><label for="customer_name" class="mb-1 block text-sm font-medium">Customer name</label><input id="customer_name" name="customer_name" required placeholder="e.g. Jane Doe" class="pm-input" value="{{ old('customer_name', $restoreInvoice?->customer_name) }}">@error('customer_name')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
+                <div><label for="customer_email" class="mb-1 block text-sm font-medium">Customer email</label><input id="customer_email" name="customer_email" type="email" required placeholder="customer@example.com" class="pm-input" value="{{ old('customer_email', $restoreInvoice?->customer_email) }}">@error('customer_email')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
                 <div><label for="issue_date" class="mb-1 block text-sm font-medium">Issue date</label><input id="issue_date" name="issue_date" type="date" required class="pm-input" value="{{ old('issue_date', $restoreInvoice?->issue_date?->toDateString() ?? now()->toDateString()) }}"></div>
                 <div><label for="due_date" class="mb-1 block text-sm font-medium">Due date</label><input id="due_date" name="due_date" type="date" class="pm-input" value="{{ old('due_date', $restoreInvoice?->due_date?->toDateString()) }}"></div>
             </div>
             </section>
             <section id="invoice-form-panel-items" role="tabpanel" aria-labelledby="invoice-form-tab-items" data-form-panel="items" hidden style="display: none" class="space-y-5">
             <div>
-                <div class="mb-2 flex items-center justify-between gap-3"><h3 class="font-semibold text-slate-800">Items</h3><button type="button" id="add-invoice-line" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i>Add item</button></div>
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><h3 class="font-semibold text-slate-800">Items</h3><button type="button" id="add-invoice-line" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-plus" aria-hidden="true"></i>Add item</button></div>
+                <div class="invoice-line-head mb-2" aria-hidden="true"><span>Description</span><span class="text-right">Qty</span><span class="text-right">Unit price</span><span class="text-right">Amount</span></div>
                 <div id="invoice-line-items" class="space-y-3">
                     @foreach ($restoreLines as $index => $line)
-                        <div class="invoice-line grid min-w-0 grid-cols-1 gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[minmax(0,1fr)_6rem_8rem_auto]">
-                            <input name="line_items[{{ $index }}][description]" required maxlength="255" placeholder="Description" aria-label="Item description" class="pm-input" value="{{ $line['description'] ?? '' }}">
-                            <input name="line_items[{{ $index }}][quantity]" required type="number" min="0.01" step="0.01" aria-label="Quantity" class="pm-input" value="{{ $line['quantity'] ?? 1 }}">
-                            <input name="line_items[{{ $index }}][unit_price]" required type="number" min="0" step="0.01" aria-label="Unit price" placeholder="Unit price" class="pm-input" value="{{ $line['unit_price'] ?? '' }}">
-                            <button type="button" class="remove-invoice-line rounded-lg px-3 py-2 text-rose-600" aria-label="Remove line item"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        <div class="invoice-line">
+                            <div data-cell="description"><span class="invoice-line-caption" aria-hidden="true">Description</span><input data-field="description" name="line_items[{{ $index }}][description]" required maxlength="255" placeholder="e.g. Website design" aria-label="Item description" class="pm-input" value="{{ $line['description'] ?? '' }}"></div>
+                            <div data-cell="quantity"><span class="invoice-line-caption" aria-hidden="true">Qty</span><input data-field="quantity" name="line_items[{{ $index }}][quantity]" required type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="1" aria-label="Quantity" class="pm-input invoice-number-input" value="{{ $line['quantity'] ?? 1 }}"></div>
+                            <div data-cell="price"><span class="invoice-line-caption" aria-hidden="true">Unit price</span><input data-field="unit_price" name="line_items[{{ $index }}][unit_price]" required type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="Unit price" class="pm-input invoice-number-input" value="{{ $line['unit_price'] ?? '' }}"></div>
+                            <div data-cell="amount"><span class="invoice-line-caption" aria-hidden="true">Amount</span><output class="invoice-line-amount" data-line-amount aria-label="Line amount">0.00</output></div>
+                            <button type="button" class="remove-invoice-line text-rose-600 hover:bg-rose-50" aria-label="Remove line item"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                         </div>
                     @endforeach
                 </div>
+                <div class="invoice-line-total mt-3" aria-live="polite"><span>Total (<span data-invoice-currency>{{ strtoupper(old('currency', $restoreInvoice?->currency ?? 'UGX')) }}</span>)</span><strong data-invoice-total class="text-base text-slate-900">0.00</strong></div>
                 @error('line_items')<p role="alert" class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                 @error('line_items.*.description')<p role="alert" class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                 @error('line_items.*.quantity')<p role="alert" class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
                 @error('line_items.*.unit_price')<p role="alert" class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
             </div>
-            <div><label for="invoice-template-id" class="mb-1 block text-sm font-medium">Invoice template</label><select id="invoice-template-id" name="template_id" class="pm-input"><option value="">Standard invoice layout</option>@foreach ($templates as $template)<option value="{{ $template->id }}" @selected((string) old('template_id', $restoreInvoice?->template_id ?? ($template->is_default ? $template->id : '')) === (string) $template->id)>{{ $template->name }}{{ $template->is_default ? ' (default)' : '' }}</option>@endforeach</select>@error('template_id')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
+            <div><label for="invoice-template-id" class="mb-1 block text-sm font-medium">Invoice template</label><select id="invoice-template-id" name="template_id" class="pm-input"><option value="">Choose a template (optional)</option>@foreach ($templates as $template)<option value="{{ $template->id }}" @selected((string) old('template_id', $restoreInvoice?->template_id ?? ($template->is_default ? $template->id : '')) === (string) $template->id)>{{ $template->name }}{{ $template->is_default ? ' (default)' : '' }}</option>@endforeach</select>@error('template_id')<p role="alert" class="mt-1 text-sm text-rose-600">{{ $message }}</p>@enderror</div>
             </section>
-            <div class="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row"><button type="button" data-close-invoice class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button><button type="submit" class="btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-white"><i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i><span id="invoice-submit-label">{{ $restoreMode === 'edit' ? 'Save changes' : 'Create invoice' }}</span></button></div>
+            </div>
+            <div class="pm-modal-footer"><button type="button" data-close-invoice class="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button type="submit" class="btn-primary inline-flex items-center justify-center gap-1 rounded-lg px-5 py-2.5 text-sm font-semibold text-white"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i><span id="invoice-submit-label">{{ $restoreMode === 'edit' ? 'Save changes' : 'Create invoice' }}</span></button></div>
         </form>
     </dialog>
 
@@ -180,7 +218,7 @@
         </form>
     </dialog>
 
-    <template id="invoice-line-template"><div class="invoice-line grid min-w-0 grid-cols-1 gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[minmax(0,1fr)_6rem_8rem_auto]"><input data-field="description" required maxlength="255" placeholder="Description" aria-label="Item description" class="pm-input"><input data-field="quantity" required type="number" min="0.01" step="0.01" aria-label="Quantity" class="pm-input" value="1"><input data-field="unit_price" required type="number" min="0" step="0.01" aria-label="Unit price" placeholder="Unit price" class="pm-input"><button type="button" class="remove-invoice-line rounded-lg px-3 py-2 text-rose-600" aria-label="Remove line item"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></div></template>
+    <template id="invoice-line-template"><div class="invoice-line"><div data-cell="description"><span class="invoice-line-caption" aria-hidden="true">Description</span><input data-field="description" required maxlength="255" placeholder="e.g. Website design" aria-label="Item description" class="pm-input"></div><div data-cell="quantity"><span class="invoice-line-caption" aria-hidden="true">Qty</span><input data-field="quantity" required type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="1" aria-label="Quantity" class="pm-input invoice-number-input" value="1"></div><div data-cell="price"><span class="invoice-line-caption" aria-hidden="true">Unit price</span><input data-field="unit_price" required type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="Unit price" class="pm-input invoice-number-input"></div><div data-cell="amount"><span class="invoice-line-caption" aria-hidden="true">Amount</span><output class="invoice-line-amount" data-line-amount aria-label="Line amount">0.00</output></div><button type="button" class="remove-invoice-line text-rose-600 hover:bg-rose-50" aria-label="Remove line item"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></div></template>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -249,7 +287,34 @@
                     });
                     lines.appendChild(row);
                 });
+                refreshTotals();
             }
+
+            function collectLines() {
+                return Array.from(lines.querySelectorAll('.invoice-line')).map(row => ({
+                    description: row.querySelector('[data-field="description"]')?.value ?? '',
+                    quantity: row.querySelector('[data-field="quantity"]')?.value ?? 1,
+                    unit_price: row.querySelector('[data-field="unit_price"]')?.value ?? '',
+                }));
+            }
+
+            // Mirror the server-side calculation (each line rounded to 2 decimals) so the preview matches the saved total.
+            const formatAmount = value => value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            function refreshTotals() {
+                let total = 0;
+                lines.querySelectorAll('.invoice-line').forEach(row => {
+                    const quantity = parseFloat(row.querySelector('[data-field="quantity"]')?.value) || 0;
+                    const unitPrice = parseFloat(row.querySelector('[data-field="unit_price"]')?.value) || 0;
+                    const amount = Math.round(quantity * unitPrice * 100) / 100;
+                    total += amount;
+                    row.querySelector('[data-line-amount]').textContent = formatAmount(amount);
+                });
+                document.querySelector('[data-invoice-total]').textContent = formatAmount(total);
+                document.querySelector('[data-invoice-currency]').textContent = (form.elements.namedItem('currency')?.value || '').toUpperCase();
+            }
+            lines.addEventListener('input', refreshTotals);
+            form.elements.namedItem('currency')?.addEventListener('input', refreshTotals);
+            refreshTotals();
 
             function openCreate() {
                 form.reset();
@@ -281,23 +346,12 @@
             }));
 
             document.querySelectorAll('[data-close-invoice]').forEach(button => button.addEventListener('click', () => modal.close()));
-            document.getElementById('add-invoice-line').addEventListener('click', () => setLines([...Array.from(lines.querySelectorAll('.invoice-line')).map(row => ({
-                description: row.querySelector('[data-field="description"]')?.value ?? '',
-                quantity: row.querySelector('[data-field="quantity"]')?.value ?? 1,
-                unit_price: row.querySelector('[data-field="unit_price"]')?.value ?? '',
-            })), {description: '', quantity: 1, unit_price: ''}]));
+            document.getElementById('add-invoice-line').addEventListener('click', () => setLines([...collectLines(), {description: '', quantity: 1, unit_price: ''}]));
             lines.addEventListener('click', event => {
                 const remove = event.target.closest('.remove-invoice-line');
                 if (remove && lines.querySelectorAll('.invoice-line').length > 1) {
-                    const rowToRemove = remove.closest('.invoice-line');
-                    const remainingItems = Array.from(lines.querySelectorAll('.invoice-line'))
-                        .filter(row => row !== rowToRemove)
-                        .map(row => ({
-                            description: row.querySelector('[data-field="description"]')?.value ?? '',
-                            quantity: row.querySelector('[data-field="quantity"]')?.value ?? 1,
-                            unit_price: row.querySelector('[data-field="unit_price"]')?.value ?? '',
-                        }));
-                    setLines(remainingItems);
+                    const removeIndex = Array.from(lines.querySelectorAll('.invoice-line')).indexOf(remove.closest('.invoice-line'));
+                    setLines(collectLines().filter((_, index) => index !== removeIndex));
                 }
             });
 

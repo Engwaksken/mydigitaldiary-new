@@ -48,7 +48,10 @@ class BusinessInvoiceWorkflowTest extends TestCase
             ->assertSee('Finance')
             ->assertSee('invoice-modal')
             ->assertSee('invoice-modal-form', false)
-            ->assertSee('padding: 1rem !important', false)
+            ->assertSee('pm-dialog-lg', false)
+            ->assertSee('class="pm-modal-body" data-modal-scroll', false)
+            ->assertSee('data-line-amount', false)
+            ->assertSee('Choose a template (optional)')
             ->assertSee('w-full max-w-full min-w-0 space-y-6', false)
             ->assertSee('aria-label="Download invoice PDF', false)
             ->assertSee('aria-label="Email invoice', false)
@@ -255,6 +258,28 @@ class BusinessInvoiceWorkflowTest extends TestCase
 
         $this->assertSame('unpaid', $invoice->fresh()->status);
         $this->assertDatabaseMissing('incomes', ['business_invoice_id' => $invoice->id]);
+    }
+
+    public function test_invoice_line_items_render_with_aligned_numeric_columns_and_totals(): void
+    {
+        $user = User::factory()->create(['subscription_status' => 'active']);
+        $invoice = $this->invoiceFor($user, [
+            'line_items' => [
+                ['description' => 'Brand design', 'quantity' => 2, 'unit_price' => 150, 'amount' => 300],
+                ['description' => 'Printing', 'quantity' => 1.5, 'unit_price' => 1000, 'amount' => 1500],
+            ],
+            'total' => 1800,
+        ]);
+
+        $html = view('business-invoices.partials.line-items-table', ['invoice' => $invoice, 'showTotals' => true])->render();
+
+        $this->assertStringContainsString('table-layout:fixed', $html);
+        $this->assertStringContainsString('Amount (USD)', $html);
+        $this->assertStringContainsString('text-align:right;white-space:nowrap;">1.50</td>', $html);
+        $this->assertStringContainsString('text-align:right;white-space:nowrap;">2.00</td>', $html);
+        $this->assertStringContainsString('1,000.00', $html);
+        $this->assertStringContainsString('Total (USD)', $html);
+        $this->assertStringContainsString('1,800.00', $html);
     }
 
     private function invoiceFor(User $user, array $overrides = []): BusinessInvoice
