@@ -9,6 +9,7 @@ use App\Models\AppreciationEmailLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -64,6 +65,43 @@ class AppreciationSender
             ->all();
     }
 
+    /** Why $user will not get this week's email, or null when they will. */
+    public static function ineligibleReason(User $user, string $weekKey): ?string
+    {
+        return match (true) {
+            blank($user->email) => 'No email address',
+            $user->email_verified_at === null => 'Email not verified',
+            $user->suspended_at !== null => 'Account suspended',
+            $user->deletion_requested_at !== null || $user->scheduled_deletion_at !== null => 'Account pending deletion',
+            $user->role === 'admin' => 'Admin account',
+            ! $user->engagementNotificationEnabled('weekly_appreciation') => 'Opted out',
+            AppreciationEmailLog::query()->where('user_id', $user->id)->where('week_key', $weekKey)->exists() => 'Already sent this week',
+            default => null,
+        };
+    }
+
+    /**
+     * This week's message for $user, kept for a few hours so the copy an
+     * admin previews is exactly the copy that is sent.
+     *
+     * @return array{subject:string, paragraphs:list<string>, source:string, theme:string}
+     */
+    public function draft(User $user, string $weekKey, bool $fresh = false): array
+    {
+        $key = self::draftKey($user, $weekKey);
+
+        if ($fresh) {
+            Cache::forget($key);
+        }
+
+        return Cache::remember($key, now()->addHours(6), fn () => $this->messages->compose($user, $weekKey));
+    }
+
+    private static function draftKey(User $user, string $weekKey): string
+    {
+        return "appreciation-draft:{$weekKey}:{$user->id}";
+    }
+
     /** @return self::SENT|self::SKIPPED|self::FAILED */
     public function send(User $user, string $weekKey): string
     {
@@ -72,7 +110,7 @@ class AppreciationSender
         }
 
         try {
-            $copy = $this->messages->compose($user, $weekKey);
+            $copy = $this->draft($user, $weekKey);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -97,6 +135,7 @@ class AppreciationSender
         try {
             Mail::to($user)->send(new WeeklyAppreciationMail($user, $copy['subject'], $copy['paragraphs']));
             $log->forceFill(['sent_at' => now()])->save();
+            Cache::forget(self::draftKey($user, $weekKey));
 
             return self::SENT;
         } catch (Throwable $exception) {

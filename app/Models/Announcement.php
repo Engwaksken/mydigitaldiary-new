@@ -19,7 +19,7 @@ class Announcement extends Model
     public const DEFAULT_FEATURE_CTA = 'Explore now';
 
     protected $fillable = [
-        'created_by', 'title', 'body', 'type', 'feature_key', 'link_url', 'cta_label', 'send_push', 'send_email',
+        'created_by', 'title', 'body', 'type', 'feature_key', 'link_url', 'cta_label', 'send_push', 'send_email', 'recipient_ids',
     ];
 
     protected $attributes = [
@@ -31,6 +31,7 @@ class Announcement extends Model
     protected $casts = [
         'send_push' => 'boolean',
         'send_email' => 'boolean',
+        'recipient_ids' => 'array',
     ];
 
     public function creator()
@@ -110,6 +111,19 @@ class Announcement extends Model
     }
 
     /** @return list<string> */
+    /** Users picked on the admin Users page, or null when sent to everyone. */
+    public function recipientIds(): ?array
+    {
+        return $this->recipient_ids === null ? null : array_map('intval', $this->recipient_ids);
+    }
+
+    public function audienceLabel(): string
+    {
+        $ids = $this->recipientIds();
+
+        return $ids === null ? 'Everyone' : count($ids).' selected '.str('user')->plural(count($ids));
+    }
+
     public function channels(): array
     {
         return array_values(array_filter([

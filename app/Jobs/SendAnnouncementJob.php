@@ -18,7 +18,8 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * Delivers one Announcement: in-app to every non-suspended user, push to
+ * Delivers one Announcement: in-app to every non-suspended user (or only the
+ * users picked on the admin Users page), push to
  * those with a registered device (when send_push), and email to verified
  * users who have not switched off "product_updates" (when send_email).
  *
@@ -44,7 +45,7 @@ class SendAnnouncementJob implements ShouldQueue
         $stats = ['in_app' => 0, 'push' => 0, 'email' => 0, 'failed' => 0];
         $pushData = self::pushData($announcement);
 
-        $audience->inApp()->with('deviceTokens')->chunkById(100, function ($users) use ($announcement, $fcm, $audience, $pushData, &$stats): void {
+        $audience->inApp($announcement->recipientIds())->with('deviceTokens')->chunkById(100, function ($users) use ($announcement, $fcm, $audience, $pushData, &$stats): void {
             foreach ($users as $user) {
                 // In-app first, so the push carries an unread count that includes it.
                 $this->attempt($user, 'in-app', $stats, function () use ($user, $announcement, &$stats): void {

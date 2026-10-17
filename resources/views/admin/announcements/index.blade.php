@@ -41,7 +41,7 @@
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5">
                             Sent {{ $announcement->created_at->diffForHumans() }} by {{ $announcement->creator->name ?? 'Unknown' }}
-                            · {{ implode(', ', $announcement->channels()) }}
+                            · {{ $announcement->audienceLabel() }} · {{ implode(', ', $announcement->channels()) }}
                         </p>
                     </div>
                     <form method="POST" action="{{ route('admin.announcements.destroy', $announcement->id) }}"

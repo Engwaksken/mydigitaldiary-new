@@ -643,6 +643,7 @@
                     <option value="suspend">Suspend Users</option>
                     <option value="reactivate">Reactivate Users</option>
                     <option value="appreciation">Send Appreciation Email</option>
+                    <option value="announcement">Send Announcement</option>
                     <option value="delete">Delete Users</option>
                 </select>
             </div>
@@ -785,8 +786,20 @@
             >
                 <div class="rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm text-teal-800">
                     <i class="fa-regular fa-heart mr-1" aria-hidden="true"></i>
-                    Each selected user gets their own thank-you email this week. Unverified, admin, suspended and
-                    opted-out users, and anyone already sent one this week, are skipped.
+                    Next you'll preview each selected user's own thank-you email before sending. Unverified, admin,
+                    suspended and opted-out users, and anyone already sent one this week, are skipped.
+                </div>
+            </section>
+
+            <section
+                id="admin-bulk-announcement-fields"
+                class="admin-bulk-action-fields"
+                hidden
+            >
+                <div class="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-800">
+                    <i class="fa-solid fa-bullhorn mr-1" aria-hidden="true"></i>
+                    Opens the announcement form for the selected users. Write the message, choose a feature,
+                    push and email, preview it, then send. Only these users will receive it.
                 </div>
             </section>
 

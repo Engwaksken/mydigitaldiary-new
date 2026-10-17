@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendAppreciationToUsersJob;
+use Illuminate\Http\JsonResponse;
+use App\Mail\WeeklyAppreciationMail;
 use App\Services\AppreciationMessageService;
 use App\Services\AppreciationSender;
 use App\Http\Requests\Admin\BulkUserRequest;
@@ -650,6 +652,64 @@ class AdminUserController extends Controller
         });
     }
 
+    /** Preview page for the "Send Appreciation Email" bulk action. */
+    public function appreciationPreview(Request $request): View
+    {
+        $weekKey = AppreciationMessageService::weekKey();
+        $users = User::query()
+            ->whereIn('id', $this->idsFromQuery($request->query('ids')))
+            ->orderBy('name')
+            ->get();
+
+        $skipped = $users
+            ->map(fn (User $user) => ['user' => $user, 'reason' => AppreciationSender::ineligibleReason($user, $weekKey)])
+            ->filter(fn (array $row) => $row['reason'] !== null)
+            ->values();
+        $eligible = $users->reject(fn (User $user) => $skipped->contains(fn (array $row) => $row['user']->is($user)))->values();
+
+        return view('admin.users.appreciation-preview', compact('eligible', 'skipped', 'weekKey'));
+    }
+
+    /**
+     * One person's appreciation email exactly as it will be sent, as JSON for
+     * the preview page. ?regenerate=1 writes a new message.
+     */
+    public function appreciationPreviewEmail(Request $request, User $user, AppreciationSender $sender): JsonResponse
+    {
+        $weekKey = AppreciationMessageService::weekKey();
+        $reason = AppreciationSender::ineligibleReason($user, $weekKey);
+        abort_if($reason !== null, 422, $reason ?? '');
+
+        $copy = $sender->draft($user, $weekKey, fresh: $request->boolean('regenerate'));
+
+        return response()->json([
+            'subject' => $copy['subject'],
+            'source' => $copy['source'],
+            'html' => (new WeeklyAppreciationMail($user, $copy['subject'], $copy['paragraphs']))->render(),
+        ]);
+    }
+
+    public function appreciationSend(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        return $this->queueAppreciation(array_map('intval', $data['ids']));
+    }
+
+    /** @return list<int> */
+    private function idsFromQuery(mixed $value): array
+    {
+        return collect(explode(',', (string) $value))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     /**
      * Queues this week's appreciation email for the selected users who are
      * eligible (verified, opted in, not admin/suspended, not yet sent this
@@ -664,7 +724,7 @@ class AdminUserController extends Controller
         $skipped = count($ids) - count($eligible);
 
         if ($eligible === []) {
-            return back()->withErrors([
+            return redirect()->route('admin.users.index')->withErrors([
                 'bulk' => 'None of the selected users can receive the appreciation email this week. '
                     .'It only goes to verified, non-admin users who have not opted out and have not had one this week.',
             ]);
@@ -677,7 +737,7 @@ class AdminUserController extends Controller
             $message .= " {$skipped} skipped (unverified, admin, suspended, opted out or already sent this week).";
         }
 
-        return back()->with('success', $message);
+        return redirect()->route('admin.users.index')->with('success', $message);
     }
 
     public function bulk(BulkUserRequest $request): RedirectResponse
@@ -742,7 +802,14 @@ class AdminUserController extends Controller
         }
 
         if ($data['action'] === 'appreciation') {
-            return $this->queueAppreciation($ids->all());
+            // Review each person's message before anything is sent.
+            return redirect()->route('admin.users.appreciation.preview', ['ids' => $ids->implode(',')]);
+        }
+
+        if ($data['action'] === 'announcement') {
+            // Compose on the announcement form, so the tabs, preview and
+            // confirmation all apply; only these users will receive it.
+            return redirect()->route('admin.announcements.create', ['recipients' => $ids->implode(',')]);
         }
 
         $users = User::query()

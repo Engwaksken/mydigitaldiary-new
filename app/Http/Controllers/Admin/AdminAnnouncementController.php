@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendAnnouncementJob;
 use App\Mail\AnnouncementMail;
 use App\Models\Announcement;
+use App\Models\User;
 use App\Services\AnnouncementAudience;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,19 +27,55 @@ class AdminAnnouncementController extends Controller
         ]);
     }
 
-    public function create(AnnouncementAudience $audience): View
+    public function create(Request $request, AnnouncementAudience $audience): View
     {
+        // Set by the Users page "Send Announcement" bulk action (?recipients=1,2,3),
+        // or carried back in old input after a validation error.
+        $recipientIds = $this->recipientIdsFrom(
+            $request->old('recipient_ids', $request->query('recipients'))
+        );
+        $recipients = $recipientIds === null ? null
+            : User::query()->whereIn('id', $recipientIds)->orderBy('name')->get(['id', 'name', 'email']);
+
         return view('admin.announcements.create', [
             'types' => Announcement::TYPES,
             'features' => Announcement::featureCatalogue(),
-            'recipientCounts' => $audience->counts(),
+            'recipientCounts' => $audience->counts($recipientIds),
+            'recipients' => $recipients,
         ]);
+    }
+
+    /**
+     * Existing user IDs from "1,2,3" or [1, 2, 3]; null when none were given,
+     * meaning the announcement goes to everyone.
+     *
+     * @return list<int>|null
+     */
+    private function recipientIdsFrom(mixed $value): ?array
+    {
+        $ids = collect(is_array($value) ? $value : explode(',', (string) $value))
+            ->map(fn ($id) => (int) trim((string) $id))
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return null;
+        }
+
+        return User::query()->whereIn('id', $ids)->pluck('id')->map(fn ($id) => (int) $id)->all() ?: null;
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $request->validate([
+            'recipient_ids' => ['nullable', 'array'],
+            'recipient_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
         $announcement = Announcement::create([
             'created_by' => $request->user()->id,
+            'recipient_ids' => $this->recipientIdsFrom($request->input('recipient_ids')),
         ] + $this->validated($request));
 
         // Delivery (in-app, push, email) happens in a queued job, chunked,
@@ -46,7 +83,7 @@ class AdminAnnouncementController extends Controller
         SendAnnouncementJob::dispatch($announcement);
 
         return redirect()->route('admin.announcements.index')
-            ->with('success', 'Announcement is being sent ('.implode(', ', $announcement->channels()).').');
+            ->with('success', 'Announcement is being sent to '.mb_strtolower($announcement->audienceLabel()).' ('.implode(', ', $announcement->channels()).').');
     }
 
     /**

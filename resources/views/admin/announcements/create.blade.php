@@ -26,6 +26,24 @@
           data-confirm="Send this announcement now? It cannot be undone." data-confirm-title="Send announcement?" data-confirm-text="Send now">
         @csrf
 
+        @if ($recipients)
+            @foreach ($recipients as $recipient)
+                <input type="hidden" name="recipient_ids[]" value="{{ $recipient->id }}">
+            @endforeach
+            <div class="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900" data-announcement-recipients>
+                <div class="min-w-0">
+                    <p class="font-semibold">
+                        <i class="fa-solid fa-user-check mr-1" aria-hidden="true"></i>
+                        Sending to {{ $recipients->count() }} selected {{ str('user')->plural($recipients->count()) }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-sky-800 break-words">
+                        {{ $recipients->take(6)->pluck('name')->join(', ') }}@if ($recipients->count() > 6) and {{ $recipients->count() - 6 }} more @endif
+                    </p>
+                </div>
+                <a href="{{ route('admin.announcements.create') }}" class="shrink-0 text-xs font-semibold text-sky-700 underline">Send to everyone instead</a>
+            </div>
+        @endif
+
         <div class="pm-form-tabs" role="tablist" aria-label="Announcement sections" data-pm-form-tabs>
             @foreach ($tabs as $i => $label)
                 <button type="button" role="tab" id="announcement-tab-{{ $i }}" aria-controls="announcement-panel-{{ $i }}" data-pm-form-tab="{{ $i }}"

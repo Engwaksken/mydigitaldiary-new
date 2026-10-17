@@ -127,6 +127,21 @@ Route::middleware([
             [AdminUserController::class, 'bulk']
         )->name('users.bulk');
 
+        Route::get(
+            'users/appreciation/preview',
+            [AdminUserController::class, 'appreciationPreview']
+        )->name('users.appreciation.preview');
+
+        Route::get(
+            'users/{user}/appreciation/preview',
+            [AdminUserController::class, 'appreciationPreviewEmail']
+        )->name('users.appreciation.preview-email');
+
+        Route::post(
+            'users/appreciation/send',
+            [AdminUserController::class, 'appreciationSend']
+        )->name('users.appreciation.send');
+
         Route::post(
             'users',
             [AdminUserController::class, 'store']
