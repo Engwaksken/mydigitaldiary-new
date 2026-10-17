@@ -112,6 +112,26 @@ class WeeklyAppreciationEmailTest extends TestCase
         $this->assertSame('ai', AppreciationEmailLog::first()->source);
     }
 
+    public function test_ai_message_uses_write_down_instead_of_jot_down(): void
+    {
+        $this->fakeAi(fn () => [
+            'subject' => 'Jot it down',
+            'message' => self::AI_MESSAGE."\n\n".'Try jotting down one small goal. Last week you jotted a note; now jot another.',
+        ]);
+        Mail::fake();
+        User::factory()->create(['name' => 'Amina Nakato']);
+
+        $this->artisan('appreciation:send-weekly')->assertSuccessful();
+
+        Mail::assertQueued(WeeklyAppreciationMail::class, function (WeeklyAppreciationMail $mail) {
+            $text = $mail->subjectLine.' '.implode(' ', $mail->paragraphs);
+
+            return $mail->subjectLine === 'Write it down'
+                && str_contains($text, 'Try writing down one small goal. Last week you wrote a note; now write another.')
+                && ! preg_match('/\bjot/i', $text);
+        });
+    }
+
     public function test_ai_message_with_stock_phrases_falls_back_to_built_in_message(): void
     {
         $this->fakeAi(fn () => [
