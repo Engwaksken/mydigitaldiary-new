@@ -22,7 +22,11 @@ class NotificationController extends Controller
             'data' => $notifications->map(fn ($n) => [
                 'id' => $n->id,
                 'type' => class_basename($n->type),
-                'data' => $n->data,
+                // Announcements always carry type/feature_key/link_url/cta_label,
+                // including ones stored before those keys existed.
+                'data' => $n->type === \App\Notifications\AnnouncementNotification::class && is_array($n->data)
+                    ? \App\Notifications\AnnouncementNotification::normalise($n->data)
+                    : $n->data,
                 'read' => ! is_null($n->read_at),
                 'created_at' => $n->created_at->toIso8601String(),
             ]),

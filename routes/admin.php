@@ -397,6 +397,14 @@ Route::middleware([
             ]
         )->name('announcements.bulk-destroy');
 
+        Route::post(
+            'announcements/preview',
+            [
+                \App\Http\Controllers\Admin\AdminAnnouncementController::class,
+                'preview',
+            ]
+        )->name('announcements.preview');
+
         Route::resource(
             'announcements',
             \App\Http\Controllers\Admin\AdminAnnouncementController::class

@@ -67,6 +67,8 @@ class NotificationCenterService
         $route = route('dashboard');
         $icon = 'fa-bell';
         $tone = 'slate';
+        $badge = null;
+        $cta = null;
 
         if ($class === 'SubscriptionExpiryReminderNotification') {
             $days = (int) ($data['days_remaining'] ?? 0);
@@ -104,6 +106,22 @@ class NotificationCenterService
             $message = $message ?: trim((string) ($data['body'] ?? 'A new announcement is available.'));
             $icon = 'fa-bullhorn';
             $tone = 'violet';
+
+            $announcementType = (string) ($data['type'] ?? 'general');
+            $link = trim((string) ($data['link_url'] ?? ''));
+            if ($link !== '') {
+                $route = $link;
+            }
+            $cta = trim((string) ($data['cta_label'] ?? '')) ?: null;
+            if ($announcementType === 'new_feature') {
+                $badge = 'New feature';
+                $featureIcon = config('features.'.($data['feature_key'] ?? '').'.icon');
+                if (is_string($featureIcon) && $featureIcon !== '') {
+                    // The views prefix "fa-solid", so keep only the icon name.
+                    $icon = trim(str_replace(['fa-solid', 'fa-regular'], '', $featureIcon));
+                }
+                $cta = $cta ?: 'Explore now';
+            }
         }
 
         if ($title === '') {
@@ -123,6 +141,8 @@ class NotificationCenterService
             'url' => $route,
             'icon' => $icon,
             'tone' => $tone,
+            'badge' => $badge,
+            'cta_label' => $cta,
             'unread' => is_null($notification->read_at),
             'action_required' => false,
             'created_at' => $notification->created_at,

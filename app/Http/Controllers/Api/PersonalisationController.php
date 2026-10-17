@@ -40,7 +40,7 @@ class PersonalisationController extends Controller
         if (array_key_exists('onboarding_focuses', $data)) $user->onboarding_focuses = array_values(array_unique($data['onboarding_focuses']));
         if (!empty($data['complete_onboarding'])) $user->onboarding_completed_at = now();
         if (array_key_exists('engagement_notification_preferences', $data)) {
-            $allowed = ['goal_progress','monthly_review','finance_insights','productivity_nudges','spiritual_insights','subscription_reminders','daily_affirmations','weekly_appreciation'];
+            $allowed = ['goal_progress','monthly_review','finance_insights','productivity_nudges','spiritual_insights','subscription_reminders','daily_affirmations','weekly_appreciation','product_updates'];
             $user->engagement_notification_preferences = collect($data['engagement_notification_preferences'])->only($allowed)->map(fn ($v) => (bool) $v)->all();
         }
         $user->save();

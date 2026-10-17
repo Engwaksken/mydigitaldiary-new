@@ -347,6 +347,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'subscription_reminders' => true,
             'daily_affirmations' => true,
             'weekly_appreciation' => true,
+            'product_updates' => true,
         ];
 
         return array_replace($defaults, is_array($this->engagement_notification_preferences) ? $this->engagement_notification_preferences : []);

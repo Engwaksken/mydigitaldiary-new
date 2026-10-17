@@ -49,8 +49,18 @@
                 @endif
                 <div class="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center" style="background:{{ $tone[0] }};color:{{ $tone[1] }}"><i class="fa-solid {{ $item['icon'] ?? 'fa-bell' }}"></i></div>
                 <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-2"><h2 class="font-semibold text-slate-900">{{ $item['title'] }}</h2>@if(!empty($item['action_required']))<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Action needed</span>@elseif(!empty($item['unread']))<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">New</span>@endif</div>
+                    <div class="flex flex-wrap items-center gap-2"><h2 class="font-semibold text-slate-900">{{ $item['title'] }}</h2>@if(!empty($item['action_required']))<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Action needed</span>@elseif(!empty($item['unread']))<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">New</span>@endif @if(!empty($item['badge']))<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{{ $item['badge'] }}</span>@endif</div>
                     <p class="text-sm text-slate-600 mt-1">{{ $item['message'] }}</p>
+                    @if(!empty($item['cta_label']))
+                        @if($isDb && !empty($item['unread']))
+                            <form method="POST" action="{{ route('notifications.read', $item['database_id']) }}" class="mt-3">@csrf
+                                <input type="hidden" name="redirect" value="{{ $item['url'] }}">
+                                <button type="submit" class="btn-primary text-white px-3 py-1.5 rounded-lg text-xs font-semibold">{{ $item['cta_label'] }}</button>
+                            </form>
+                        @else
+                            <a href="{{ $item['url'] }}" class="inline-block mt-3 btn-primary text-white px-3 py-1.5 rounded-lg text-xs font-semibold">{{ $item['cta_label'] }}</a>
+                        @endif
+                    @endif
                     <p class="text-xs text-slate-400 mt-2">{{ optional($item['created_at'] ?? null)->diffForHumans() }}</p>
                 </div>
                 <div class="shrink-0 flex items-center gap-1">

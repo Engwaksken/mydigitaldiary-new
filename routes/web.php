@@ -112,6 +112,14 @@ Route::post('/appreciation/unsubscribe/{user}', [\App\Http\Controllers\Appreciat
     ->middleware(['signed', 'throttle:20,1'])
     ->name('appreciation.unsubscribe.confirm');
 
+// Public — same signed opt-out for new feature (announcement) emails.
+Route::get('/product-updates/unsubscribe/{user}', [\App\Http\Controllers\ProductUpdatesUnsubscribeController::class, 'show'])
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('product-updates.unsubscribe');
+Route::post('/product-updates/unsubscribe/{user}', [\App\Http\Controllers\ProductUpdatesUnsubscribeController::class, 'store'])
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('product-updates.unsubscribe.confirm');
+
 Route::get('/signed-documents/{signedDocument}/shared', [\App\Http\Controllers\SignatureController::class, 'showSharedDocument'])
     ->middleware('signed')
     ->name('signature.documents.shared');

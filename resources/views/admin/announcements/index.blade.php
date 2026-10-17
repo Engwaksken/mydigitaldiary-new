@@ -17,8 +17,8 @@
     </div>
 
     <p class="text-sm text-slate-500 mb-6">
-        Sent immediately to every user's in-app notifications when published — there's no draft/schedule step,
-        so double-check the wording before sending.
+        Sent to every user's in-app notifications when published, plus push and email if chosen. Use the
+        Preview tab to check the wording before sending.
     </p>
 
     <div id="pm-announcement-bulk-bar" class="flex items-center justify-between gap-3 bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 mb-4">
@@ -32,9 +32,16 @@
                 <div class="mb-3"><input type="checkbox" value="{{ $announcement->id }}" onchange="pmUpdateAnnouncementBulkBar()" class="pm-announcement-checkbox rounded border-slate-300 text-rose-600" aria-label="Select {{ $announcement->title }}"></div>
                 <div class="flex items-start justify-between gap-3 mb-2">
                     <div>
-                        <h2 class="font-semibold text-slate-800">{{ $announcement->title }}</h2>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="font-semibold text-slate-800">{{ $announcement->title }}</h2>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $announcement->isNewFeature() ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600' }}">{{ $announcement->typeLabel() }}</span>
+                            @if ($announcement->feature())
+                                <span class="text-xs text-slate-500"><i class="{{ $announcement->feature()['icon'] }} mr-1" aria-hidden="true"></i>{{ $announcement->feature()['label'] }}</span>
+                            @endif
+                        </div>
                         <p class="text-xs text-slate-400 mt-0.5">
                             Sent {{ $announcement->created_at->diffForHumans() }} by {{ $announcement->creator->name ?? 'Unknown' }}
+                            · {{ implode(', ', $announcement->channels()) }}
                         </p>
                     </div>
                     <form method="POST" action="{{ route('admin.announcements.destroy', $announcement->id) }}"

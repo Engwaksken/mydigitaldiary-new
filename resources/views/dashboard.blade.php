@@ -633,7 +633,7 @@
                                         <span class="md-notif-copy">
                                             <span class="flex items-center gap-2 min-w-0">
                                                 <span class="md-notif-item-title">{{ $notificationItem['title'] }}</span>
-                                                @if(!empty($notificationItem['action_required']))<span class="md-notif-action">Action</span>@endif
+                                                @if(!empty($notificationItem['action_required']))<span class="md-notif-action">Action</span>@elseif(!empty($notificationItem['badge']))<span class="md-notif-action">{{ $notificationItem['badge'] }}</span>@endif
                                             </span>
                                             <span class="md-notif-msg">{{ $notificationItem['message'] }}</span>
                                             <span class="md-notif-time">{{ optional($notificationItem['created_at'] ?? null)->diffForHumans() }}</span>
