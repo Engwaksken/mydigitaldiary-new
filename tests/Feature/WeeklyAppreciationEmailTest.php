@@ -17,8 +17,8 @@ class WeeklyAppreciationEmailTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const AI_MESSAGE = 'Thank you for being part of My Digital Diary, Amina. Every plan, note and reminder you add is a small promise to yourself, and we are honoured to help you keep it. This week, try opening your diary for just a few quiet minutes and choosing one thing that matters most to you.'
-        ."\n\n".'You do not need a perfect routine to make real progress. A single note or a short plan for tomorrow is a wonderful start, and your diary will be right here whenever you are ready. We are cheering you on.';
+    private const AI_MESSAGE = 'Thanks for being part of My Digital Diary, Amina. It\'s been lovely having you with us, and every plan or note you add is a small way of looking after yourself. If you\'ve got a few quiet minutes this week, try picking the one thing that matters most and writing it down.'
+        ."\n\n".'You don\'t need a perfect routine to make progress. A single note or a short plan for tomorrow is a good start, and your diary will be here whenever you\'re ready. Have a good week.';
 
     protected function setUp(): void
     {
@@ -69,7 +69,7 @@ class WeeklyAppreciationEmailTest extends TestCase
 
             return $mail->hasTo($user->email)
                 && $mail->subjectLine === 'Thank you for joining us, Amina'
-                && str_contains($html, 'Every plan, note and reminder')
+                && str_contains($html, 'a small way of looking after yourself')
                 && ! str_contains($html, '<script>')
                 && str_contains($html, 'Open My Digital Diary')
                 && str_contains($html, e(WeeklyAppreciationMail::unsubscribeUrl($user)));
@@ -89,6 +89,42 @@ class WeeklyAppreciationEmailTest extends TestCase
         $this->assertSame('ai', $log->source);
         $this->assertSame('2026-W43', $log->week_key);
         $this->assertNotNull($log->sent_at);
+    }
+
+    public function test_ai_message_is_converted_to_uk_spelling(): void
+    {
+        $this->fakeAi(fn () => [
+            'subject' => 'Organize your favorite week',
+            'message' => self::AI_MESSAGE."\n\n".'Pick a color for the week and organize your plans around it.',
+        ]);
+        Mail::fake();
+        User::factory()->create(['name' => 'Amina Nakato']);
+
+        $this->artisan('appreciation:send-weekly')->assertSuccessful();
+
+        Mail::assertQueued(WeeklyAppreciationMail::class, function (WeeklyAppreciationMail $mail) {
+            $text = $mail->subjectLine.' '.implode(' ', $mail->paragraphs);
+
+            return $mail->subjectLine === 'Organise your favourite week'
+                && str_contains($text, 'Pick a colour for the week and organise your plans')
+                && ! preg_match('/\b(organize|favorite|color)\b/i', $text);
+        });
+        $this->assertSame('ai', AppreciationEmailLog::first()->source);
+    }
+
+    public function test_ai_message_with_stock_phrases_falls_back_to_built_in_message(): void
+    {
+        $this->fakeAi(fn () => [
+            'subject' => 'Your journey continues',
+            'message' => self::AI_MESSAGE."\n\n".'Here is to the next step of your journey with us.',
+        ]);
+        Mail::fake();
+        User::factory()->create();
+
+        $this->artisan('appreciation:send-weekly')->assertSuccessful();
+
+        Mail::assertQueued(WeeklyAppreciationMail::class, fn (WeeklyAppreciationMail $mail) => ! str_contains(mb_strtolower(implode(' ', $mail->paragraphs)), 'journey'));
+        $this->assertSame('fallback', AppreciationEmailLog::first()->source);
     }
 
     public function test_falls_back_to_built_in_message_when_ai_fails(): void

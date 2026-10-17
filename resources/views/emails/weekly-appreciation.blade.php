@@ -45,7 +45,7 @@
                         </table>
 
                         <div style="font-size:15px;line-height:1.7;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:22px;">
-                            With gratitude,<br>
+                            Best wishes,<br>
                             <strong style="color:#1f2937;">The {{ $siteName }} team</strong>
                         </div>
                     </td>
@@ -53,7 +53,7 @@
             </table>
 
             <div style="max-width:620px;font-size:12px;line-height:1.6;color:#9ca3af;text-align:center;padding:18px 20px 0;">
-                You are receiving this weekly note because you have a {{ $siteName }} account.<br>
+                You're getting this weekly note because you have a {{ $siteName }} account.<br>
                 <a href="{{ $unsubscribeUrl }}" style="color:#6b7280;text-decoration:underline;">Unsubscribe from weekly appreciation emails</a>
             </div>
         </td>
