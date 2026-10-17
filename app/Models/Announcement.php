@@ -18,25 +18,76 @@ class Announcement extends Model
 
     public const DEFAULT_FEATURE_CTA = 'Explore now';
 
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_SCHEDULED = 'scheduled';
+    public const STATUS_SENDING = 'sending';
+    public const STATUS_SENT = 'sent';
+    public const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_FAILED = 'failed';
+
+    public const STATUS_LABELS = [
+        self::STATUS_DRAFT => 'Draft',
+        self::STATUS_SCHEDULED => 'Scheduled',
+        self::STATUS_SENDING => 'Sending',
+        self::STATUS_SENT => 'Sent',
+        self::STATUS_CANCELLED => 'Cancelled',
+        self::STATUS_FAILED => 'Failed',
+    ];
+
     protected $fillable = [
         'created_by', 'title', 'body', 'type', 'feature_key', 'link_url', 'cta_label', 'send_push', 'send_email', 'recipient_ids',
+        'status', 'scheduled_for', 'sent_at', 'skip_already_told', 'skipped_count',
     ];
 
     protected $attributes = [
         'type' => self::TYPE_GENERAL,
         'send_push' => true,
         'send_email' => false,
+        'status' => self::STATUS_SENDING,
+        'skip_already_told' => false,
+        'skipped_count' => 0,
     ];
 
     protected $casts = [
         'send_push' => 'boolean',
         'send_email' => 'boolean',
         'recipient_ids' => 'array',
+        'scheduled_for' => 'datetime',
+        'sent_at' => 'datetime',
+        'skip_already_told' => 'boolean',
+        'skipped_count' => 'integer',
     ];
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function deliveries()
+    {
+        return $this->hasMany(AnnouncementDelivery::class);
+    }
+
+    public function isScheduled(): bool
+    {
+        return $this->status === self::STATUS_SCHEDULED;
+    }
+
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status] ?? ucfirst((string) $this->status);
+    }
+
+    /** Whether this send leaves out people already told about the same feature. */
+    public function skipsAlreadyTold(): bool
+    {
+        return $this->isNewFeature() && $this->skip_already_told && filled($this->feature_key);
+    }
+
+    /** "Mon 20 Oct, 09:00" in the app timezone (Africa/Kampala). */
+    public static function formatTime(?\DateTimeInterface $at): ?string
+    {
+        return \App\Services\SendTime::format($at);
     }
 
     /** @return array<string, array{label:string,route:string,icon:string}> */
@@ -110,7 +161,6 @@ class Announcement extends Model
         return Str::limit(trim(preg_replace('/\s+/', ' ', (string) $this->body)), 120);
     }
 
-    /** @return list<string> */
     /** Users picked on the admin Users page, or null when sent to everyone. */
     public function recipientIds(): ?array
     {
@@ -124,6 +174,7 @@ class Announcement extends Model
         return $ids === null ? 'Everyone' : count($ids).' selected '.str('user')->plural(count($ids));
     }
 
+    /** @return list<string> */
     public function channels(): array
     {
         return array_values(array_filter([

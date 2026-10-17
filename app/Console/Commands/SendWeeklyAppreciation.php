@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Services\AppreciationMessageService;
 use App\Services\AppreciationSender;
+use App\Services\WeeklyAppreciationSchedule;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
@@ -23,7 +24,8 @@ class SendWeeklyAppreciation extends Command
 {
     protected $signature = 'appreciation:send-weekly
         {--dry-run : Show who would receive which message without sending or logging anything}
-        {--user= : Only process this user (ID or email)}';
+        {--user= : Only process this user (ID or email)}
+        {--scheduled : Run by the scheduler: honours Admin Settings > Weekly Email and runs at most once per week}';
 
     protected $description = 'Send each member a weekly AI-written appreciation email for joining My Digital Diary.';
 
@@ -31,6 +33,20 @@ class SendWeeklyAppreciation extends Command
     {
         $weekKey = AppreciationMessageService::weekKey();
         $dryRun = (bool) $this->option('dry-run');
+
+        if ($this->option('scheduled') && ! $dryRun) {
+            if (! WeeklyAppreciationSchedule::settings()['enabled']) {
+                $this->info('The weekly appreciation email is switched off in Admin Settings.');
+
+                return self::SUCCESS;
+            }
+
+            if (! WeeklyAppreciationSchedule::claimWeek($weekKey)) {
+                $this->info("The weekly appreciation run for {$weekKey} has already happened.");
+
+                return self::SUCCESS;
+            }
+        }
         $sent = 0;
         $skipped = 0;
         $failed = 0;

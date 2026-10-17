@@ -264,6 +264,11 @@ Route::middleware([
         )->name('settings.privacy.update');
 
         Route::post(
+            'settings/weekly-appreciation',
+            [AdminSettingsController::class, 'updateWeeklyAppreciation']
+        )->name('settings.weekly-appreciation.update');
+
+        Route::post(
             'settings/terms',
             [AdminSettingsController::class, 'updateTerms']
         )->name('settings.terms.update');
@@ -420,6 +425,30 @@ Route::middleware([
             ]
         )->name('announcements.preview');
 
+        Route::get(
+            'announcements/audience',
+            [
+                \App\Http\Controllers\Admin\AdminAnnouncementController::class,
+                'audience',
+            ]
+        )->name('announcements.audience');
+
+        Route::post(
+            'announcements/{announcement}/cancel',
+            [
+                \App\Http\Controllers\Admin\AdminAnnouncementController::class,
+                'cancel',
+            ]
+        )->whereNumber('announcement')->name('announcements.cancel');
+
+        Route::post(
+            'announcements/{announcement}/send-now',
+            [
+                \App\Http\Controllers\Admin\AdminAnnouncementController::class,
+                'sendNow',
+            ]
+        )->whereNumber('announcement')->name('announcements.send-now');
+
         Route::resource(
             'announcements',
             \App\Http\Controllers\Admin\AdminAnnouncementController::class
@@ -427,8 +456,30 @@ Route::middleware([
             'index',
             'create',
             'store',
+            'show',
             'destroy',
         ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Appreciation emails (history and scheduled campaigns)
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            'appreciation',
+            [\App\Http\Controllers\Admin\AdminAppreciationController::class, 'index']
+        )->name('appreciation.index');
+
+        Route::post(
+            'appreciation/campaigns/{campaign}/cancel',
+            [\App\Http\Controllers\Admin\AdminAppreciationController::class, 'cancel']
+        )->whereNumber('campaign')->name('appreciation.campaigns.cancel');
+
+        Route::post(
+            'appreciation/campaigns/{campaign}/send-now',
+            [\App\Http\Controllers\Admin\AdminAppreciationController::class, 'sendNow']
+        )->whereNumber('campaign')->name('appreciation.campaigns.send-now');
 
         /*
         |--------------------------------------------------------------------------

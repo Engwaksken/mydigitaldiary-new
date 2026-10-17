@@ -56,18 +56,30 @@ class AppreciationSender
      */
     public static function eligibleIds(iterable $ids, string $weekKey): array
     {
-        return self::recipients($weekKey)
-            ->whereIn('id', collect($ids)->all())
-            ->get()
-            ->filter(fn (User $user) => $user->engagementNotificationEnabled('weekly_appreciation'))
-            ->map(fn (User $user) => (int) $user->id)
-            ->values()
-            ->all();
+        $eligible = [];
+
+        // Chunked so a selection of thousands never builds one huge IN list.
+        foreach (collect($ids)->map(fn ($id) => (int) $id)->unique()->chunk(500) as $chunk) {
+            self::recipients($weekKey)
+                ->whereIn('id', $chunk->values()->all())
+                ->get(['id', 'engagement_notification_preferences'])
+                ->filter(fn (User $user) => $user->engagementNotificationEnabled('weekly_appreciation'))
+                ->each(function (User $user) use (&$eligible): void {
+                    $eligible[] = (int) $user->id;
+                });
+        }
+
+        sort($eligible);
+
+        return $eligible;
     }
 
     /** Why $user will not get this week's email, or null when they will. */
-    public static function ineligibleReason(User $user, string $weekKey): ?string
+    public static function ineligibleReason(User $user, string $weekKey, ?bool $alreadySentThisWeek = null): ?string
     {
+        $alreadySent = fn (): bool => $alreadySentThisWeek
+            ?? AppreciationEmailLog::query()->where('user_id', $user->id)->where('week_key', $weekKey)->exists();
+
         return match (true) {
             blank($user->email) => 'No email address',
             $user->email_verified_at === null => 'Email not verified',
@@ -75,7 +87,7 @@ class AppreciationSender
             $user->deletion_requested_at !== null || $user->scheduled_deletion_at !== null => 'Account pending deletion',
             $user->role === 'admin' => 'Admin account',
             ! $user->engagementNotificationEnabled('weekly_appreciation') => 'Opted out',
-            AppreciationEmailLog::query()->where('user_id', $user->id)->where('week_key', $weekKey)->exists() => 'Already sent this week',
+            $alreadySent() => 'Already sent this week',
             default => null,
         };
     }
@@ -97,20 +109,78 @@ class AppreciationSender
         return Cache::remember($key, now()->addHours(6), fn () => $this->messages->compose($user, $weekKey));
     }
 
-    private static function draftKey(User $user, string $weekKey): string
+    /**
+     * The draft already written for this user this week, without writing one.
+     *
+     * @return array{subject:string, paragraphs:list<string>, source:string, theme:string}|null
+     */
+    public static function cachedDraft(int $userId, string $weekKey): ?array
     {
-        return "appreciation-draft:{$weekKey}:{$user->id}";
+        $draft = Cache::get(self::draftKeyFor($userId, $weekKey));
+
+        return is_array($draft) ? $draft : null;
     }
 
-    /** @return self::SENT|self::SKIPPED|self::FAILED */
-    public function send(User $user, string $weekKey): string
+    /** Remembers that $adminId opened this person's preview, so scheduling can keep that copy. */
+    public static function rememberPreviewed(int $adminId, int $userId, string $weekKey): void
+    {
+        $key = self::previewedKey($adminId, $weekKey);
+        $ids = (array) Cache::get($key, []);
+        $ids[$userId] = true;
+        Cache::put($key, $ids, now()->addHours(6));
+    }
+
+    /**
+     * Previewed drafts among $userIds, keyed by user ID, ready to store on
+     * an AppreciationCampaign.
+     *
+     * @param  list<int>  $userIds
+     * @return array<string, array{subject:string, paragraphs:list<string>, source:string, theme:string}>
+     */
+    public static function previewedDrafts(int $adminId, array $userIds, string $weekKey): array
+    {
+        $previewed = array_keys((array) Cache::get(self::previewedKey($adminId, $weekKey), []));
+        $wanted = array_flip($userIds);
+        $drafts = [];
+
+        foreach ($previewed as $userId) {
+            if (isset($wanted[(int) $userId]) && ($draft = self::cachedDraft((int) $userId, $weekKey))) {
+                $drafts[(string) $userId] = $draft;
+            }
+        }
+
+        return $drafts;
+    }
+
+    private static function draftKey(User $user, string $weekKey): string
+    {
+        return self::draftKeyFor((int) $user->id, $weekKey);
+    }
+
+    private static function draftKeyFor(int $userId, string $weekKey): string
+    {
+        return "appreciation-draft:{$weekKey}:{$userId}";
+    }
+
+    private static function previewedKey(int $adminId, string $weekKey): string
+    {
+        return "appreciation-previewed:{$weekKey}:{$adminId}";
+    }
+
+    /**
+     * @param  array{subject:string, paragraphs:list<string>, source:string, theme:string}|null  $copy
+     *         the previewed copy to send; null uses this week's draft (written now if needed)
+     * @param  int|null  $sentBy  the admin who sent it; null for the weekly automatic run
+     * @return self::SENT|self::SKIPPED|self::FAILED
+     */
+    public function send(User $user, string $weekKey, ?array $copy = null, ?int $sentBy = null, ?int $campaignId = null): string
     {
         if (! $user->engagementNotificationEnabled('weekly_appreciation')) {
             return self::SKIPPED;
         }
 
         try {
-            $copy = $this->draft($user, $weekKey);
+            $copy ??= $this->draft($user, $weekKey);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -127,6 +197,8 @@ class AppreciationSender
                 'theme' => $copy['theme'],
                 'subject' => $copy['subject'],
                 'message' => implode("\n\n", $copy['paragraphs']),
+                'sent_by' => $sentBy,
+                'campaign_id' => $campaignId,
             ]);
         } catch (QueryException) {
             return self::SKIPPED;

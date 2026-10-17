@@ -18,7 +18,7 @@
 
     <p class="text-sm text-slate-500 mb-6">
         Sent to every user's in-app notifications when published, plus push and email if chosen. Use the
-        Preview tab to check the wording before sending.
+        Preview tab to check the wording before sending. Scheduled times are in {{ config('app.timezone') }}.
     </p>
 
     <div id="pm-announcement-bulk-bar" class="flex items-center justify-between gap-3 bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 mb-4">
@@ -33,16 +33,55 @@
                 <div class="flex items-start justify-between gap-3 mb-2">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <h2 class="font-semibold text-slate-800">{{ $announcement->title }}</h2>
+                            <h2 class="font-semibold text-slate-800 break-words"><a href="{{ route('admin.announcements.show', $announcement) }}" class="hover:underline">{{ $announcement->title }}</a></h2>
+                            @php
+                                $statusClass = match ($announcement->status) {
+                                    'scheduled' => 'bg-sky-100 text-sky-700',
+                                    'sending' => 'bg-amber-100 text-amber-700',
+                                    'cancelled' => 'bg-slate-100 text-slate-500',
+                                    'failed' => 'bg-rose-100 text-rose-700',
+                                    default => 'bg-emerald-100 text-emerald-700',
+                                };
+                            @endphp
+                            @if ($announcement->isScheduled())
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $statusClass }}" data-scheduled-badge>
+                                    <i class="fa-regular fa-clock mr-0.5" aria-hidden="true"></i>Scheduled for {{ \App\Services\SendTime::format($announcement->scheduled_for) }}
+                                </span>
+                            @else
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $statusClass }}">{{ $announcement->statusLabel() }}</span>
+                            @endif
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $announcement->isNewFeature() ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600' }}">{{ $announcement->typeLabel() }}</span>
                             @if ($announcement->feature())
                                 <span class="text-xs text-slate-500"><i class="{{ $announcement->feature()['icon'] }} mr-1" aria-hidden="true"></i>{{ $announcement->feature()['label'] }}</span>
                             @endif
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5">
-                            Sent {{ $announcement->created_at->diffForHumans() }} by {{ $announcement->creator->name ?? 'Unknown' }}
+                            @if ($announcement->isScheduled())
+                                Scheduled by {{ $announcement->creator->name ?? 'Unknown' }}
+                            @elseif ($announcement->status === 'cancelled')
+                                Cancelled · created by {{ $announcement->creator->name ?? 'Unknown' }}
+                            @else
+                                Sent {{ ($announcement->sent_at ?? $announcement->created_at)->diffForHumans() }} by {{ $announcement->creator->name ?? 'Unknown' }}
+                            @endif
                             · {{ $announcement->audienceLabel() }} · {{ implode(', ', $announcement->channels()) }}
+                            @if ($announcement->deliveries_count)
+                                · <a href="{{ route('admin.announcements.show', $announcement) }}" class="text-[var(--brand-1)] hover:underline">{{ number_format($announcement->deliveries_count) }} reached</a>
+                            @endif
                         </p>
+                        @if ($announcement->isScheduled())
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <form method="POST" action="{{ route('admin.announcements.send-now', $announcement) }}"
+                                      data-confirm="Send this announcement now instead of at {{ \App\Services\SendTime::format($announcement->scheduled_for) }}?" data-confirm-title="Send now?" data-confirm-text="Send now" data-confirm-danger="false">
+                                    @csrf
+                                    <button type="submit" class="btn-primary text-white px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fa-solid fa-paper-plane mr-1" aria-hidden="true"></i>Send now</button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.announcements.cancel', $announcement) }}"
+                                      data-confirm="Cancel this scheduled announcement? Nothing will be sent." data-confirm-title="Cancel announcement?" data-confirm-text="Cancel it">
+                                    @csrf
+                                    <button type="submit" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                                </form>
+                            </div>
+                        @endif
                     </div>
                     <form method="POST" action="{{ route('admin.announcements.destroy', $announcement->id) }}"
                           data-confirm="Delete this announcement record? This does not remove notifications already delivered to users." data-confirm-title="Delete announcement?" data-confirm-text="Delete">

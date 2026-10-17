@@ -183,16 +183,40 @@ Schedule::command('engagement:send-smart-nudges')
 | Weekly Appreciation Email
 |--------------------------------------------------------------------------
 |
-| Monday morning thank-you note written by the administrator's active AI
-| provider (built-in messages are used when AI is unavailable). Emails are
-| queued; appreciation_email_logs guarantees at most one per user per week,
-| and people can opt out from the email or their profile.
+| Weekly thank-you note written by the administrator's active AI provider
+| (built-in messages are used when AI is unavailable). Emails are queued;
+| appreciation_email_logs guarantees at most one per user per week, and
+| people can opt out from the email or their profile.
+|
+| The day, time and on/off switch come from Admin Settings > Weekly Email
+| (default Monday 09:00 Africa/Kampala). The check runs every minute and is
+| read fresh on each schedule:run; --scheduled claims the ISO week first,
+| so changing the day or time can never make it run twice in one week.
 |
 */
-Schedule::command('appreciation:send-weekly')
-    ->weeklyOn(1, '09:00')
-    ->timezone(config('app.timezone', 'Africa/Kampala'))
+Schedule::command('appreciation:send-weekly --scheduled')
+    ->everyMinute()
+    ->when(fn (): bool => \App\Services\WeeklyAppreciationSchedule::isDue())
+    ->name('appreciation-weekly')
     ->withoutOverlapping(120);
+
+/*
+|--------------------------------------------------------------------------
+| Scheduled Announcements and Appreciation Emails
+|--------------------------------------------------------------------------
+|
+| Admin-scheduled sends. Each due row is moved from scheduled to sending
+| with a conditional update before its job is queued, so it is dispatched
+| exactly once.
+|
+*/
+Schedule::command('announcements:dispatch-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping(5);
+
+Schedule::command('appreciation:dispatch-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping(5);
 
 /*
 |--------------------------------------------------------------------------

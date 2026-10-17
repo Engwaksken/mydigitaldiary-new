@@ -20,6 +20,7 @@ class SiteSetting extends Model
         'default_currency_code', 'default_currency_symbol', 'default_currency_decimals',
         'default_ai_provider', 'default_ai_api_key', 'default_ai_free_limit_per_month',
         'privacy_policy_content', 'privacy_policy_version', 'terms_of_use_content', 'terms_of_use_version', 'supported_currencies',
+        'appreciation_weekly_enabled', 'appreciation_weekly_day', 'appreciation_weekly_time',
     ];
 
     protected $casts = [
@@ -28,6 +29,8 @@ class SiteSetting extends Model
         'trial_days' => 'integer',
         'default_ai_free_limit_per_month' => 'integer',
         'supported_currencies' => 'array',
+        'appreciation_weekly_enabled' => 'boolean',
+        'appreciation_weekly_day' => 'integer',
     ];
 
     public static function current(): self

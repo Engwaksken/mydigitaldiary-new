@@ -28,6 +28,7 @@ class SendFeatureAnnouncement extends Command
         {--cta= : Optional button label (defaults to "Explore now")}
         {--no-push : Do not send a push notification}
         {--email : Also send an email to opted-in, verified users}
+        {--include-previous : Also send to users already told about this feature by an earlier announcement}
         {--dry-run : Show recipient counts per channel without creating or sending anything}';
 
     protected $description = 'Create and send a "New feature" announcement to every user.';
@@ -79,7 +80,10 @@ class SendFeatureAnnouncement extends Command
             'send_email' => $sendEmail,
         ]);
 
-        $counts = $audience->counts();
+        $includePrevious = (bool) $this->option('include-previous');
+        $announcement->skip_already_told = ! $includePrevious;
+        $told = $audience->alreadyTold(null, $featureKey);
+        $counts = $audience->counts(null, $includePrevious ? null : $featureKey);
         $this->table(['Channel', 'Recipients'], [
             ['In-app', $counts['in_app']],
             ['Push', $sendPush ? $counts['push'] : '0 (--no-push)'],
@@ -88,6 +92,11 @@ class SendFeatureAnnouncement extends Command
         $this->line('Feature: '.$catalogue[$featureKey]['label']);
         $this->line('Link: '.($announcement->resolvedLinkUrl() ?? '(none)'));
         $this->line('Button: '.$announcement->resolvedCtaLabel());
+        if ($notice = $audience->alreadyToldNotice($told)) {
+            $this->warn($notice.($includePrevious
+                ? ' They will be told again (--include-previous).'
+                : ' They will be skipped; add --include-previous to include them.'));
+        }
 
         if ($this->option('dry-run')) {
             $this->info('Dry run: nothing was created or sent.');

@@ -63,10 +63,17 @@ class AdminBulkAppreciationTest extends TestCase
             ->assertOk()
             ->assertSee('Amina Nakato')
             ->assertSee(route('admin.users.appreciation.preview-email', $eligible), false)
-            ->assertSeeInOrder(['Skipped', 'Otto Out', 'Opted out', 'Sam Sent', 'Already sent this week', 'Una Verified', 'Email not verified'])
+            // Skipped people are summarised by reason, each group expandable.
+            ->assertSeeInOrder(['Skipped', '3'])
+            ->assertSeeInOrder(['Already sent this week', 'Sam Sent'])
+            ->assertSeeInOrder(['Email not verified', 'Una Verified'])
+            ->assertSeeInOrder(['Opted out', 'Otto Out'])
+            ->assertSee('data-skipped-reason="Opted out"', false)
+            ->assertSee('Once per week')
             ->assertSee('Send to 1 user')
-            ->assertSee('name="ids[]" value="'.$eligible->id.'"', false)
-            ->assertDontSee('name="ids[]" value="'.$unverified->id.'"', false);
+            // Everyone selected is posted: "now" sends to the eligible one,
+            // a schedule re-checks eligibility when it sends.
+            ->assertSee('name="ids[]" value="'.$eligible->id.'"', false);
     }
 
     public function test_previewed_message_is_exactly_the_one_sent(): void

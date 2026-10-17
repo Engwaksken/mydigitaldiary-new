@@ -1006,6 +1006,31 @@ class AdminSettingsController extends Controller
     /**
      * Update Privacy Policy.
      */
+    /**
+     * Weekly Email tab: when the automatic weekly appreciation email runs
+     * (on/off, day and time in the app timezone). Read every minute by the
+     * scheduler through WeeklyAppreciationSchedule.
+     */
+    public function updateWeeklyAppreciation(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'appreciation_weekly_enabled' => ['nullable', 'boolean'],
+            'appreciation_weekly_day' => ['required', 'integer', 'between:1,7'],
+            'appreciation_weekly_time' => ['required', 'date_format:H:i'],
+        ]);
+
+        $settings = SiteSetting::current();
+        $settings->forceFill([
+            'appreciation_weekly_enabled' => $request->boolean('appreciation_weekly_enabled'),
+            'appreciation_weekly_day' => (int) $data['appreciation_weekly_day'],
+            'appreciation_weekly_time' => $data['appreciation_weekly_time'],
+        ])->save();
+
+        return redirect()
+            ->route('admin.settings.edit', ['tab' => 'weekly-email'])
+            ->with('success', 'Weekly appreciation email: '.\App\Services\WeeklyAppreciationSchedule::describe().'.');
+    }
+
     public function updatePrivacy(
         Request $request
     ): RedirectResponse {

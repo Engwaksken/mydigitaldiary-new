@@ -6,8 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendAppreciationToUsersJob;
 use Illuminate\Http\JsonResponse;
 use App\Mail\WeeklyAppreciationMail;
+use App\Models\AnnouncementDelivery;
+use App\Models\AppreciationCampaign;
+use App\Models\AppreciationEmailLog;
+use App\Services\AdminUserFilter;
+use App\Services\AdminUserSelection;
 use App\Services\AppreciationMessageService;
 use App\Services\AppreciationSender;
+use App\Services\SendTime;
 use App\Http\Requests\Admin\BulkUserRequest;
 use App\Http\Requests\Admin\UpdateUserSubscriptionRequest;
 use App\Http\Requests\Admin\UpdateTranscriptionCapacityRequest;
@@ -48,49 +54,15 @@ class AdminUserController extends Controller
 
     public function index(Request $request): View
     {
-        $search = trim((string) $request->query('search', ''));
-        $subscriptionStatus = trim(
-            (string) $request->query('subscription_status', '')
-        );
-        $verification = (string) $request->query('verification', '');
+        $filter = self::userFilter($request->query());
 
-        $users = User::query()
+        $users = self::filteredUsersQuery($filter->toArray())
             ->with('subscriptionPlan')
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($sub) use ($search): void {
-                    $sub->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-
-                    if (Schema::hasColumn('users', 'phone')) {
-                        $sub->orWhere('phone', 'like', "%{$search}%");
-                    }
-                });
-            })
-            ->when(
-                $subscriptionStatus !== ''
-                    && Schema::hasColumn('users', 'subscription_status'),
-                fn ($query) =>
-                    // Legacy rows may still hold the old enum spellings.
-                    $query->whereIn(
-                        DB::raw("LOWER(TRIM(COALESCE(subscription_status, '')))"),
-                        match (strtolower($subscriptionStatus)) {
-                            'trial', 'trialing' => ['trial', 'trialing'],
-                            'cancelled', 'canceled' => ['cancelled', 'canceled'],
-                            default => [strtolower($subscriptionStatus)],
-                        }
-                    )
-            )
-            ->when(
-                $verification === 'verified',
-                fn ($query) => $query->whereNotNull('email_verified_at')
-            )
-            ->when(
-                $verification === 'unverified',
-                fn ($query) => $query->whereNull('email_verified_at')
-            )
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
+
+        $appreciationStatus = $this->appreciationStatusFor($users->getCollection()->pluck('id')->all());
 
         $plans = $this->subscriptionPlans();
 
@@ -145,7 +117,58 @@ class AdminUserController extends Controller
             'plans' => $plans,
             'userStats' => $userStats,
             'availableRoles' => self::availableRoles(),
+            'filter' => $filter,
+            'appreciationStatus' => $appreciationStatus,
         ]);
+    }
+
+    /**
+     * The Users page filters as a query: the list and the "all users
+     * matching these filters" bulk actions both use this, so they agree.
+     *
+     * @param  array<string, mixed>  $filters  search, subscription_status, verification, appreciation
+     */
+    public static function filteredUsersQuery(array $filters): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::userFilter($filters)->query();
+    }
+
+    /** @param  array<string, mixed>  $filters */
+    private static function userFilter(array $filters): AdminUserFilter
+    {
+        return AdminUserFilter::fromArray($filters);
+    }
+
+    /**
+     * For the Users table "Appreciation" column: whether each user has this
+     * week's email, otherwise when they last had one.
+     *
+     * @param  list<int>  $userIds
+     * @return array<int, array{this_week:bool, last_sent_at:?Carbon}>
+     */
+    private function appreciationStatusFor(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        $weekKey = AppreciationMessageService::weekKey();
+        $thisWeek = AppreciationEmailLog::query()->whereIn('user_id', $userIds)->where('week_key', $weekKey)
+            ->pluck('user_id')->map(fn ($id) => (int) $id)->flip();
+        $last = AppreciationEmailLog::query()->whereIn('user_id', $userIds)->whereNotNull('sent_at')
+            ->groupBy('user_id')->selectRaw('user_id, MAX(sent_at) AS last_sent_at')
+            ->pluck('last_sent_at', 'user_id');
+
+        $status = [];
+        foreach ($userIds as $id) {
+            $value = $last[$id] ?? null;
+            $status[(int) $id] = [
+                'this_week' => $thisWeek->has((int) $id),
+                'last_sent_at' => $value ? Carbon::parse($value, config('app.timezone')) : null,
+            ];
+        }
+
+        return $status;
     }
 
     public function create(): View
@@ -382,6 +405,10 @@ class AdminUserController extends Controller
             'user' => $user,
             'plans' => $this->subscriptionPlans(),
             'availableRoles' => self::availableRoles(),
+            'recentDeliveries' => AnnouncementDelivery::query()->with('announcement')
+                ->where('user_id', $user->id)->latest('id')->limit(10)->get(),
+            'recentAppreciation' => AppreciationEmailLog::query()->with('sender')
+                ->where('user_id', $user->id)->latest('id')->limit(10)->get(),
         ]);
     }
 
@@ -652,22 +679,105 @@ class AdminUserController extends Controller
         });
     }
 
-    /** Preview page for the "Send Appreciation Email" bulk action. */
-    public function appreciationPreview(Request $request): View
+    /**
+     * Preview page for the "Send Appreciation Email" bulk action, for a few
+     * picked users (?ids=1,2,3) or thousands matching the Users filters
+     * (?selection=<token>). The "Will receive it" list is paginated (50 at a
+     * time, searchable) and skipped people are summarised by reason. Drafts
+     * are only written for the people the admin opens.
+     */
+    public function appreciationPreview(Request $request): View|RedirectResponse
     {
         $weekKey = AppreciationMessageService::weekKey();
-        $users = User::query()
-            ->whereIn('id', $this->idsFromQuery($request->query('ids')))
+        $selectionToken = (string) $request->query('selection', '');
+        $selection = $selectionToken !== '' ? AdminUserSelection::get($selectionToken) : null;
+
+        if ($selectionToken !== '' && $selection === null) {
+            return redirect()->route('admin.users.index')->withErrors([
+                'bulk' => 'That selection has expired. Select the users again.',
+            ]);
+        }
+
+        $ids = $selection['ids'] ?? $this->idsFromQuery($request->query('ids'));
+        [$eligibleIds, $skippedGroups] = $this->classifyForAppreciation($ids, $weekKey);
+
+        $search = trim((string) $request->query('q', ''));
+        $eligible = $this->eligiblePage($eligibleIds, $search);
+
+        $skippedTotal = array_sum(array_column($skippedGroups, 'count'));
+
+        return view('admin.users.appreciation-preview', [
+            'weekKey' => $weekKey,
+            'eligible' => $eligible,
+            'eligibleCount' => count($eligibleIds),
+            'eligibleIds' => $selection === null ? $eligibleIds : [],
+            'skippedGroups' => $skippedGroups,
+            'skippedTotal' => $skippedTotal,
+            'selectionToken' => $selection !== null ? $selectionToken : null,
+            'selectionDescription' => $selection['description'] ?? null,
+            'search' => $search,
+            'ids' => $selection === null ? implode(',', $ids) : null,
+            'weeklySchedule' => \App\Services\WeeklyAppreciationSchedule::describe(),
+        ]);
+    }
+
+    /**
+     * Splits the selected users into those who will get this week's email
+     * and those skipped, grouped by reason (largest group first, up to 100
+     * names each), in chunks so thousands of users stay cheap.
+     *
+     * @param  list<int>  $ids
+     * @return array{0: list<int>, 1: list<array{reason:string, count:int, users:list<array{name:string, email:?string}>}>}
+     */
+    private function classifyForAppreciation(array $ids, string $weekKey): array
+    {
+        $eligible = [];
+        $groups = [];
+
+        foreach (array_chunk(array_values(array_unique($ids)), 500) as $chunk) {
+            $sentThisWeek = AppreciationEmailLog::query()->whereIn('user_id', $chunk)->where('week_key', $weekKey)
+                ->pluck('user_id')->map(fn ($id) => (int) $id)->flip();
+
+            User::query()->whereIn('id', $chunk)->orderBy('name')->get()
+                ->each(function (User $user) use ($weekKey, $sentThisWeek, &$eligible, &$groups): void {
+                    $reason = AppreciationSender::ineligibleReason($user, $weekKey, $sentThisWeek->has((int) $user->id));
+
+                    if ($reason === null) {
+                        $eligible[] = (int) $user->id;
+
+                        return;
+                    }
+
+                    $groups[$reason] ??= ['reason' => $reason, 'count' => 0, 'users' => []];
+                    $groups[$reason]['count']++;
+                    if (count($groups[$reason]['users']) < 100) {
+                        $groups[$reason]['users'][] = ['name' => (string) $user->name, 'email' => $user->email];
+                    }
+                });
+        }
+
+        $groups = array_values($groups);
+        usort($groups, fn (array $a, array $b) => [$b['count'], $a['reason']] <=> [$a['count'], $b['reason']]);
+        foreach ($groups as &$group) {
+            usort($group['users'], fn (array $a, array $b) => strcasecmp($a['name'], $b['name']));
+        }
+
+        return [$eligible, $groups];
+    }
+
+    /** @param  list<int>  $eligibleIds */
+    private function eligiblePage(array $eligibleIds, string $search): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        $query = User::query()
+            ->when($eligibleIds === [], fn ($q) => $q->whereRaw('1 = 0'))
+            ->when($eligibleIds !== [], fn ($q) => $q->whereIn('id', $eligibleIds))
+            ->when($search !== '', fn ($q) => $q->where(fn ($sub) => $sub
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")))
             ->orderBy('name')
-            ->get();
+            ->orderBy('id');
 
-        $skipped = $users
-            ->map(fn (User $user) => ['user' => $user, 'reason' => AppreciationSender::ineligibleReason($user, $weekKey)])
-            ->filter(fn (array $row) => $row['reason'] !== null)
-            ->values();
-        $eligible = $users->reject(fn (User $user) => $skipped->contains(fn (array $row) => $row['user']->is($user)))->values();
-
-        return view('admin.users.appreciation-preview', compact('eligible', 'skipped', 'weekKey'));
+        return $query->paginate(50, ['id', 'name', 'email'])->withQueryString();
     }
 
     /**
@@ -681,6 +791,7 @@ class AdminUserController extends Controller
         abort_if($reason !== null, 422, $reason ?? '');
 
         $copy = $sender->draft($user, $weekKey, fresh: $request->boolean('regenerate'));
+        AppreciationSender::rememberPreviewed((int) $request->user()->id, (int) $user->id, $weekKey);
 
         return response()->json([
             'subject' => $copy['subject'],
@@ -689,14 +800,37 @@ class AdminUserController extends Controller
         ]);
     }
 
+    /**
+     * Sends now (a campaign with status sending, queued straight away) or
+     * schedules a campaign for later. Either way the previewed drafts are
+     * copied onto the campaign so exactly that text is sent.
+     */
     public function appreciationSend(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
+            'selection' => ['nullable', 'string', 'max:64'],
+            'ids' => ['required_without:selection', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:users,id'],
-        ]);
+        ] + SendTime::rules());
 
-        return $this->queueAppreciation(array_map('intval', $data['ids']));
+        if (filled($data['selection'] ?? null)) {
+            $selection = AdminUserSelection::get($data['selection']);
+            if ($selection === null) {
+                return redirect()->route('admin.users.index')->withErrors([
+                    'bulk' => 'That selection has expired. Select the users again.',
+                ]);
+            }
+            $ids = $selection['ids'];
+        } else {
+            $ids = array_map('intval', $data['ids']);
+        }
+
+        $ids = array_values(array_unique($ids));
+        $scheduledFor = SendTime::fromRequest($request);
+
+        return $scheduledFor
+            ? $this->scheduleAppreciation($request, $ids, $scheduledFor)
+            : $this->queueAppreciation($request, $ids);
     }
 
     /** @return list<int> */
@@ -717,7 +851,7 @@ class AdminUserController extends Controller
      *
      * @param  list<int>  $ids
      */
-    private function queueAppreciation(array $ids): RedirectResponse
+    private function queueAppreciation(Request $request, array $ids): RedirectResponse
     {
         $weekKey = AppreciationMessageService::weekKey();
         $eligible = AppreciationSender::eligibleIds($ids, $weekKey);
@@ -730,7 +864,16 @@ class AdminUserController extends Controller
             ]);
         }
 
-        SendAppreciationToUsersJob::dispatch($eligible, $weekKey);
+        $adminId = (int) $request->user()->id;
+        $campaign = AppreciationCampaign::create([
+            'created_by' => $adminId,
+            'user_ids' => $eligible,
+            'status' => AppreciationCampaign::STATUS_SENDING,
+            'week_key' => $weekKey,
+            'drafts' => AppreciationSender::previewedDrafts($adminId, $eligible, $weekKey) ?: null,
+        ]);
+
+        SendAppreciationToUsersJob::dispatch($eligible, $weekKey, $campaign->id);
 
         $message = 'Appreciation email is being sent to '.count($eligible).' '.str('user')->plural(count($eligible)).'.';
         if ($skipped > 0) {
@@ -740,11 +883,66 @@ class AdminUserController extends Controller
         return redirect()->route('admin.users.index')->with('success', $message);
     }
 
+    /**
+     * Stores a scheduled campaign for every selected user: eligibility and
+     * the once-per-week rule are checked when it sends, for that week.
+     *
+     * @param  list<int>  $ids
+     */
+    private function scheduleAppreciation(Request $request, array $ids, Carbon $scheduledFor): RedirectResponse
+    {
+        $weekKey = AppreciationMessageService::weekKey();
+        $adminId = (int) $request->user()->id;
+        $ids = User::query()->whereIn('id', $ids)->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if ($ids === []) {
+            return redirect()->route('admin.users.index')->withErrors(['bulk' => 'Select at least one user.']);
+        }
+
+        AppreciationCampaign::create([
+            'created_by' => $adminId,
+            'user_ids' => $ids,
+            'scheduled_for' => $scheduledFor,
+            'status' => AppreciationCampaign::STATUS_SCHEDULED,
+            'drafts' => AppreciationSender::previewedDrafts($adminId, $ids, $weekKey) ?: null,
+        ]);
+
+        return redirect()->route('admin.appreciation.index')->with('success',
+            'Appreciation email scheduled for '.SendTime::format($scheduledFor).' ('.SendTime::timezone().') for '
+            .number_format(count($ids)).' '.str('user')->plural(count($ids)).'. Who is eligible is checked when it sends.');
+    }
+
+    /**
+     * "Select all users matching these filters": resolves the matching IDs
+     * now, with the same query as the list, and keeps them server-side
+     * behind a short-lived token rather than in the URL. Only the sending
+     * actions get here (BulkUserRequest rejects the others).
+     */
+    private function bulkForFilteredUsers(array $data): RedirectResponse
+    {
+        $filter = self::userFilter((array) ($data['filter'] ?? []));
+        $ids = $filter->query()->orderBy('id')->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if ($ids === []) {
+            return back()->withErrors(['bulk' => 'No users match these filters.']);
+        }
+
+        $token = AdminUserSelection::store($ids, $filter->description());
+
+        return $data['action'] === 'appreciation'
+            ? redirect()->route('admin.users.appreciation.preview', ['selection' => $token])
+            : redirect()->route('admin.announcements.create', ['selection' => $token]);
+    }
+
     public function bulk(BulkUserRequest $request): RedirectResponse
     {
         $data = $request->validated();
 
         $currentUserId = (int) $request->user()->id;
+
+        if ($request->isFiltered()) {
+            return $this->bulkForFilteredUsers($data);
+        }
 
         $ids = collect($data['ids'])
             ->map(fn ($id) => (int) $id)

@@ -54,6 +54,56 @@
             </dl>
         </div>
 
+        {{-- Recent announcements and appreciation emails this person received. --}}
+        @php
+            $recentDeliveries = $recentDeliveries ?? collect();
+            $recentAppreciation = $recentAppreciation ?? collect();
+            $messageTz = config('app.timezone');
+        @endphp
+        <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6 mb-6" data-user-messages>
+            <h2 class="font-semibold mb-1">Messages</h2>
+            <p class="text-xs text-slate-400 mb-4">Times in {{ $messageTz }}</p>
+
+            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Announcements</h3>
+            <ul class="space-y-2 mb-5 text-sm">
+                @forelse ($recentDeliveries as $delivery)
+                    <li class="flex flex-wrap items-start justify-between gap-2">
+                        <span class="min-w-0 break-words">
+                            @if ($delivery->announcement)
+                                <a href="{{ route('admin.announcements.show', $delivery->announcement) }}" class="font-medium text-slate-700 hover:underline">{{ $delivery->announcement->title }}</a>
+                            @else
+                                <span class="text-slate-500">Deleted announcement</span>
+                            @endif
+                            <span class="block text-xs text-slate-500">
+                                {{ implode(', ', $delivery->reachedChannels()) ?: 'Not delivered' }}
+                                @if ($delivery->failedChannelLabels())
+                                    · <span class="text-rose-600">{{ implode(', ', $delivery->failedChannelLabels()) }} failed</span>
+                                @endif
+                            </span>
+                        </span>
+                        <span class="shrink-0 text-xs text-slate-500">{{ $delivery->created_at?->copy()->timezone($messageTz)->format('j M Y, H:i') }}</span>
+                    </li>
+                @empty
+                    <li class="text-slate-400">No announcements recorded yet.</li>
+                @endforelse
+            </ul>
+
+            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Appreciation emails</h3>
+            <ul class="space-y-2 text-sm">
+                @forelse ($recentAppreciation as $log)
+                    <li class="flex flex-wrap items-start justify-between gap-2">
+                        <span class="min-w-0 break-words">
+                            <span class="font-medium text-slate-700">{{ $log->subject ?: 'Appreciation email' }}</span>
+                            <span class="block text-xs text-slate-500">{{ $log->week_key }} · {{ $log->sourceLabel() }} · {{ $log->originLabel() }}</span>
+                        </span>
+                        <span class="shrink-0 text-xs text-slate-500">{{ $log->sent_at ? $log->sent_at->copy()->timezone($messageTz)->format('j M Y, H:i') : 'Sending…' }}</span>
+                    </li>
+                @empty
+                    <li class="text-slate-400">No appreciation emails sent yet.</li>
+                @endforelse
+            </ul>
+        </div>
+
         @if ($isSelf)
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
                 This is your own account. Suspension, role, and deletion changes to your own account

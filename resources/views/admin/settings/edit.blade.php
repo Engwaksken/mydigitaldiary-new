@@ -42,12 +42,15 @@
         'terms',
         'meetings',
         'backups',
+        'weekly-email',
     ], true)) {
         if (
             old('privacy_policy_version') !== null
             || old('privacy_policy_content') !== null
         ) {
             $currentTab = 'privacy';
+        } elseif (old('appreciation_weekly_day') !== null) {
+            $currentTab = 'weekly-email';
         } elseif (
             old('terms_of_use_version') !== null
             || old('terms_of_use_content') !== null
@@ -153,6 +156,7 @@
             ['key' => 'terms', 'icon' => 'fa-file-contract', 'label' => 'Terms of Use'],
             ['key' => 'meetings', 'icon' => 'fa-video', 'label' => 'Meeting Platforms'],
             ['key' => 'backups', 'icon' => 'fa-cloud-arrow-up', 'label' => 'Backups'],
+            ['key' => 'weekly-email', 'icon' => 'fa-heart', 'label' => 'Weekly Email'],
         ] as $tab)
             <button
                 type="button"
@@ -1151,6 +1155,92 @@
                         class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm">
                         <i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i>
                         Save Terms of Use
+                    </button>
+                </div>
+            </div>
+        </section>
+    </form>
+
+    {{--
+    |--------------------------------------------------------------------------
+    | WEEKLY APPRECIATION EMAIL
+    |--------------------------------------------------------------------------
+    --}}
+    @php
+        $weeklyAppreciation = \App\Services\WeeklyAppreciationSchedule::settings();
+        $weeklyEnabled = (bool) old('appreciation_weekly_enabled', $weeklyAppreciation['enabled']);
+        $weeklyDay = (int) old('appreciation_weekly_day', $weeklyAppreciation['day']);
+        $weeklyTime = (string) old('appreciation_weekly_time', $weeklyAppreciation['time']);
+    @endphp
+    <form
+        method="POST"
+        action="{{ route('admin.settings.weekly-appreciation.update') }}">
+        @csrf
+
+        <section
+            role="tabpanel"
+            id="pm-settings-panel-weekly-email"
+            aria-labelledby="pm-settings-tab-weekly-email"
+            tabindex="0"
+            class="pm-settings-panel"
+            @if($currentTab !== 'weekly-email') hidden @endif>
+
+            <div class="max-w-3xl pm-card-bg shadow-sm border border-slate-100 rounded-xl p-5 sm:p-6 space-y-5">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-800">Weekly appreciation email</h2>
+                    <p class="text-sm text-slate-500 mt-1">
+                        The automatic thank-you email to every eligible member. It runs at most once a week, and each person gets at most one appreciation email per week.
+                    </p>
+                </div>
+
+                <label class="flex items-center gap-3 rounded-lg border border-slate-200 p-4 text-sm text-slate-700 cursor-pointer">
+                    <input type="hidden" name="appreciation_weekly_enabled" value="0">
+                    <input type="checkbox" id="appreciation_weekly_enabled" name="appreciation_weekly_enabled" value="1" @checked($weeklyEnabled)
+                           class="rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-1)]">
+                    <span class="flex-1 font-medium">Send the weekly appreciation email automatically</span>
+                </label>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="appreciation_weekly_day" class="block text-sm font-medium text-slate-700 mb-1">Day of the week</label>
+                        <select id="appreciation_weekly_day" name="appreciation_weekly_day" class="pm-input w-full" required
+                                @error('appreciation_weekly_day') aria-invalid="true" @enderror>
+                            <option value="" disabled>Choose a day</option>
+                            @foreach (\App\Services\WeeklyAppreciationSchedule::DAYS as $value => $label)
+                                <option value="{{ $value }}" @selected($weeklyDay === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('appreciation_weekly_day')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div>
+                        <label for="appreciation_weekly_time" class="block text-sm font-medium text-slate-700 mb-1">
+                            Time <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{{ config('app.timezone') }}</span>
+                        </label>
+                        <input type="time" id="appreciation_weekly_time" name="appreciation_weekly_time" step="60" required
+                               value="{{ $weeklyTime }}" placeholder="09:00" class="pm-input w-full"
+                               @error('appreciation_weekly_time') aria-invalid="true" @enderror>
+                        @error('appreciation_weekly_time')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                <div class="rounded-lg bg-slate-50 border border-slate-100 p-3 text-sm text-slate-600">
+                    <i class="fa-regular fa-clock mr-1" aria-hidden="true"></i>
+                    Currently: <strong>{{ \App\Services\WeeklyAppreciationSchedule::describe() }}</strong>
+                    @if ($weeklyAppreciation['last_run_week'])
+                        · last run {{ $weeklyAppreciation['last_run_week'] }}
+                    @endif
+                </div>
+
+                <div class="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    @if (\Illuminate\Support\Facades\Route::has('admin.appreciation.index'))
+                        <a href="{{ route('admin.appreciation.index') }}" class="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50">
+                            Appreciation history
+                        </a>
+                    @endif
+                    <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm">
+                        <i class="fa-solid fa-floppy-disk mr-1" aria-hidden="true"></i>
+                        Save weekly email
                     </button>
                 </div>
             </div>

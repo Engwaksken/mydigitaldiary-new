@@ -125,7 +125,7 @@
             </button>
         </div>
 
-        <form method="GET" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_190px_190px_auto]">
+        <form method="GET" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_170px_170px_220px_auto]">
             <input name="search"
                    value="{{ request('search') }}"
                    class="pm-input w-full"
@@ -144,6 +144,12 @@
                 <option value="">Choose verification (optional)</option>
                 <option value="verified" @selected(request('verification') === 'verified')>Verified email</option>
                 <option value="unverified" @selected(request('verification') === 'unverified')>Unverified email</option>
+            </select>
+
+            <select name="appreciation" class="pm-input w-full" aria-label="Appreciation email">
+                <option value="">Choose appreciation status (optional)</option>
+                <option value="sent_this_week" @selected(request('appreciation') === 'sent_this_week')>Sent this week</option>
+                <option value="not_sent_this_week" @selected(request('appreciation') === 'not_sent_this_week')>Not sent this week</option>
             </select>
 
             <button class="apple-btn rounded-xl px-4 py-2 text-sm font-bold">
@@ -302,6 +308,31 @@
             }
         </style>
 
+        {{-- Select all on this page (phones have no table header checkbox) --}}
+        <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-xs font-bold text-slate-600 md:hidden">
+            <label class="inline-flex items-center gap-2">
+                <input type="checkbox" id="admin-users-select-all-mobile" onchange="pmToggleAllUsers(this.checked)">
+                Select all on this page
+            </label>
+        </div>
+
+        {{-- Gmail-style "select everyone matching the filters" bar --}}
+        <div id="admin-select-all-bar" class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-sky-100 bg-sky-50 px-4 py-2.5 text-center text-sm text-sky-900" hidden
+             data-page-count="{{ $users->count() }}" data-total="{{ $users->total() }}">
+            <span id="admin-select-all-page-text">
+                All {{ number_format($users->count()) }} on this page are selected.
+                @if ($users->total() > $users->count())
+                    <button type="button" class="font-bold text-sky-700 underline" onclick="pmSelectAllFiltered()">
+                        Select all {{ number_format($users->total()) }} users matching these filters
+                    </button>
+                @endif
+            </span>
+            <span id="admin-select-all-filtered-text" hidden>
+                All {{ number_format($users->total()) }} users matching these filters are selected.
+            </span>
+            <button type="button" class="font-bold text-sky-700 underline" onclick="pmClearUserSelection()">Clear selection</button>
+        </div>
+
         {{-- DESKTOP TABLE --}}
         <div class="admin-user-desktop admin-user-table-wrap">
             <table class="text-sm">
@@ -322,6 +353,7 @@
                         <th class="px-4 py-3 text-left">Subscription</th>
                         <th class="px-4 py-3 text-left">Current Status</th>
                         <th class="px-4 py-3 text-left">Subscription Expiry</th>
+                        <th class="px-4 py-3 text-left">Appreciation</th>
                         <th class="px-4 py-3 text-right">Action</th>
                     </tr>
                 </thead>
@@ -432,6 +464,10 @@
                                 @endif
                             </td>
 
+                            <td class="px-4 py-4 align-top text-xs" data-appreciation-cell>
+                                @include('admin.users.partials.appreciation-status', ['status' => $appreciationStatus[$user->id] ?? null])
+                            </td>
+
                             <td class="px-4 py-4 align-top text-right">
                                 <button
                                     type="button"
@@ -446,7 +482,7 @@
 
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-400">
+                            <td colspan="10" class="px-4 py-10 text-center text-sm text-slate-400">
                                 No users found.
                             </td>
                         </tr>
@@ -547,6 +583,13 @@
                                 · {{ ucfirst($canonicalStatus) }}
                             </p>
                         </div>
+
+                        <div class="col-span-2 rounded-xl bg-slate-50 p-2.5">
+                            <span class="text-slate-400">Appreciation</span>
+                            <div class="mt-0.5 font-bold">
+                                @include('admin.users.partials.appreciation-status', ['status' => $appreciationStatus[$user->id] ?? null])
+                            </div>
+                        </div>
                     </div>
 
                     <button
@@ -625,6 +668,11 @@
 
             <div id="admin-bulk-hidden-ids"></div>
 
+            <div id="admin-bulk-filtered-note" class="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900" hidden>
+                <i class="fa-solid fa-filter mr-1" aria-hidden="true"></i>
+                Everyone matching: <strong>{{ $filter->description() }}</strong>. Only Send Appreciation Email and Send Announcement work for a selection this large.
+            </div>
+
             <div>
                 <label class="text-xs font-bold text-slate-700">
                     Bulk Action
@@ -638,13 +686,13 @@
                     onchange="pmShowBulkActionFields(this.value)"
                 >
                     <option value="">Choose an action</option>
-                    <option value="role">Change Role</option>
-                    <option value="subscription">Update Subscription</option>
-                    <option value="suspend">Suspend Users</option>
-                    <option value="reactivate">Reactivate Users</option>
+                    <option value="role" data-ids-only>Change Role</option>
+                    <option value="subscription" data-ids-only>Update Subscription</option>
+                    <option value="suspend" data-ids-only>Suspend Users</option>
+                    <option value="reactivate" data-ids-only>Reactivate Users</option>
                     <option value="appreciation">Send Appreciation Email</option>
                     <option value="announcement">Send Announcement</option>
-                    <option value="delete">Delete Users</option>
+                    <option value="delete" data-ids-only>Delete Users</option>
                 </select>
             </div>
 
@@ -908,8 +956,41 @@
         );
     }
 
+    // 'ids' = the ticked users; 'filtered' = every user matching the filters.
+    var pmBulkScope = 'ids';
+    var pmBulkFilters = @json($filter->toArray());
+    var pmFilteredTotal = {{ (int) $users->total() }};
+
+    function pmSelectAllFiltered() {
+        pmBulkScope = 'filtered';
+        pmUpdateBulkSelection();
+    }
+
+    function pmClearUserSelection() {
+        pmBulkScope = 'ids';
+        pmToggleAllUsers(false);
+    }
+
+    function pmAllOnPageSelected() {
+        var all = Array.from(document.querySelectorAll('.admin-user-desktop .admin-user-selector'));
+        return all.length > 0 && all.every(function (checkbox) { return checkbox.checked; });
+    }
+
+    function pmUpdateSelectAllBar() {
+        var bar = document.getElementById('admin-select-all-bar');
+        if (!bar) { return; }
+        var allSelected = pmAllOnPageSelected();
+        if (!allSelected) { pmBulkScope = 'ids'; }
+        bar.hidden = !allSelected;
+        document.getElementById('admin-select-all-page-text').hidden = pmBulkScope === 'filtered';
+        document.getElementById('admin-select-all-filtered-text').hidden = pmBulkScope !== 'filtered';
+        var mobile = document.getElementById('admin-users-select-all-mobile');
+        if (mobile) { mobile.checked = allSelected; }
+    }
+
     function pmUpdateBulkSelection() {
-        var count = pmUniqueSelectedUserIds().length;
+        pmUpdateSelectAllBar();
+        var count = pmBulkScope === 'filtered' ? pmFilteredTotal : pmUniqueSelectedUserIds().length;
         var button = document.getElementById('admin-bulk-open');
         var badge = document.getElementById('admin-bulk-count');
         var dialogCount = document.getElementById('admin-bulk-dialog-count');
@@ -1008,20 +1089,49 @@
 
         hidden.innerHTML = '';
 
-        ids.forEach(function (id) {
+        var addHidden = function (name, value) {
             var input = document.createElement('input');
             input.type = 'hidden';
-            input.name = 'ids[]';
-            input.value = id;
+            input.name = name;
+            input.value = value;
             hidden.appendChild(input);
+        };
+
+        var filtered = pmBulkScope === 'filtered';
+
+        if (filtered) {
+            // The server resolves everyone matching these filters with the
+            // same query as this list, instead of posting thousands of IDs.
+            addHidden('scope', 'filtered');
+            Object.keys(pmBulkFilters).forEach(function (key) {
+                addHidden('filter[' + key + ']', pmBulkFilters[key]);
+            });
+        } else {
+            ids.forEach(function (id) { addHidden('ids[]', id); });
+        }
+
+        document.getElementById('admin-bulk-filtered-note').hidden = !filtered;
+
+        var actionSelect = document.getElementById('admin-bulk-action');
+        Array.from(actionSelect.options).forEach(function (option) {
+            if (option.hasAttribute('data-ids-only')) {
+                option.disabled = filtered;
+                option.hidden = filtered;
+            }
         });
+        if (filtered && actionSelect.selectedOptions[0] && actionSelect.selectedOptions[0].disabled) {
+            actionSelect.value = '';
+            pmShowBulkActionFields('');
+        }
 
         var dialogCount = document.getElementById(
             'admin-bulk-dialog-count'
         );
 
         if (dialogCount) {
-            dialogCount.textContent = String(ids.length);
+            dialogCount.textContent = filtered
+                ? pmFilteredTotal.toLocaleString('en-GB')
+                : String(ids.length);
         }
 
         document
@@ -1049,7 +1159,12 @@
         var ids = pmUniqueSelectedUserIds();
         var action = form.elements.namedItem('action').value;
 
-        if (!ids.length) {
+        if (pmBulkScope === 'filtered' && ['appreciation', 'announcement'].indexOf(action) === -1) {
+            alert('Only Send Appreciation Email and Send Announcement work for everyone matching the filters. Tick users individually for other actions.');
+            return false;
+        }
+
+        if (!ids.length && pmBulkScope !== 'filtered') {
             alert('Select at least one user.');
             return false;
         }

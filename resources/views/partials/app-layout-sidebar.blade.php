@@ -112,6 +112,7 @@
                 ['route' => 'admin.feedback.index', 'pattern' => 'admin.feedback.*', 'icon' => 'fa-solid fa-comment-dots', 'label' => 'Admin Feedback'],
                 ['route' => 'admin.support.index', 'pattern' => 'admin.support.*', 'icon' => 'fa-solid fa-headset', 'label' => 'Support Conversations'],
                 ['route' => 'admin.announcements.index', 'pattern' => 'admin.announcements.*', 'icon' => 'fa-solid fa-bullhorn', 'label' => 'Announcements'],
+                ['route' => 'admin.appreciation.index', 'pattern' => 'admin.appreciation.*', 'icon' => 'fa-regular fa-heart', 'label' => 'Appreciation emails'],
                 ['route' => 'admin.billing-logs.index', 'pattern' => 'admin.billing-logs.*', 'icon' => 'fa-solid fa-file-invoice-dollar', 'label' => 'Billing Activity'],
                 ['route' => 'admin.enterprise-inquiries.index', 'pattern' => 'admin.enterprise-inquiries.*', 'icon' => 'fa-solid fa-handshake', 'label' => 'Enterprise Inquiries'],
                 ['route' => 'admin.invoices.index', 'pattern' => 'admin.invoices.*', 'icon' => 'fa-solid fa-file-invoice', 'label' => 'Quotations & Invoices'],

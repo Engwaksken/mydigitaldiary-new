@@ -248,9 +248,14 @@ class WeeklyAppreciationEmailTest extends TestCase
         Mail::assertNothingQueued();
     }
 
-    public function test_schedule_runs_weekly_on_monday_morning(): void
+    public function test_schedule_runs_weekly_on_monday_morning_by_default(): void
     {
         Artisan::call('schedule:list');
-        $this->assertMatchesRegularExpression('/0\s+9\s+\*\s+\*\s+1\s+.*appreciation:send-weekly/', Artisan::output());
+        $this->assertMatchesRegularExpression('/\*\s+\*\s+\*\s+\*\s+\*\s+php artisan appreciation:send-weekly --scheduled/', Artisan::output());
+
+        // Defaults: on, Monday 09:00 Africa/Kampala.
+        $this->assertTrue(\App\Services\WeeklyAppreciationSchedule::isDue(Carbon::parse('2026-10-19 09:00', 'Africa/Kampala')));
+        $this->assertFalse(\App\Services\WeeklyAppreciationSchedule::isDue(Carbon::parse('2026-10-19 08:59', 'Africa/Kampala')));
+        $this->assertFalse(\App\Services\WeeklyAppreciationSchedule::isDue(Carbon::parse('2026-10-20 09:00', 'Africa/Kampala')));
     }
 }
