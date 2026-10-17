@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendAppreciationToUsersJob;
+use App\Services\AppreciationMessageService;
+use App\Services\AppreciationSender;
 use App\Http\Requests\Admin\BulkUserRequest;
 use App\Http\Requests\Admin\UpdateUserSubscriptionRequest;
 use App\Http\Requests\Admin\UpdateTranscriptionCapacityRequest;
@@ -647,6 +650,36 @@ class AdminUserController extends Controller
         });
     }
 
+    /**
+     * Queues this week's appreciation email for the selected users who are
+     * eligible (verified, opted in, not admin/suspended, not yet sent this
+     * week) and reports how many were left out.
+     *
+     * @param  list<int>  $ids
+     */
+    private function queueAppreciation(array $ids): RedirectResponse
+    {
+        $weekKey = AppreciationMessageService::weekKey();
+        $eligible = AppreciationSender::eligibleIds($ids, $weekKey);
+        $skipped = count($ids) - count($eligible);
+
+        if ($eligible === []) {
+            return back()->withErrors([
+                'bulk' => 'None of the selected users can receive the appreciation email this week. '
+                    .'It only goes to verified, non-admin users who have not opted out and have not had one this week.',
+            ]);
+        }
+
+        SendAppreciationToUsersJob::dispatch($eligible, $weekKey);
+
+        $message = 'Appreciation email is being sent to '.count($eligible).' '.str('user')->plural(count($eligible)).'.';
+        if ($skipped > 0) {
+            $message .= " {$skipped} skipped (unverified, admin, suspended, opted out or already sent this week).";
+        }
+
+        return back()->with('success', $message);
+    }
+
     public function bulk(BulkUserRequest $request): RedirectResponse
     {
         $data = $request->validated();
@@ -706,6 +739,10 @@ class AdminUserController extends Controller
                 422,
                 'Type DELETE to confirm bulk deletion.'
             );
+        }
+
+        if ($data['action'] === 'appreciation') {
+            return $this->queueAppreciation($ids->all());
         }
 
         $users = User::query()

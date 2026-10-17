@@ -14,7 +14,7 @@ class BulkUserRequest extends UpdateUserSubscriptionRequest
         return array_replace(parent::rules(), [
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:users,id'],
-            'action' => ['required', Rule::in(['role', 'subscription', 'suspend', 'reactivate', 'delete'])],
+            'action' => ['required', Rule::in(['role', 'subscription', 'suspend', 'reactivate', 'delete', 'appreciation'])],
             'role' => ['nullable', Rule::in(array_keys(AdminUserController::availableRoles()))],
             'subscription_status' => ['nullable', Rule::in(['active', 'trial', 'inactive', 'expired', 'suspended', 'cancelled'])],
             'reason' => ['nullable', 'string', 'max:1000'],

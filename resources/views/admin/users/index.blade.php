@@ -642,6 +642,7 @@
                     <option value="subscription">Update Subscription</option>
                     <option value="suspend">Suspend Users</option>
                     <option value="reactivate">Reactivate Users</option>
+                    <option value="appreciation">Send Appreciation Email</option>
                     <option value="delete">Delete Users</option>
                 </select>
             </div>
@@ -774,6 +775,18 @@
             >
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
                     The selected accounts will be reactivated.
+                </div>
+            </section>
+
+            <section
+                id="admin-bulk-appreciation-fields"
+                class="admin-bulk-action-fields"
+                hidden
+            >
+                <div class="rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm text-teal-800">
+                    <i class="fa-regular fa-heart mr-1" aria-hidden="true"></i>
+                    Each selected user gets their own thank-you email this week. Unverified, admin, suspended and
+                    opted-out users, and anyone already sent one this week, are skipped.
                 </div>
             </section>
 
