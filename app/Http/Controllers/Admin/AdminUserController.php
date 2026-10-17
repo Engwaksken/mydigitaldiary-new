@@ -47,6 +47,7 @@ class AdminUserController extends Controller
         $subscriptionStatus = trim(
             (string) $request->query('subscription_status', '')
         );
+        $verification = (string) $request->query('verification', '');
 
         $users = User::query()
             ->with('subscriptionPlan')
@@ -73,6 +74,14 @@ class AdminUserController extends Controller
                             default => [strtolower($subscriptionStatus)],
                         }
                     )
+            )
+            ->when(
+                $verification === 'verified',
+                fn ($query) => $query->whereNotNull('email_verified_at')
+            )
+            ->when(
+                $verification === 'unverified',
+                fn ($query) => $query->whereNull('email_verified_at')
             )
             ->latest('id')
             ->paginate(25)

@@ -125,7 +125,7 @@
             </button>
         </div>
 
-        <form method="GET" class="mt-4 grid gap-3 sm:grid-cols-[1fr_190px_auto]">
+        <form method="GET" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_190px_190px_auto]">
             <input name="search"
                    value="{{ request('search') }}"
                    class="pm-input w-full"
@@ -138,6 +138,12 @@
                         {{ ucfirst($status) }}
                     </option>
                 @endforeach
+            </select>
+
+            <select name="verification" class="pm-input w-full" aria-label="Email verification">
+                <option value="">Choose verification (optional)</option>
+                <option value="verified" @selected(request('verification') === 'verified')>Verified email</option>
+                <option value="unverified" @selected(request('verification') === 'unverified')>Unverified email</option>
             </select>
 
             <button class="apple-btn rounded-xl px-4 py-2 text-sm font-bold">
@@ -178,7 +184,7 @@
             }
 
             #admin-user-list table {
-                min-width: 1120px;
+                min-width: 1300px;
                 width: 100%;
             }
 
@@ -311,6 +317,8 @@
                         </th>
                         <th class="px-4 py-3 text-left">User</th>
                         <th class="px-4 py-3 text-left">Role</th>
+                        <th class="px-4 py-3 text-left">Joined</th>
+                        <th class="px-4 py-3 text-left">Email</th>
                         <th class="px-4 py-3 text-left">Subscription</th>
                         <th class="px-4 py-3 text-left">Current Status</th>
                         <th class="px-4 py-3 text-left">Subscription Expiry</th>
@@ -346,6 +354,9 @@
                             $displayRole = $user->system_role
                                 ?? $user->role
                                 ?? ($user->isAdmin() ? 'admin' : 'user');
+
+                            $joinedAt = $user->created_at?->copy()->timezone(config('app.timezone'));
+                            $verifiedAt = $user->email_verified_at ? \Illuminate\Support\Carbon::parse($user->email_verified_at)->timezone(config('app.timezone')) : null;
                         @endphp
 
                         <tr>
@@ -370,6 +381,27 @@
                                 <span class="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-black uppercase text-sky-700">
                                     {{ str_replace('_', ' ', $displayRole) }}
                                 </span>
+                            </td>
+
+                            <td class="px-4 py-4 align-top">
+                                @if($joinedAt)
+                                    <div class="text-xs font-semibold text-slate-700">{{ $joinedAt->format('d M Y') }}</div>
+                                    <div class="mt-0.5 text-[10px] text-slate-400">{{ $joinedAt->diffForHumans() }}</div>
+                                @else
+                                    <span class="text-xs text-slate-400">—</span>
+                                @endif
+                            </td>
+
+                            <td class="px-4 py-4 align-top">
+                                @if($verifiedAt)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700" title="Verified {{ $verifiedAt->format('d M Y, H:i') }}">
+                                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Verified
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase text-amber-700">
+                                        <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> Unverified
+                                    </span>
+                                @endif
                             </td>
 
                             <td class="px-4 py-4 align-top">
@@ -414,7 +446,7 @@
 
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-10 text-center text-sm text-slate-400">
+                            <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-400">
                                 No users found.
                             </td>
                         </tr>
@@ -444,6 +476,9 @@
                     $displayRole = $user->system_role
                         ?? $user->role
                         ?? ($user->isAdmin() ? 'admin' : 'user');
+
+                    $joinedAt = $user->created_at?->copy()->timezone(config('app.timezone'));
+                    $verifiedAt = $user->email_verified_at ? \Illuminate\Support\Carbon::parse($user->email_verified_at)->timezone(config('app.timezone')) : null;
                 @endphp
 
                 <article class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
@@ -487,6 +522,21 @@
                             <span class="text-slate-400">Account</span>
                             <p class="mt-0.5 truncate font-bold text-slate-700">
                                 {{ ucfirst($accountStatus) }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl bg-slate-50 p-2.5">
+                            <span class="text-slate-400">Joined</span>
+                            <p class="mt-0.5 truncate font-bold text-slate-700">
+                                {{ $joinedAt?->format('d M Y') ?? '—' }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl bg-slate-50 p-2.5">
+                            <span class="text-slate-400">Email</span>
+                            <p class="mt-0.5 truncate font-bold {{ $verifiedAt ? 'text-emerald-700' : 'text-amber-700' }}">
+                                <i class="fa-solid {{ $verifiedAt ? 'fa-circle-check' : 'fa-circle-exclamation' }}" aria-hidden="true"></i>
+                                {{ $verifiedAt ? 'Verified' : 'Unverified' }}
                             </p>
                         </div>
 
