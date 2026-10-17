@@ -911,12 +911,12 @@
                 @include('crud._fields', ['fields' => $fields, 'item' => null])
 
                 @if ($dateFieldName)
-                    <div class="pm-modal-section flex items-start gap-3">
-                        <input type="checkbox" id="crud-set-reminder" name="set_reminder" value="1"
-                               class="mt-0.5 rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-2)]">
-                        <div>
-                            <label for="crud-set-reminder" class="!mb-0 text-sm font-semibold text-slate-700" title="Get notified at the relevant date and time.">
-                                Also set a reminder
+                    <div class="pm-modal-section">
+                        <div class="flex items-center gap-3 min-h-[46px] px-4 rounded-xl border border-slate-200 bg-slate-50">
+                            <input type="checkbox" id="crud-set-reminder" name="set_reminder" value="1"
+                                   class="shrink-0 !m-0 rounded border-slate-300 text-[var(--brand-1)] focus:ring-[var(--brand-2)]">
+                            <label for="crud-set-reminder" class="!mb-0 flex-1 py-3 cursor-pointer text-slate-700" title="Get notified at the relevant date and time.">
+                                <i class="fa-regular fa-bell mr-1.5 text-slate-400" aria-hidden="true"></i>Also set a reminder
                             </label>
                         </div>
                     </div>

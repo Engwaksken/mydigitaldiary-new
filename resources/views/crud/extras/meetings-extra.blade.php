@@ -112,18 +112,20 @@
                     </select>
                 </div>
 
-                <div class="flex items-center">
-                    <label class="mt-5 flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                <div class="flex items-end">
+                    <div class="flex w-full items-center gap-3 min-h-[46px] px-4 rounded-xl border border-slate-200 bg-slate-50">
                         <input
                             type="checkbox"
+                            id="recurring-set-reminder"
                             name="set_reminder"
                             value="1"
+                            class="shrink-0 !m-0"
                             @checked(old('set_reminder'))
                         >
-                        <span class="text-sm font-bold">
-                            Set reminder for each meeting
-                        </span>
-                    </label>
+                        <label for="recurring-set-reminder" class="!mb-0 flex-1 py-3 cursor-pointer text-slate-700">
+                            <i class="fa-regular fa-bell mr-1.5 text-slate-400" aria-hidden="true"></i>Set reminder for each meeting
+                        </label>
+                    </div>
                 </div>
 
                 <div class="md:col-span-2">
