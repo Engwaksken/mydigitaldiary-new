@@ -428,6 +428,7 @@
                         'spiritual_insights' => ['Spiritual Growth insights','Allow spiritual reflection prompts to appear in personalised insights.','fa-hands-praying'],
                         'daily_affirmations' => ['Daily affirmations','Show a fresh motivational affirmation in Today’s Insight rotation.','fa-sparkles'],
                         'subscription_reminders' => ['Subscription reminders','Keep important expiry and renewal reminders enabled.','fa-credit-card'],
+                        'weekly_appreciation' => ['Weekly appreciation email','A short weekly thank-you note from My Digital Diary.','fa-envelope-open-text'],
                     ];
                 @endphp
                 <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6">

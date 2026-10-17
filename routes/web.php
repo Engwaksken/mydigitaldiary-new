@@ -103,6 +103,15 @@ Route::get('/terms-of-use', [TermsOfUseController::class, 'show'])->name('terms-
 // privacy-policy above.
 Route::get('/card/{slug}', [BusinessCardController::class, 'showPublic'])->name('card.show');
 
+// Public — the signed link in the weekly appreciation email lets a person
+// opt out without signing in. GET only confirms; POST stores the choice.
+Route::get('/appreciation/unsubscribe/{user}', [\App\Http\Controllers\AppreciationUnsubscribeController::class, 'show'])
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('appreciation.unsubscribe');
+Route::post('/appreciation/unsubscribe/{user}', [\App\Http\Controllers\AppreciationUnsubscribeController::class, 'store'])
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('appreciation.unsubscribe.confirm');
+
 Route::get('/signed-documents/{signedDocument}/shared', [\App\Http\Controllers\SignatureController::class, 'showSharedDocument'])
     ->middleware('signed')
     ->name('signature.documents.shared');

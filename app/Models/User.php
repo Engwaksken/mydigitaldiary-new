@@ -333,6 +333,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'spiritual_insights' => true,
             'subscription_reminders' => true,
             'daily_affirmations' => true,
+            'weekly_appreciation' => true,
         ];
 
         return array_replace($defaults, is_array($this->engagement_notification_preferences) ? $this->engagement_notification_preferences : []);

@@ -180,6 +180,22 @@ Schedule::command('engagement:send-smart-nudges')
 
 /*
 |--------------------------------------------------------------------------
+| Weekly Appreciation Email
+|--------------------------------------------------------------------------
+|
+| Monday morning thank-you note written by the administrator's active AI
+| provider (built-in messages are used when AI is unavailable). Emails are
+| queued; appreciation_email_logs guarantees at most one per user per week,
+| and people can opt out from the email or their profile.
+|
+*/
+Schedule::command('appreciation:send-weekly')
+    ->weeklyOn(1, '09:00')
+    ->timezone(config('app.timezone', 'Africa/Kampala'))
+    ->withoutOverlapping(120);
+
+/*
+|--------------------------------------------------------------------------
 | Today's Insight
 |--------------------------------------------------------------------------
 |
