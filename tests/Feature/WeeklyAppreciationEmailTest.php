@@ -191,6 +191,25 @@ class WeeklyAppreciationEmailTest extends TestCase
         Mail::assertQueued(WeeklyAppreciationMail::class, 2);
     }
 
+    public function test_user_option_explains_why_a_user_is_not_eligible(): void
+    {
+        $this->fakeAi();
+        Mail::fake();
+        User::factory()->unverified()->create(['email' => 'unverified@example.com']);
+        User::factory()->create(['email' => 'boss@example.com', 'role' => 'admin']);
+        User::factory()->create(['email' => 'Mixed@Example.com']);
+
+        $this->artisan('appreciation:send-weekly', ['--user' => 'nobody@example.com'])
+            ->expectsOutputToContain('no user with that ID or email')->assertSuccessful();
+        $this->artisan('appreciation:send-weekly', ['--user' => 'unverified@example.com'])
+            ->expectsOutputToContain('their email address is not verified')->assertSuccessful();
+        $this->artisan('appreciation:send-weekly', ['--user' => 'boss@example.com'])
+            ->expectsOutputToContain('admin accounts do not receive this email')->assertSuccessful();
+        $this->artisan('appreciation:send-weekly', ['--user' => 'mixed@example.com'])
+            ->expectsOutputToContain('the stored email is Mixed@Example.com')->assertSuccessful();
+        Mail::assertNothingQueued();
+    }
+
     public function test_dry_run_and_user_option(): void
     {
         $this->fakeAi();

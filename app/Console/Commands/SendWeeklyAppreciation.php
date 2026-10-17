@@ -48,7 +48,7 @@ class SendWeeklyAppreciation extends Command
                 : $q->where('email', $needle));
 
             if (! (clone $query)->exists()) {
-                $this->warn("User {$needle} is not eligible this week (not found, unverified, suspended, opted out or already sent for {$weekKey}).");
+                $this->warn("User {$needle} is not eligible this week: {$this->ineligibilityReason($needle, $weekKey)}.");
 
                 return self::SUCCESS;
             }
@@ -112,6 +112,24 @@ class SendWeeklyAppreciation extends Command
         $this->info("{$sent} weekly appreciation email(s) {$verb} for {$weekKey}; {$skipped} skipped; {$failed} failed.");
 
         return self::SUCCESS;
+    }
+
+    /** Explains why --user matched nobody, checking each recipients() condition in turn. */
+    private function ineligibilityReason(string $needle, string $weekKey): string
+    {
+        $user = ctype_digit($needle)
+            ? User::query()->find((int) $needle)
+            : User::query()->whereRaw('LOWER(email) = ?', [mb_strtolower($needle)])->first();
+
+        return match (true) {
+            $user === null => 'no user with that ID or email in the '.config('database.default').' database',
+            ! ctype_digit($needle) && $user->email !== $needle => "the stored email is {$user->email} (check the capitalisation)",
+            $user->email_verified_at === null => 'their email address is not verified',
+            $user->suspended_at !== null => 'the account is suspended',
+            $user->deletion_requested_at !== null || $user->scheduled_deletion_at !== null => 'the account is pending deletion',
+            $user->role === 'admin' => 'admin accounts do not receive this email',
+            default => "they have already been sent this week's email ({$weekKey})",
+        };
     }
 
     private function recipients(string $weekKey): Builder
