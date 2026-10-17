@@ -76,7 +76,7 @@ class CrudFormLayoutTest extends TestCase
 
     public function test_admin_long_forms_render_tabs_without_hint_lines(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = User::factory()->create(['role' => 'admin', 'system_role' => 'super_admin']);
 
         foreach ([
             'admin.subscription-plans.create' => ['Plan', 'Pricing', 'Appearance', 'Features'],

@@ -85,7 +85,11 @@ class CrudListTableLayoutTest extends TestCase
             $response = $this->get(route($routeName . '.index'));
             $response->assertOk();
 
-            if ($routeName !== 'savings-goals') {
+            if ($routeName === 'notes') {
+                // Notes render as a sticky-note card grid instead of a table.
+                $response->assertSee('pm-sticky-notes-grid', false)
+                    ->assertDontSee('class="pm-dt"', false);
+            } elseif ($routeName !== 'savings-goals') {
                 $response->assertSee('class="pm-dt"', false);
             }
             $checked++;
