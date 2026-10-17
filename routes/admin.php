@@ -59,6 +59,7 @@ use Illuminate\Support\Facades\Route;
 */
 Route::middleware([
     'auth',
+    'verified',
     'support.staff',
 ])
     ->prefix('admin')
@@ -98,6 +99,7 @@ Route::middleware([
 */
 Route::middleware([
     'auth',
+    'verified',
     'admin',
 ])
     ->prefix('admin')

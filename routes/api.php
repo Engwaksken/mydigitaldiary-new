@@ -53,7 +53,8 @@ use Illuminate\Support\Facades\Route;
 |
 | Every route below except register/login/verify-otp/resend-otp requires
 | a Sanctum Bearer token (Authorization: Bearer {token}), obtained from
-| POST /api/verify-otp. There is no CSRF/session concern here at all —
+| POST /api/verify-otp. All but me/logout/email/verification-* also require
+| a verified email address ('verified.api'). There is no CSRF/session concern here at all —
 | unlike the web app's cookie-based auth, this is stateless token auth,
 | the same mechanism a Flutter HTTP client naturally works with.
 */
@@ -67,6 +68,18 @@ Route::post('resend-otp', [AuthController::class, 'resendOtp']);
 Route::post('biometric/login', [BiometricAuthController::class, 'login'])
     ->middleware('throttle:6,1');
 
+// Signed in but NOT necessarily verified. These are the only protected
+// endpoints an unverified user can call: who am I, sign out, resend the
+// verification email and poll whether it has been verified yet. Everything
+// else sits behind 'verified.api' (403, code=email_unverified).
+Route::middleware(['auth:sanctum', 'mobile.idempotent'])->group(function () {
+    Route::get('me', [AuthController::class, 'me']);
+    Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('email/verification-notification', [AuthController::class, 'resendVerification'])
+        ->middleware('throttle:6,1');
+    Route::get('email/verification-status', [AuthController::class, 'verificationStatus']);
+});
+
 // Every route name in this group gets an 'api.' prefix — Route::apiResource()
 // auto-generates names (plans.index, incomes.index, etc.) using the exact
 // same convention as the web app's own Route::resource() calls, which
@@ -77,11 +90,10 @@ Route::post('biometric/login', [BiometricAuthController::class, 'login'])
 // fixing that collision for all ~20 affected modules at once and
 // preventing it from ever recurring for any route added to this group
 // in the future.
-Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(function () {
+Route::middleware(['auth:sanctum', 'verified.api', 'mobile.idempotent'])->name('api.')->group(function () {
     Route::get('support/attachments/{attachment}', [SupportAttachmentController::class, 'download'])
         ->where('attachment', '[^/]+')
         ->name('support.attachment.download');
-    Route::get('me', [AuthController::class, 'me']);
 
     // Biometric enrolment stores only a revocable device credential hash.
     // Raw fingerprint/face data never leaves the phone.
@@ -122,7 +134,6 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
         ->whereNumber('user')
         ->whereNumber('account')
         ->name('admin.social-media.accounts.destroy');
-    Route::post('logout', [AuthController::class, 'logout']);
     Route::get('privacy', [\App\Http\Controllers\Api\PrivacyController::class, 'index']);
     Route::post('privacy/reports', [\App\Http\Controllers\Api\PrivacyController::class, 'requestReport']);
     Route::delete('privacy/account', [\App\Http\Controllers\Api\PrivacyController::class, 'scheduleDeletion']);
@@ -483,7 +494,7 @@ Route::middleware(['auth:sanctum', 'mobile.idempotent'])->name('api.')->group(fu
 
 require __DIR__.'/growth_api.php';
 
-Route::middleware('auth:sanctum')->get(
+Route::middleware(['auth:sanctum', 'verified.api'])->get(
     'organization/access-context',
     \App\Http\Controllers\Api\OrganizationAccessController::class
 );

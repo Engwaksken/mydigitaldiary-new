@@ -68,6 +68,14 @@ class OtpVerificationController extends Controller
         $otp->update(['consumed_at' => now()]);
 
         $user = User::findOrFail($userId);
+
+        // The code was emailed to $user->email, so entering it proves the
+        // person controls that mailbox — the same proof the verification link
+        // gives. It is email (never SMS) only: LoginOtpNotification::via()
+        // returns ['mail']. If an SMS channel is ever added, this must only
+        // run for codes delivered by email.
+        $user->markEmailVerifiedByOtp();
+
         Auth::login($user, (bool) session('otp.remember', false));
 
         // Clear temporary OTP throttles after a successful verification so a

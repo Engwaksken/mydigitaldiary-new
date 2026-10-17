@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\DailyFoodJournalController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth'])->group(function (): void {
+Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('/daily-food-journal', function () {
         return redirect()->route('diet-logs.index', [
             'diet_tab' => 'today',

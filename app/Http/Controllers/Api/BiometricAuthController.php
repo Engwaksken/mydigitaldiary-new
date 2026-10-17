@@ -115,6 +115,7 @@ class BiometricAuthController extends Controller
 
         return response()->json([
             'token' => $token,
+            'email_verified' => $user->hasVerifiedEmail(),
             'user' => $this->userPayload($user),
         ]);
     }
@@ -157,6 +158,7 @@ class BiometricAuthController extends Controller
             'subscription_status' => $user->subscription_status,
             'has_active_access' => $user->hasActiveAccess(),
             'email_verified' => ! is_null($user->email_verified_at),
+            'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'alarms_muted' => (bool) $user->alarms_muted,
             'onboarding_completed' => ! is_null($user->onboarding_completed_at),
             'onboarding_focuses' => $user->onboarding_focuses ?? [],

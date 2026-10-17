@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'mobile.idempotent'])
+Route::middleware(['auth:sanctum', 'verified.api', 'mobile.idempotent'])
     ->prefix('growth')
     ->name('api.growth.')
     ->group(function (): void {

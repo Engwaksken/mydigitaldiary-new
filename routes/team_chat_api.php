@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\TeamChatController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')
+Route::middleware(['auth:sanctum', 'verified.api'])
     ->prefix('team-chat')
     ->group(function (): void {
         Route::get('/conversations', [TeamChatController::class, 'conversations']);

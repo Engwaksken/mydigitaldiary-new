@@ -7,7 +7,7 @@ use App\Http\Controllers\SocialMediaPlannerController;
 use App\Http\Controllers\Api\EngagementController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->group(function (): void {
+Route::middleware(['auth:sanctum', 'verified.api'])->group(function (): void {
     // Flutter AI-assisted forms, including Spiritual Growth.
     Route::post('ai/form-assist', [AiFormAssistController::class, 'generate']);
 

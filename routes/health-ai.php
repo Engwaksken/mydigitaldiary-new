@@ -7,7 +7,7 @@ use App\Http\Controllers\WellbeingAiAdvisorController;
 use App\Http\Controllers\WellbeingGoalController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/health-profile', [HealthProfileController::class, 'update'])
         ->middleware('throttle:30,1')
         ->name('health-profile.update');

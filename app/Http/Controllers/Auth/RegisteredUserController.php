@@ -73,6 +73,9 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // Straight to "check your email": nothing past this is reachable
+        // until the address is verified (every authenticated route group
+        // carries the 'verified' middleware).
+        return redirect(route('verification.notice', absolute: false));
     }
 }

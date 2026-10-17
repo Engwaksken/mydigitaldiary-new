@@ -67,6 +67,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Account created. Please check your email to verify your address, then log in.',
+            'email_verified' => $user->hasVerifiedEmail(),
         ], 201);
     }
 
@@ -130,6 +131,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'A 6-digit code has been emailed to you.',
             'user_id' => $user->id,
+            'email_verified' => $user->hasVerifiedEmail(),
         ]);
     }
 
@@ -163,6 +165,11 @@ class AuthController extends Controller
 
         $user = User::findOrFail($request->user_id);
 
+        // The code was emailed to $user->email, so entering it proves the
+        // person controls that mailbox: the same proof the verification
+        // link gives. Count it as verification (see OtpVerificationController).
+        $user->markEmailVerifiedByOtp();
+
         // 'flutter-app' names the token so it's identifiable at
         // /admin — not that admins can see personal DATA there, but this
         // ties an active session to "logged in from the mobile app" for
@@ -173,6 +180,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
+            'email_verified' => $user->hasVerifiedEmail(),
             'user' => $this->userPayload($user),
         ]);
     }
@@ -240,6 +248,55 @@ class AuthController extends Controller
         return response()->json(['user' => $this->userPayload($request->user())]);
     }
 
+    /**
+     * POST /api/email/verification-notification — reachable while
+     * unverified (no 'verified.api'), throttled 6/min by the route.
+     */
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Email already verified.',
+                'email_verified' => true,
+            ]);
+        }
+
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (Throwable $e) {
+            Log::warning('Could not resend the mobile email verification notification.', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'We could not send a verification email right now. Please try again in a moment.',
+                'email_verified' => false,
+            ], 503);
+        }
+
+        return response()->json([
+            'message' => 'Verification link sent.',
+            'email_verified' => false,
+        ]);
+    }
+
+    /**
+     * GET /api/email/verification-status — polled by the app after the user
+     * taps the link in their email. Reachable while unverified.
+     */
+    public function verificationStatus(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'email_verified' => $user->hasVerifiedEmail(),
+            'email' => $user->email,
+        ]);
+    }
+
     private function userPayload(User $user): array
     {
         return [
@@ -255,6 +312,7 @@ class AuthController extends Controller
             'subscription_status' => $user->subscription_status,
             'has_active_access' => $user->hasActiveAccess(),
             'email_verified' => ! is_null($user->email_verified_at),
+            'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'alarms_muted' => (bool) $user->alarms_muted,
             'onboarding_completed' => ! is_null($user->onboarding_completed_at),
             'onboarding_focuses' => $user->onboarding_focuses ?? [],

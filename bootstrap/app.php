@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureApiEmailIsVerified;
 use App\Http\Middleware\EnsureIdempotentMobileWrite;
 use App\Http\Middleware\EnsureUserHasAccess;
 use App\Http\Middleware\EnsureUserIsAdmin;
@@ -27,7 +28,22 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
             'support.staff' => EnsureUserIsSupportStaff::class,
             'mobile.idempotent' => EnsureIdempotentMobileWrite::class,
+            'verified.api' => EnsureApiEmailIsVerified::class,
         ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Email verification
+        |--------------------------------------------------------------------------
+        |
+        | Every authenticated web route group carries Laravel's 'verified'
+        | middleware, and every authenticated API group carries 'verified.api'
+        | (JSON 403, code=email_unverified). Unverified web users are sent to
+        | the verification notice page.
+        | Exemptions are listed next to each route in routes/auth.php,
+        | routes/web.php and routes/api.php.
+        |
+        */
 
         /*
         |--------------------------------------------------------------------------

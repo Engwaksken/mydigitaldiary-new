@@ -101,7 +101,7 @@ class AppServiceProvider extends ServiceProvider
         // Login history is admin-only now: admins are sent to the admin report;
         // normal users are returned to their general Activity Log without exposing
         // cross-account login records.
-        Route::middleware(['web', 'auth'])->get('/login-activity', function () {
+        Route::middleware(['web', 'auth', 'verified'])->get('/login-activity', function () {
             $user = auth()->user();
             if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
                 return redirect()->route('admin.login-activities.index');
@@ -173,7 +173,7 @@ class AppServiceProvider extends ServiceProvider
             Route::post('/support/widget/send', [UserSupportController::class, 'widgetSend'])->name('support.widget.send');
         });
 
-        Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::middleware(['web', 'auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
             Route::get('/login-activities', [\App\Http\Controllers\Admin\AdminLoginActivityController::class, 'index'])->name('login-activities.index');
             Route::post('/users/{user}/restore-data', [\App\Http\Controllers\Admin\AdminUserController::class, 'restoreData'])->name('users.restore-data');
         });
@@ -186,7 +186,7 @@ class AppServiceProvider extends ServiceProvider
             Route::delete('/trash/{item}', [UserDataController::class, 'destroy'])->name('destroy');
         });
 
-        Route::middleware(['api', 'auth:sanctum'])->prefix('api')->name('api.')->group(function () {
+        Route::middleware(['api', 'auth:sanctum', 'verified.api'])->prefix('api')->name('api.')->group(function () {
             Route::get('/profile/currency', [CurrencyPreferenceController::class, 'show'])->name('profile.currency.show');
             Route::put('/profile/currency', [CurrencyPreferenceController::class, 'update'])->name('profile.currency.update');
             Route::get('/account-data/usage', [UserDataController::class, 'usage'])->name('account-data.usage');

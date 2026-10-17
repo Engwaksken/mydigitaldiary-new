@@ -277,6 +277,19 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->effectiveTranscriptionCapacityMb() * 1024 * 1024;
     }
 
+    /**
+     * A login code is only ever delivered to this account's email address
+     * (LoginOtpNotification is mail-only), so entering it correctly proves
+     * ownership of that address. Called after a successful OTP check on the
+     * web and mobile login flows.
+     */
+    public function markEmailVerifiedByOtp(): void
+    {
+        if (! $this->hasVerifiedEmail() && $this->markEmailAsVerified()) {
+            event(new \Illuminate\Auth\Events\Verified($this));
+        }
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

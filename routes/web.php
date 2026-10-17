@@ -172,7 +172,12 @@ Route::post('/webhooks/{gatewayCode}', [\App\Http\Controllers\PaymentGatewayWebh
 // defines these itself), they have to be restored explicitly — the same
 // issue as the 'login' route fixed earlier. Skipping this reintroduces a
 // RouteNotFoundException the moment anything links to route('profile.edit').
-Route::middleware(['auth'])->group(function () {
+//
+// Email verification: this group is NOT exempt from 'verified' — billing,
+// privacy, support and profile all need a verified address. The only
+// authenticated web routes an unverified user can reach are the
+// verification/logout routes in routes/auth.php and account deletion below.
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/support/attachments/{attachment}', [SupportAttachmentController::class, 'download'])
         ->where('attachment', '[^/]+')
         ->name('support.attachment.download');
@@ -252,7 +257,6 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])
         ->middleware(\App\Http\Middleware\LockOrganizationMemberEmail::class)
         ->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
@@ -287,8 +291,14 @@ Route::middleware(['auth'])->group(function () {
     // Invitees may not have a subscription, but must be authenticated; the
     // controller verifies that the current account owns or was invited to it.
     Route::get('meetings/{meeting}/join', [MeetingController::class, 'join'])
-        ->middleware('verified')
         ->name('meetings.join');
+});
+
+// Deliberately exempt from 'verified': someone who signed up with an address
+// they cannot (or do not want to) verify must still be able to delete the
+// account. Offered from the verification notice page as well as the profile.
+Route::middleware(['auth'])->group(function () {
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOrganizationMember::class])->group(function () {
