@@ -148,7 +148,7 @@
             aria-controls="pm-a11y-panel"
             class="pm-a11y-toggle"
             aria-label="Accessibility options">
-        <i class="fa-solid fa-universal-access text-xl" aria-hidden="true"></i>
+        <x-icon name="universal-access" class="text-xl" />
     </button>
 
     <div id="pm-a11y-panel"
@@ -159,13 +159,13 @@
          class="pm-a11y-panel">
         <div class="flex items-center justify-between mb-4">
             <h2 class="font-bold text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-universal-access text-[var(--brand-1)]" aria-hidden="true"></i>
+                <x-icon name="universal-access" class="text-[var(--brand-1)]" />
                 Accessibility
             </h2>
             <button type="button" onclick="pmToggleA11yPanel()"
                     class="w-11 h-11 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shrink-0"
                     aria-label="Close accessibility panel">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                <x-icon name="xmark" />
             </button>
         </div>
 
@@ -176,13 +176,13 @@
                     <button type="button" onclick="pmA11yAdjustFontScale(-1)"
                             class="w-11 h-11 rounded-lg border border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-colors shrink-0"
                             aria-label="Decrease text size">
-                        <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                        <x-icon name="minus" />
                     </button>
                     <span id="pm-a11y-font-scale-label" class="w-14 text-center text-slate-600" aria-live="polite">100%</span>
                     <button type="button" onclick="pmA11yAdjustFontScale(1)"
                             class="w-11 h-11 rounded-lg border border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-colors shrink-0"
                             aria-label="Increase text size">
-                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                        <x-icon name="plus" />
                     </button>
                 </div>
             </div>
@@ -222,11 +222,11 @@
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="pmA11yReadPage()"
                             class="flex-1 inline-flex items-center justify-center gap-2 border border-slate-300 rounded-lg px-3 py-2 text-sm hover:bg-slate-50 transition-colors">
-                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i> Read page aloud
+                        <x-icon name="volume-high" /> Read page aloud
                     </button>
                     <button type="button" onclick="pmA11yStopReading()"
                             class="w-10 h-10 rounded-lg border border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-colors" aria-label="Stop reading">
-                        <i class="fa-solid fa-stop" aria-hidden="true"></i>
+                        <x-icon name="stop" />
                     </button>
                 </div>
             </div>
@@ -235,7 +235,7 @@
                 <button type="button" onclick="pmA11yToggleShortcuts()"
                         class="w-full flex items-center justify-between text-slate-700 hover:text-slate-900">
                     <span class="font-medium">Keyboard navigation</span>
-                    <i class="fa-solid fa-chevron-down text-xs transition-transform" id="pm-a11y-shortcuts-chevron" aria-hidden="true"></i>
+                    <x-icon name="chevron-down" class="text-xs transition-transform" id="pm-a11y-shortcuts-chevron" />
                 </button>
                 <ul id="pm-a11y-shortcuts-list" hidden class="mt-2 space-y-1.5 text-xs text-slate-500">
                     <li><kbd class="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 font-mono">Tab</kbd> move to the next control</li>

@@ -10,7 +10,7 @@
     <ul {{ $attributes->merge(['class' => 'text-sm text-rose-600 space-y-1']) }} role="alert">
         @foreach ((array) $messages as $message)
             <li class="flex items-center gap-1.5">
-                <i class="fa-solid fa-circle-exclamation text-xs" aria-hidden="true"></i>
+                <x-icon name="circle-exclamation" class="text-xs" />
                 <span>{{ $message }}</span>
             </li>
         @endforeach

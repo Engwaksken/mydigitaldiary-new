@@ -15,20 +15,23 @@
     <title>{{ $siteSettings->site_name }}</title>
     {{-- Precompiled Tailwind (npm run build:guest-css), not the Play CDN script. --}}
     <link rel="stylesheet" href="{{ asset($guestCss) }}{{ $guestCssVersion ? '?v='.$guestCssVersion : '' }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    {{-- Font and icon stylesheets load without blocking first paint. --}}
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
-    <noscript>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    </noscript>
+    {{-- Self-hosted Lato (public/fonts/lato) instead of Google Fonts, and icons
+         are inline SVG (<x-icon>) instead of Font Awesome: no third-party
+         requests, and nothing swaps in after first paint to shift the layout. --}}
+    <link rel="preload" href="{{ asset('fonts/lato/lato-400-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ asset('fonts/lato/lato-700-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
     @include('partials.pwa-head')
     @include('partials.auth-styles')
 
     <style>
+        /* optional, not swap: if Lato is not ready for first paint the page
+           keeps the system font for this view rather than reflowing when it
+           lands; it is cached for the next page. */
+        @font-face { font-family: 'Lato'; font-style: normal; font-weight: 400; font-display: optional; src: url('{{ asset('fonts/lato/lato-400-latin.woff2') }}') format('woff2'); }
+        @font-face { font-family: 'Lato'; font-style: normal; font-weight: 700; font-display: optional; src: url('{{ asset('fonts/lato/lato-700-latin.woff2') }}') format('woff2'); }
+        .pm-icon-spin { animation: pm-icon-spin 1s linear infinite; }
+        @keyframes pm-icon-spin { to { transform: rotate(360deg); } }
+
         * { box-sizing: border-box; }
         html, body { margin: 0; min-height: 100%; }
         body { background: color-mix(in srgb, var(--brand-1) 6%, white 94%); }
@@ -68,7 +71,10 @@
 
         @media (max-width: 1023px) {
             .auth-page-shell { display: block; }
-            .auth-form-section { min-height: 100vh; padding: 24px 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--brand-1) 10%, white 90%) 0%, #fff 100%); }
+            /* Top-aligned, not centred: the card is about a screen tall here,
+               so when centred any change in its height (the app hint, a
+               validation error) moved the whole card and counted as layout shift. */
+            .auth-form-section { justify-content: flex-start; min-height: 100vh; padding: 24px 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--brand-1) 10%, white 90%) 0%, #fff 100%); }
         }
         @media (max-width: 640px) {
             .auth-form-section { padding: 18px 12px; }
@@ -90,7 +96,7 @@
                 @if ($authLogo)
                     <div class="guest-logo-circle"><img src="{{ $authLogo }}" width="76" height="76" decoding="async" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
                 @else
-                    <div class="guest-logo-circle"><div class="guest-logo-fallback"><i class="fa-solid fa-chart-line"></i></div></div>
+                    <div class="guest-logo-circle"><div class="guest-logo-fallback"><x-icon name="chart-line" /></div></div>
                 @endif
                 <span class="font-semibold text-lg">{{ $siteSettings->site_name }}</span>
             </div>
@@ -99,20 +105,20 @@
             <p class="text-white/75 text-sm mb-8 leading-relaxed">Keep your money, health, plans, relationships, goals and reminders organised in one place.</p>
 
             <ul class="space-y-4 text-sm text-white/85">
-                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><i class="fa-solid fa-wallet"></i></span><span class="pt-1">Keep track of income, expenses, budgets, savings and financial goals.</span></li>
-                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><i class="fa-solid fa-heart-pulse"></i></span><span class="pt-1">Record meals, exercise, sleep and your personal wellbeing.</span></li>
-                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><i class="fa-solid fa-list-check"></i></span><span class="pt-1">Plan your day, annual goals and important projects.</span></li>
-                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><i class="fa-solid fa-bell"></i></span><span class="pt-1">Receive timely reminders when something needs your attention.</span></li>
+                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><x-icon name="wallet" /></span><span class="pt-1">Keep track of income, expenses, budgets, savings and financial goals.</span></li>
+                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><x-icon name="heart-pulse" /></span><span class="pt-1">Record meals, exercise, sleep and your personal wellbeing.</span></li>
+                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><x-icon name="list-check" /></span><span class="pt-1">Plan your day, annual goals and important projects.</span></li>
+                <li class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><x-icon name="bell" /></span><span class="pt-1">Receive timely reminders when something needs your attention.</span></li>
             </ul>
 
             <div class="mt-7 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-xs text-white/80 leading-5">
-                <div class="font-semibold text-white mb-1"><i class="fa-solid fa-shield-halved mr-1"></i> Privacy-first by design</div>
+                <div class="font-semibold text-white mb-1"><x-icon name="shield-halved" class="mr-1" /> Privacy-first by design</div>
                 Your diary entries are not shared with other users by default. We do not sell private diary data for advertising, and you control which areas AI features may use.
             </div>
 
             <div class="auth-guide-callout">
                 <p class="text-white/65 text-xs mb-2">New to {{ $siteSettings->site_name }}?</p>
-                <a href="{{ route('user-guide') }}"><i class="fa-solid fa-book-open"></i> Open the User Guide <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                <a href="{{ route('user-guide') }}"><x-icon name="book-open" /> Open the User Guide <x-icon name="arrow-right" class="text-xs" /></a>
             </div>
         </div>
     </aside>
@@ -124,7 +130,7 @@
                     @if ($authLogo)
                         <div class="guest-logo-circle-sm"><img src="{{ $authLogo }}" width="62" height="62" fetchpriority="high" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
                     @else
-                        <div class="guest-logo-circle-sm"><div class="guest-logo-fallback"><i class="fa-solid fa-chart-line"></i></div></div>
+                        <div class="guest-logo-circle-sm"><div class="guest-logo-fallback"><x-icon name="chart-line" /></div></div>
                     @endif
                     <span class="auth-brand-name">{{ $siteSettings->site_name }}</span>
                 </a>
@@ -134,9 +140,9 @@
         </div>
 
         <div class="auth-footer-links" aria-label="Help links">
-            <a href="{{ route('user-guide') }}"><i class="fa-solid fa-book-open"></i> User Guide</a>
+            <a href="{{ route('user-guide') }}"><x-icon name="book-open" /> User Guide</a>
             @if (Route::has('privacy-policy'))
-                <a href="{{ route('privacy-policy') }}"><i class="fa-solid fa-shield-halved"></i> Privacy Policy</a>
+                <a href="{{ route('privacy-policy') }}"><x-icon name="shield-halved" /> Privacy Policy</a>
             @endif
         </div>
     </main>

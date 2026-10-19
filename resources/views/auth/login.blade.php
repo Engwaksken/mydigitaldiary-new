@@ -24,7 +24,7 @@
             @endif
         </div>
 
-        <x-primary-button class="w-full mt-6 justify-center gap-2"><i class="fa-solid fa-right-to-bracket text-xs" aria-hidden="true"></i> Log in</x-primary-button>
+        <x-primary-button class="w-full mt-6 justify-center gap-2"><x-icon name="right-to-bracket" class="text-xs" /> Log in</x-primary-button>
     </form>
 
     <p class="text-sm text-slate-600 text-center mt-6">

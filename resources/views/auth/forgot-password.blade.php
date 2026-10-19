@@ -9,7 +9,7 @@
 
         <x-auth-field name="email" label="Email" type="email" placeholder="you@example.com" required autofocus />
 
-        <x-primary-button class="w-full mt-6 justify-center gap-2"><i class="fa-solid fa-paper-plane text-xs" aria-hidden="true"></i> Email Reset Link</x-primary-button>
+        <x-primary-button class="w-full mt-6 justify-center gap-2"><x-icon name="paper-plane" class="text-xs" /> Email Reset Link</x-primary-button>
     </form>
 
     <p class="text-sm text-center mt-6">

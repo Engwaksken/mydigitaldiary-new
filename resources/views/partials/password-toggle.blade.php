@@ -8,6 +8,9 @@
 --}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        var eyeIcon = @js(\App\View\Icon::svg('eye', 'text-sm'));
+        var eyeSlashIcon = @js(\App\View\Icon::svg('eye-slash', 'text-sm'));
+
         document.querySelectorAll('input[type="password"]').forEach(function (input) {
             if (input.dataset.pmPasswordToggled) { return; }
             input.dataset.pmPasswordToggled = 'true';
@@ -24,14 +27,14 @@
             toggle.type = 'button';
             toggle.setAttribute('aria-label', 'Show password');
             toggle.className = 'absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600 transition-colors';
-            toggle.innerHTML = '<i class="fa-solid fa-eye text-sm" aria-hidden="true"></i>';
+            toggle.innerHTML = eyeIcon;
 
             toggle.addEventListener('click', function () {
                 var isPassword = input.type === 'password';
                 input.type = isPassword ? 'text' : 'password';
                 toggle.innerHTML = isPassword
-                    ? '<i class="fa-solid fa-eye-slash text-sm" aria-hidden="true"></i>'
-                    : '<i class="fa-solid fa-eye text-sm" aria-hidden="true"></i>';
+                    ? eyeSlashIcon
+                    : eyeIcon;
                 toggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
             });
 

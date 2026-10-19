@@ -76,7 +76,7 @@
 
         <div class="flex justify-end mt-6">
             <x-primary-button class="gap-2" id="otpVerifyButton">
-                <i class="fa-solid fa-check text-xs" aria-hidden="true"></i>
+                <x-icon name="check" class="text-xs" />
                 Verify &amp; Sign In
             </x-primary-button>
         </div>
@@ -112,7 +112,7 @@
 
                 button.disabled = true;
                 button.dataset.originalHtml = button.innerHTML;
-                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs" aria-hidden="true"></i> Verifying...';
+                button.innerHTML = @js(\App\View\Icon::svg('spinner', 'text-xs pm-icon-spin')) + ' Verifying...';
             });
         });
     </script>

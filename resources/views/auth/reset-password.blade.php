@@ -21,6 +21,6 @@
             <x-auth-field name="password_confirmation" label="Confirm New Password" type="password" placeholder="Type it again" required autocomplete="new-password" />
         </div>
 
-        <x-primary-button class="w-full mt-6 justify-center gap-2"><i class="fa-solid fa-key text-xs" aria-hidden="true"></i> Reset Password</x-primary-button>
+        <x-primary-button class="w-full mt-6 justify-center gap-2"><x-icon name="key" class="text-xs" /> Reset Password</x-primary-button>
     </form>
 </x-guest-layout>

@@ -36,7 +36,7 @@
             <x-input-error :messages="$errors->get('data_consent')" class="mt-2" />
         </div>
 
-        <x-primary-button class="w-full mt-6 justify-center gap-2"><i class="fa-solid fa-user-plus text-xs" aria-hidden="true"></i> Register</x-primary-button>
+        <x-primary-button class="w-full mt-6 justify-center gap-2"><x-icon name="user-plus" class="text-xs" /> Register</x-primary-button>
     </form>
 
     <p class="text-sm text-slate-600 text-center mt-6">

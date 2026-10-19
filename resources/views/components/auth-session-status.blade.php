@@ -3,7 +3,7 @@
 
 @if ($status)
     <div {{ $attributes->merge(['class' => 'font-medium text-sm text-emerald-600 flex items-center gap-2']) }}>
-        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        <x-icon name="circle-check" />
         <span>{{ $status }}</span>
     </div>
 @endif

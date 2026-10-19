@@ -43,11 +43,13 @@
     $attributes = $attributes->except('id');
 
     // A sensible icon by field name/type if the caller didn't pick one.
-    $resolvedIcon = $icon ?? match (true) {
-        $type === 'email' => 'fa-solid fa-envelope',
-        $type === 'password' => 'fa-solid fa-lock',
-        $name === 'name' => 'fa-solid fa-user',
-        $name === 'code' => 'fa-solid fa-shield-halved',
+    // Names are App\View\Icon names; a Font Awesome class string such as
+    // "fa-solid fa-envelope" is still accepted and reduced to its name.
+    $resolvedIcon = $icon ? preg_replace('/^.*fa-/', '', $icon) : match (true) {
+        $type === 'email' => 'envelope',
+        $type === 'password' => 'lock',
+        $name === 'name' => 'user',
+        $name === 'code' => 'shield-halved',
         default => null,
     };
 
@@ -59,7 +61,7 @@
 
     <div class="{{ $resolvedIcon ? 'auth-field-icon-wrap' : '' }}">
         @if ($resolvedIcon)
-            <span class="auth-field-icon"><i class="{{ $resolvedIcon }}" aria-hidden="true"></i></span>
+            <span class="auth-field-icon"><x-icon :name="$resolvedIcon" /></span>
         @endif
 
         {{-- A plain <input>, not a nested x-text-input call — attribute

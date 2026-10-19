@@ -26,7 +26,7 @@
         @csrf
 
         <x-primary-button class="w-full justify-center gap-2" id="verificationResendButton">
-            <i class="fa-solid fa-paper-plane text-xs" aria-hidden="true"></i>
+            <x-icon name="paper-plane" class="text-xs" />
             Resend verification email
         </x-primary-button>
     </form>
@@ -46,7 +46,7 @@
             <x-input-error :messages="$emailUpdateErrors->get('email')" id="verification-email-update-error" class="mt-2" />
 
             <x-primary-button class="w-full mt-4 justify-center gap-2">
-                <i class="fa-solid fa-envelope text-xs" aria-hidden="true"></i>
+                <x-icon name="envelope" class="text-xs" />
                 Update email and send link
             </x-primary-button>
         </form>
@@ -91,7 +91,7 @@
             form.addEventListener('submit', function () {
                 if (button.disabled) return;
                 button.disabled = true;
-                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs" aria-hidden="true"></i> Sending...';
+                button.innerHTML = @js(\App\View\Icon::svg('spinner', 'text-xs pm-icon-spin')) + ' Sending...';
             });
         });
     </script>
