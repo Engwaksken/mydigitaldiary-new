@@ -50,17 +50,18 @@
             background: #fff; border: 1px solid color-mix(in srgb, var(--brand-1) 15%, #e2e8f0 85%);
             border-radius: 18px; box-shadow: 0 12px 35px rgba(15,23,42,.07), 0 3px 10px rgba(15,23,42,.04);
         }
-        .guest-logo-circle, .guest-logo-circle-sm {
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;
-            background: #fff; border-radius: 9999px;
-        }
-        .guest-logo-circle { width: 100px; height: 100px; padding: 12px; box-shadow: 0 9px 25px rgba(15,23,42,.15); }
-        .guest-logo-circle-sm { width: 82px; height: 82px; padding: 10px; border: 1px solid #e2e8f0; box-shadow: 0 7px 20px rgba(15,23,42,.08); }
-        .guest-logo-circle img, .guest-logo-circle-sm img { width: 100%; height: 100%; display: block; object-fit: contain; filter: none !important; }
-        .guest-logo-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: inherit; color: var(--brand-1); font-size: 2rem; }
-        .auth-card-header { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 30px 24px 24px; background: #fff; border-bottom: 1px solid #f1f5f9; }
-        .auth-brand-link { display: flex; flex-direction: column; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
-        .auth-brand-name { margin: 0; color: var(--brand-1); font-size: 1.1rem; font-weight: 700; line-height: 1.3; text-align: center; }
+        /* The logo is a standalone mark, so on the white card it sits bare
+           beside the name as one lockup. On the brand-coloured panel its
+           green would disappear, so there it sits on a white app-icon tile
+           (matching the installed PWA icon) rather than in a circle. */
+        .guest-brand-tile, .guest-brand-mark { display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+        .guest-brand-tile { width: 56px; height: 56px; padding: 5px; background: #fff; border-radius: 14px; box-shadow: 0 6px 18px rgba(15,23,42,.18); }
+        .guest-brand-mark { width: 48px; height: 48px; }
+        .guest-brand-tile img, .guest-brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; filter: none !important; }
+        .guest-logo-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--brand-1); font-size: 1.6rem; }
+        .auth-card-header { display: flex; justify-content: center; padding: 22px 24px 18px; background: #fff; border-bottom: 1px solid #f1f5f9; }
+        .auth-brand-link { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+        .auth-brand-name { margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
         .auth-card-content { padding: 30px 26px; background: #fff; }
         .auth-footer-links { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 18px; font-size: .8125rem; color: #64748b; }
         .auth-footer-links a { display: inline-flex; align-items: center; gap: 6px; color: #64748b; text-decoration: none; }
@@ -79,9 +80,9 @@
         @media (max-width: 640px) {
             .auth-form-section { padding: 18px 12px; }
             .auth-card-wrapper { border-radius: 16px; }
-            .auth-card-header { padding: 24px 18px 20px; }
+            .auth-card-header { padding: 18px 18px 16px; }
             .auth-card-content { padding: 24px 20px; }
-            .guest-logo-circle-sm { width: 72px; height: 72px; padding: 8px; }
+            .guest-brand-mark { width: 44px; height: 44px; }
         }
     </style>
 </head>
@@ -92,13 +93,13 @@
 <div class="auth-page-shell">
     <aside class="hidden lg:flex lg:w-2/5 auth-side text-white flex-col justify-center px-12 py-16">
         <div class="auth-side-inner">
-            <div class="flex flex-col items-center gap-3 mb-10 text-center">
+            <div class="flex items-center gap-4 mb-10">
                 @if ($authLogo)
-                    <div class="guest-logo-circle"><img src="{{ $authLogo }}" width="76" height="76" decoding="async" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
+                    <div class="guest-brand-tile"><img src="{{ $authLogo }}" width="46" height="46" decoding="async" onerror="this.closest('.guest-brand-tile, .guest-brand-mark')?.classList.add('logo-load-error'); this.style.display='none';" alt=""></div>
                 @else
-                    <div class="guest-logo-circle"><div class="guest-logo-fallback"><x-icon name="chart-line" /></div></div>
+                    <div class="guest-brand-tile"><div class="guest-logo-fallback"><x-icon name="chart-line" /></div></div>
                 @endif
-                <span class="font-semibold text-lg">{{ $siteSettings->site_name }}</span>
+                <span class="text-xl font-bold tracking-tight">{{ $siteSettings->site_name }}</span>
             </div>
 
             <h1 class="text-2xl font-semibold leading-snug mb-4">One place for the parts of life you're already keeping track of.</h1>
@@ -126,11 +127,11 @@
     <main class="auth-form-section lg:w-3/5">
         <div class="auth-card-wrapper">
             <div class="auth-card-header">
-                <a href="/" class="auth-brand-link" aria-label="{{ $siteSettings->site_name }}">
+                <a href="/" class="auth-brand-link">
                     @if ($authLogo)
-                        <div class="guest-logo-circle-sm"><img src="{{ $authLogo }}" width="62" height="62" fetchpriority="high" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
+                        <div class="guest-brand-mark"><img src="{{ $authLogo }}" width="48" height="48" fetchpriority="high" onerror="this.closest('.guest-brand-tile, .guest-brand-mark')?.classList.add('logo-load-error'); this.style.display='none';" alt=""></div>
                     @else
-                        <div class="guest-logo-circle-sm"><div class="guest-logo-fallback"><x-icon name="chart-line" /></div></div>
+                        <div class="guest-brand-mark"><div class="guest-logo-fallback"><x-icon name="chart-line" /></div></div>
                     @endif
                     <span class="auth-brand-name">{{ $siteSettings->site_name }}</span>
                 </a>
