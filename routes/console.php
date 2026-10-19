@@ -352,3 +352,14 @@ Schedule::command('debts:send-reminders --limit=200')
 Schedule::command('savings:send-reminders --limit=200')
     ->hourly()
     ->withoutOverlapping(15);
+
+/*
+|--------------------------------------------------------------------------
+| AI guardrail evaluation
+|--------------------------------------------------------------------------
+| Sends known prompt-injection attacks through the configured provider and
+| logs whether the guardrails held (app/Console/Commands/EvaluateAiGuardrails).
+*/
+Schedule::command('ai:evaluate-guardrails')
+    ->weeklyOn(1, '06:30')
+    ->withoutOverlapping(10);

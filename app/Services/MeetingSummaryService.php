@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\Ai\AiTextFormatter;
+use App\Services\Ai\PromptGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -51,6 +52,10 @@ class MeetingSummaryService
 
     private function buildPrompt(string $transcript): string
     {
+        // Transcripts are other people's speech, so they are fenced as data.
+        $rule = PromptGuard::RULE;
+        $transcript = PromptGuard::data('transcript', $transcript);
+
         return <<<PROMPT
 You are summarizing a meeting transcript. Read it carefully and respond with
 ONLY a single JSON object (no markdown code fences, no commentary before or
@@ -68,6 +73,8 @@ actually states one — use null rather than guessing. If a section has
 nothing to report, use an empty array for it. Do not invent content that
 isn't supported by the transcript.
 Use a standard hyphen (-), never an en dash or em dash, in generated text.
+
+{$rule}
 
 TRANSCRIPT:
 {$transcript}
@@ -172,15 +179,16 @@ PROMPT;
         $decoded = json_decode($cleaned, true);
 
         if (! is_array($decoded)) {
-            Log::warning('Failed to parse AI summary response', ['raw' => $raw, 'cleaned' => $cleaned]);
+            // Lengths only: the raw output repeats the meeting's content.
+            Log::warning('Failed to parse AI summary response', ['raw_length' => mb_strlen($raw), 'cleaned_length' => mb_strlen($cleaned)]);
             throw new RuntimeException('The AI provider returned a response that could not be parsed as a summary. Try again.');
         }
 
-        return AiTextFormatter::normalize([
+        return PromptGuard::cleanOutput(AiTextFormatter::normalize([
             'main_points' => $decoded['main_points'] ?? [],
             'decisions' => $decoded['decisions'] ?? [],
             'action_items' => $decoded['action_items'] ?? [],
             'questions_for_followup' => $decoded['questions_for_followup'] ?? [],
-        ]);
+        ]));
     }
 }

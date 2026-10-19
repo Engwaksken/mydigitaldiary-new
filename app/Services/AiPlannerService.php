@@ -6,6 +6,7 @@ use App\Models\AiPlan;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\Ai\AiTextFormatter;
+use App\Services\Ai\PromptGuard;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -77,11 +78,13 @@ class AiPlannerService
 
     private function call(string $provider, string $apiKey, string $prompt): string
     {
-        return AiTextFormatter::normalize(match ($provider) {
+        // The snapshot includes text other people wrote (calendar invites,
+        // transcripts, copied meetings), so the saved plan is cleaned too.
+        return PromptGuard::cleanOutput(AiTextFormatter::normalize(match ($provider) {
             'anthropic' => $this->callAnthropic($apiKey, $prompt),
             'openai' => $this->callOpenAi($apiKey, $prompt),
             default => $this->callCustomProvider($provider, $apiKey, $prompt),
-        });
+        }));
     }
 
     /**
@@ -120,6 +123,8 @@ class AiPlannerService
         $snapshot = $this->snapshotService->build($user, $now);
         $today = $now->format('l, F j, Y');
         $customInstruction = trim((string) $customPrompt);
+        $rule = PromptGuard::RULE;
+        $snapshotBlock = PromptGuard::data('snapshot', $this->snapshotService->toJson($snapshot));
         $customInstruction = $customInstruction !== ''
             ? "\nUSER REQUEST (follow this as the primary planning instruction while staying grounded in the snapshot):\n{$customInstruction}\n"
             : '';
@@ -158,9 +163,11 @@ Markdown renderer, so any Markdown symbols would show up literally as
 clutter rather than formatting.
 Use a standard hyphen (-), never an en dash or em dash, in your response.
 
+{$rule}
+
 {$customInstruction}
 SNAPSHOT:
-{$this->snapshotService->toJson($snapshot)}
+{$snapshotBlock}
 PROMPT;
     }
 

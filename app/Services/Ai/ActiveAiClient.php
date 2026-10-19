@@ -84,6 +84,8 @@ class ActiveAiClient
     {
         $cfg = $this->configuration($user);
         $system .= "\nUse a standard hyphen (-), never an en dash or em dash, in generated text.";
+        // Every feature on this client gets the indirect prompt-injection rule.
+        $system .= "\n\n".PromptGuard::RULE;
 
         try {
             return AiTextFormatter::normalize($this->sendJson($cfg, $system, $prompt, $maxTokens));

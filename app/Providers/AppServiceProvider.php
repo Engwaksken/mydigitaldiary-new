@@ -118,6 +118,18 @@ class AppServiceProvider extends ServiceProvider
         */
         /*
         |------------------------------------------------------------------
+        | AI request audit log
+        |------------------------------------------------------------------
+        | One line per AI provider request in storage/logs/ai-*.log, with
+        | no prompt, response or key text. See AiRequestLogger.
+        */
+        Event::listen(
+            [\Illuminate\Http\Client\Events\ResponseReceived::class, \Illuminate\Http\Client\Events\ConnectionFailed::class],
+            \App\Services\Ai\AiRequestLogger::class
+        );
+
+        /*
+        |------------------------------------------------------------------
         | Browser push follows the signed-in person
         |------------------------------------------------------------------
         | A diary's morning reminder names today's tasks. When someone signs

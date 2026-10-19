@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Services\Ai\ActiveAiClient;
+use App\Services\Ai\PromptGuard;
 use Illuminate\Support\Facades\Log;
 
 class NutritionEstimateService
@@ -52,7 +53,8 @@ SYSTEM,
                 'confidence' => in_array(($result['confidence'] ?? ''), ['low', 'medium', 'high'], true)
                     ? $result['confidence']
                     : 'medium',
-                'assumptions' => trim((string) ($result['assumptions'] ?? '')),
+                // Appended to the user's own notes, so cleaned like any saved output.
+                'assumptions' => trim((string) PromptGuard::cleanOutput((string) ($result['assumptions'] ?? ''))),
             ];
         } catch (\Throwable $e) {
             Log::warning('Diet calorie AI estimate unavailable', [

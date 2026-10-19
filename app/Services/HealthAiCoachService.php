@@ -9,6 +9,7 @@ use App\Models\SleepLog;
 use App\Models\User;
 use App\Services\Ai\ActiveAiClient;
 use App\Services\Ai\AiTextFormatter;
+use App\Services\Ai\PromptGuard;
 use Illuminate\Support\Facades\Log;
 
 class HealthAiCoachService
@@ -72,6 +73,8 @@ class HealthAiCoachService
                 ), 0, 5)),
                 'medical_note' => trim((string) ($advice['medical_note'] ?? '')),
             ];
+
+            $clean = PromptGuard::cleanOutput($clean);
 
             $profile->forceFill([
                 'sleep_advice' => $clean,
@@ -162,6 +165,8 @@ class HealthAiCoachService
                 'allergy_note' => trim((string) ($advice['allergy_note'] ?? '')),
                 'medical_note' => trim((string) ($advice['medical_note'] ?? '')),
             ];
+
+            $clean = PromptGuard::cleanOutput($clean);
 
             $profile->forceFill([
                 'diet_advice' => $clean,

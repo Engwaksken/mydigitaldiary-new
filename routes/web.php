@@ -93,6 +93,10 @@ Route::get('/pwa-icons/{version}/{variant}.png', [PwaController::class, 'icon'])
     ->name('pwa.icon');
 Route::get('/sw.js', [PwaController::class, 'serviceWorker'])->name('pwa.service-worker');
 
+// Content-Security-Policy violation reports (see App\Http\Middleware\SecurityHeaders).
+Route::post('/csp-report', \App\Http\Controllers\CspReportController::class)
+    ->middleware('throttle:60,1')->name('csp.report');
+
 // Public — reachable without an account, since it's linked from the
 // registration consent checkbox.
 Route::get('/privacy-policy', [PrivacyPolicyController::class, 'show'])->name('privacy-policy');
@@ -249,10 +253,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // User support chat remains available even when subscription access is limited.
     Route::get('/support', [SupportController::class, 'index'])->name('support.index');
-    Route::post('/support/send', [SupportController::class, 'send'])->name('support.send');
+    Route::post('/support/send', [SupportController::class, 'send'])->middleware('throttle:20,1')->name('support.send');
     Route::post('/support/end', [SupportController::class, 'end'])->name('support.end');
     Route::get('/support/widget/history', [SupportController::class, 'widgetHistory'])->name('support.widget.history');
-    Route::post('/support/widget/send', [SupportController::class, 'widgetSend'])->name('support.widget.send');
+    Route::post('/support/widget/send', [SupportController::class, 'widgetSend'])->middleware('throttle:20,1')->name('support.widget.send');
 
     // Notification centre is available even if a subscription has expired.
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -313,7 +317,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::get('/getting-started', [\App\Http\Controllers\OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('/getting-started', [\App\Http\Controllers\OnboardingController::class, 'store'])->name('onboarding.store');
     Route::get('/dashboard', DashboardController::class . '@index')->name('dashboard');
-    Route::post('/dashboard/today-insight/refresh', [DashboardController::class, 'refreshTodayInsight'])->name('dashboard.today-insight.refresh');
+    Route::post('/dashboard/today-insight/refresh', [DashboardController::class, 'refreshTodayInsight'])->middleware('throttle:5,1')->name('dashboard.today-insight.refresh');
     Route::get('/activity', DashboardController::class . '@activity')->name('activity');
     Route::get('wellbeing/steps', [\App\Http\Controllers\DailyStepController::class, 'show'])->name('wellbeing.steps');
     Route::get('wellbeing/steps/live', [\App\Http\Controllers\DailyStepController::class, 'live'])->name('wellbeing.steps.live');
@@ -592,7 +596,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
         ->name('api-credentials.activate');
 
     Route::get('ai-plans', [AiPlanController::class, 'index'])->name('ai-plans.index');
-    Route::post('ai-plans', [AiPlanController::class, 'store'])->name('ai-plans.store');
+    Route::post('ai-plans', [AiPlanController::class, 'store'])->middleware('throttle:5,1')->name('ai-plans.store');
     Route::get('ai-plans/{aiPlan}/pdf', [AiPlanController::class, 'downloadPdf'])->name('ai-plans.pdf');
     Route::delete('ai-plans/bulk-destroy', [AiPlanController::class, 'bulkDestroy'])->name('ai-plans.bulk-destroy');
     Route::delete('ai-plans/{aiPlan}', [AiPlanController::class, 'destroy'])->name('ai-plans.destroy');

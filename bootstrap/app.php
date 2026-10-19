@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureIdempotentMobileWrite;
 use App\Http\Middleware\EnsureUserHasAccess;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsSupportStaff;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -61,7 +62,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'webhooks/iotec',
             'webhooks/iotec/subscriptions',
+            // Browsers post CSP reports with no session or token.
+            'csp-report',
         ]);
+
+        // Framing, referrer, device-permission and CSP headers on every
+        // response (app/Http/Middleware/SecurityHeaders.php).
+        $middleware->append(SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

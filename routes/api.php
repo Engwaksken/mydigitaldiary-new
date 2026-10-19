@@ -289,7 +289,7 @@ Route::middleware(['auth:sanctum', 'verified.api', 'mobile.idempotent'])->name('
     Route::post('budgets/{id}/expense-status', [BudgetController::class, 'setExpenseStatus'])
         ->whereNumber('id')
         ->name('budgets.expense-status');
-    Route::post('dashboard/today-insight/refresh', [DashboardController::class, 'refreshTodayInsight'])->name('dashboard.today-insight.refresh');
+    Route::post('dashboard/today-insight/refresh', [DashboardController::class, 'refreshTodayInsight'])->middleware('throttle:5,1')->name('dashboard.today-insight.refresh');
 
     // These literal routes must precede the wellbeing apiResource below,
     // otherwise its /wellbeing/{id} route treats "steps" as a record ID.
@@ -437,7 +437,7 @@ Route::middleware(['auth:sanctum', 'verified.api', 'mobile.idempotent'])->name('
 
     // AI Planner
     Route::get('ai-plans', [\App\Http\Controllers\Api\AiPlanController::class, 'index']);
-    Route::post('ai-plans', [\App\Http\Controllers\Api\AiPlanController::class, 'store']);
+    Route::post('ai-plans', [\App\Http\Controllers\Api\AiPlanController::class, 'store'])->middleware('throttle:5,1');
     Route::delete('ai-plans/{aiPlan}', [\App\Http\Controllers\Api\AiPlanController::class, 'destroy']);
 
     // Daily Engagement / Retention

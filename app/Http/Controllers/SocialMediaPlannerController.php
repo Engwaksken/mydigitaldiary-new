@@ -126,6 +126,13 @@ class SocialMediaPlannerController extends Controller
          * not yet registered the global AI helper route.
          */
         if ($request->boolean('_ai_generate')) {
+            if (\App\Services\Ai\AiRateLimit::exceeded('social-draft', $request->user()->id, 15)) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Too many AI drafts in a short time. Please wait a minute and try again.',
+                ], 429);
+            }
+
             $validated = $request->validate([
                 'title' => ['required', 'string', 'max:500'],
                 'platforms' => ['nullable', 'array'],

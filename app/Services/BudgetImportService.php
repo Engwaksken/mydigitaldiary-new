@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Services\Ai\ActiveAiClient;
+use App\Services\Ai\PromptGuard;
 use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use RuntimeException;
@@ -47,8 +48,10 @@ Valid period values are weekly, monthly, annually. Use monthly when the period i
 Use null when unknown and never invent an amount that is not supported by the source.
 SYS;
 
-        $prompt = "Filename: {$file->getClientOriginalName()}\nMIME: {$file->getMimeType()}\n\nSource data:\n"
-            . json_encode($source, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        // The file name and contents are both untrusted, so both are fenced.
+        $prompt = 'Filename: '.PromptGuard::data('filename', $file->getClientOriginalName())
+            . "\nMIME: {$file->getMimeType()}\n\nSource data:\n"
+            . PromptGuard::data('document', (string) json_encode($source, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
 
         $result = $this->ai->json($system, $prompt);
         $items = array_values(array_filter($result['items'] ?? [], 'is_array'));

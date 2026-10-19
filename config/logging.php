@@ -73,6 +73,23 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // CSP violation reports (App\Http\Controllers\CspReportController).
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => 30,
+        ],
+
+        // One line per AI provider request, without prompt or response text
+        // (App\Services\Ai\AiRequestLogger).
+        'ai' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/ai.log'),
+            'level' => 'info',
+            'days' => 30,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

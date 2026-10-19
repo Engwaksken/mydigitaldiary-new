@@ -9,5 +9,5 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::post(
         '/ai/form-assist',
         [AiFormAssistController::class, 'generate']
-    )->name('ai.form-assist');
+    )->middleware('throttle:15,1')->name('ai.form-assist');
 });

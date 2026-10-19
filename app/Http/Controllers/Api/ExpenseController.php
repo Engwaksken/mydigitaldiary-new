@@ -254,6 +254,12 @@ class ExpenseController extends ApiCrudController
 
     private function extractReceipt(Request $request): JsonResponse
     {
+        if (\App\Services\Ai\AiRateLimit::exceeded('receipt', $request->user()->id, 10)) {
+            return response()->json([
+                'message' => 'Too many receipt scans in a short time. Please wait a minute and try again.',
+            ], 429);
+        }
+
         $request->validate([
             'receipt_file' => 'required|file|max:12288|mimes:pdf,jpg,jpeg,png,webp',
         ]);
