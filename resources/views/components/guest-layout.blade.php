@@ -3,17 +3,28 @@
 <html lang="en">
 @php
     $siteSettings = $siteSettings ?? \App\Models\SiteSetting::current();
-    $authLogo = $siteSettings->logoDataUri() ?: $siteSettings->logoUrl();
+    // The resized, cached 192px PWA icon rather than logoDataUri(): inlining
+    // the full uploaded PNG as base64 (twice) made this page ~1MB of HTML.
+    $authLogo = $siteSettings->logo_path ? app(\App\Services\PwaIconService::class)->url('icon-192') : null;
+    $guestCss = 'css/guest-tailwind.css';
+    $guestCssVersion = @filemtime(public_path($guestCss)) ?: null;
 @endphp
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $siteSettings->site_name }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    {{-- Precompiled Tailwind (npm run build:guest-css), not the Play CDN script. --}}
+    <link rel="stylesheet" href="{{ asset($guestCss) }}{{ $guestCssVersion ? '?v='.$guestCssVersion : '' }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    {{-- Font and icon stylesheets load without blocking first paint. --}}
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    </noscript>
     @include('partials.pwa-head')
     @include('partials.auth-styles')
 
@@ -77,7 +88,7 @@
         <div class="auth-side-inner">
             <div class="flex flex-col items-center gap-3 mb-10 text-center">
                 @if ($authLogo)
-                    <div class="guest-logo-circle"><img src="{{ $authLogo }}" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
+                    <div class="guest-logo-circle"><img src="{{ $authLogo }}" width="76" height="76" decoding="async" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
                 @else
                     <div class="guest-logo-circle"><div class="guest-logo-fallback"><i class="fa-solid fa-chart-line"></i></div></div>
                 @endif
@@ -111,7 +122,7 @@
             <div class="auth-card-header">
                 <a href="/" class="auth-brand-link" aria-label="{{ $siteSettings->site_name }}">
                     @if ($authLogo)
-                        <div class="guest-logo-circle-sm"><img src="{{ $authLogo }}" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
+                        <div class="guest-logo-circle-sm"><img src="{{ $authLogo }}" width="62" height="62" fetchpriority="high" onerror="this.closest('.guest-logo-circle, .guest-logo-circle-sm')?.classList.add('logo-load-error'); this.style.display='none';" alt="{{ $siteSettings->site_name }} logo"></div>
                     @else
                         <div class="guest-logo-circle-sm"><div class="guest-logo-fallback"><i class="fa-solid fa-chart-line"></i></div></div>
                     @endif
