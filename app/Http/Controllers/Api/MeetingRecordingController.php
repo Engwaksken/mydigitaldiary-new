@@ -94,12 +94,8 @@ class MeetingRecordingController extends Controller
         ]);
 
         $audioFile = $request->file('audio');
-        $this->validateRecordingFile(
-            $audioFile,
-            $request->user()->effectiveTranscriptionCapacityBytes(),
-            $request->user()->availableExtraRecordingQuotaMinutes() > 0
-        );
-        $audioPath = $this->storeRecordingFile($audioFile);
+        $this->validateRecordingFile($audioFile);
+        $audioPath = $this->storeRecordingFile($audioFile, $request->user());
 
         $recording->update([
             'status' => 'completed',
@@ -516,27 +512,17 @@ class MeetingRecordingController extends Controller
      * can use .bin when Android sends application/octet-stream, and OpenAI
      * rejects an otherwise valid recording because the multipart filename has
      * an unsupported extension. */
-    private function storeRecordingFile(\Illuminate\Http\UploadedFile $file): string
+    private function storeRecordingFile(\Illuminate\Http\UploadedFile $file, User $user): string
     {
-        $extension = strtolower((string) $file->getClientOriginalExtension());
-        if ($extension === '') {
-            $extension = strtolower((string) $file->extension());
-        }
-        if ($extension === '') {
-            $extension = 'webm';
-        }
-
-        $safeExtension = preg_replace('/[^a-z0-9]+/', '', $extension) ?: 'webm';
-        $name = (string) \Illuminate\Support\Str::uuid() . '.' . $safeExtension;
-
-        return $file->storeAs('meeting-recordings', $name, 'public');
+        return app(\App\Services\MeetingRecordingAudioCompressor::class)->store(
+            $file,
+            $user->effectiveTranscriptionCapacityBytes(),
+            $user->availableExtraRecordingQuotaMinutes() > 0
+        );
     }
 
-    private function validateRecordingFile(\Illuminate\Http\UploadedFile $file, int $capacityBytes, bool $hasTopUp = false): void
+    private function validateRecordingFile(\Illuminate\Http\UploadedFile $file): void
     {
-        if (! $hasTopUp && ($file->getSize() ?? 0) > $capacityBytes) {
-            abort(422, 'The recording exceeds your transcription capacity.');
-        }
         if (($file->getSize() ?? 0) < 1024) {
             abort(422, 'The recording is empty or too short. Record at least a few seconds and try again.');
         }

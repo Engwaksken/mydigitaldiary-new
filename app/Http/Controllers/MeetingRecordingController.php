@@ -129,15 +129,12 @@ class MeetingRecordingController extends Controller
         $audioFile =
             $request->file('audio');
 
-        $this->validateRecordingFile(
-            $audioFile,
-            $request->user()->effectiveTranscriptionCapacityBytes(),
-            $request->user()->availableExtraRecordingQuotaMinutes() > 0
-        );
+        $this->validateRecordingFile($audioFile);
 
         $audioPath =
             $this->storeRecordingFile(
-                $audioFile
+                $audioFile,
+                $request->user()
             );
 
         $recording =
@@ -311,15 +308,12 @@ class MeetingRecordingController extends Controller
             }
         }
 
-        $this->validateRecordingFile(
-            $audioFile,
-            $request->user()->effectiveTranscriptionCapacityBytes(),
-            $request->user()->availableExtraRecordingQuotaMinutes() > 0
-        );
+        $this->validateRecordingFile($audioFile);
 
         $audioPath =
             $this->storeRecordingFile(
-                $audioFile
+                $audioFile,
+                $request->user()
             );
 
         if (
@@ -1902,100 +1896,17 @@ class MeetingRecordingController extends Controller
         );
     }
 
-    private function storeRecordingFile(
-        UploadedFile $file
-    ): string {
-        $extension =
-            strtolower(
-                (string)
-                $file
-                    ->getClientOriginalExtension()
-            );
-
-        if (
-            $extension === ''
-        ) {
-            $extension =
-                strtolower(
-                    (string)
-                    $file->extension()
-                );
-        }
-
-        if (
-            $extension === ''
-            || $extension === 'bin'
-        ) {
-            $mime =
-                strtolower(
-                    (string)
-                    $file->getMimeType()
-                );
-
-            $extension =
-                match (true) {
-                    str_contains(
-                        $mime,
-                        'webm'
-                    ) =>
-                        'webm',
-
-                    str_contains(
-                        $mime,
-                        'ogg'
-                    ) =>
-                        'ogg',
-
-                    str_contains(
-                        $mime,
-                        'mpeg'
-                    ) =>
-                        'mp3',
-
-                    str_contains(
-                        $mime,
-                        'wav'
-                    ) =>
-                        'wav',
-
-                    str_contains(
-                        $mime,
-                        'mp4'
-                    ) =>
-                        'm4a',
-
-                    default =>
-                        'webm',
-                };
-        }
-
-        $safeExtension =
-            preg_replace(
-                '/[^a-z0-9]+/',
-                '',
-                $extension
-            ) ?: 'webm';
-
-        $name =
-            (string) Str::uuid()
-            . '.'
-            . $safeExtension;
-
-        return $file->storeAs(
-            'meeting-recordings',
-            $name,
-            'public'
+    private function storeRecordingFile(UploadedFile $file, User $user): string
+    {
+        return app(\App\Services\MeetingRecordingAudioCompressor::class)->store(
+            $file,
+            $user->effectiveTranscriptionCapacityBytes(),
+            $user->availableExtraRecordingQuotaMinutes() > 0
         );
+
     }
 
-    private function validateRecordingFile(
-        UploadedFile $file,
-        int $capacityBytes,
-        bool $hasTopUp = false
-    ): void {
-        if (! $hasTopUp && ($file->getSize() ?? 0) > $capacityBytes) {
-            abort(422, 'The recording exceeds your transcription capacity.');
-        }
+    private function validateRecordingFile(UploadedFile $file): void {
         if (
             ($file->getSize() ?? 0)
             < 1024
