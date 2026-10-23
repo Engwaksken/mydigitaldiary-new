@@ -679,6 +679,15 @@
                             <td class="pm-dt-num">{!! $pmRenderCell($pmAmountField, $item, $rowValues) !!}</td>
                         @endif
                         <td class="pm-dt-actions">
+                            @if ($routeName === 'meetings' && $pmIsOwner)
+                                <a href="{{ route('meetings.notes', $item->id) }}#record-meeting"
+                                   class="pm-dt-icon-btn"
+                                   title="Record meeting"
+                                   aria-label="Record meeting: {{ $rowLabel }}">
+                                    <i class="fa-solid fa-microphone text-xs" aria-hidden="true"></i>
+                                    <span class="sr-only">Record meeting</span>
+                                </a>
+                            @endif
                             @if ($pmIsOwner && auth()->user()->hasActiveAccess())
                                 <button type="button"
                                         onclick='openCrudEditModal({{ json_encode(route($routeName . '.update', $item->id)) }}, {{ json_encode($rowValues) }})'
@@ -700,13 +709,6 @@
                                                 class="pm-dt-menu-item">
                                             <i class="fa-solid fa-eye" aria-hidden="true"></i> View details
                                         </button>
-                                        @if ($routeName === 'meetings' && $pmIsOwner)
-                                            <a href="{{ route('meetings.notes', $item->id) }}#record-meeting"
-                                               class="pm-dt-menu-item"
-                                               title="Record meeting">
-                                                <i class="fa-solid fa-microphone" aria-hidden="true"></i> Record meeting
-                                            </a>
-                                        @endif
                                         @if ($pmIsOwner)
                                             @if (auth()->user()->hasActiveAccess())
                                                 <button type="button"
