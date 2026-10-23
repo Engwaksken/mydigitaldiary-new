@@ -1052,7 +1052,12 @@ class SubscriptionController extends Controller
 
     public function downloadReceipt(Request $request, Payment $payment)
     {
-        abort_unless($payment->user_id === $request->user()->id, 403);
+        // Account owners can download their own receipt; administrators need
+        // access to receipts linked from the admin billing/payment screens.
+        abort_unless(
+            $payment->user_id === $request->user()->id || $request->user()->isAdmin(),
+            403
+        );
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('subscription.receipt-pdf', ['payment' => $payment])->setPaper('a4');
 
