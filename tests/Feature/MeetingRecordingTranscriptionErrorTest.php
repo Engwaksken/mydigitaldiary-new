@@ -17,6 +17,9 @@ class MeetingRecordingTranscriptionErrorTest extends TestCase
     private const USER_MESSAGE =
         'We could not transcribe this recording. Please try again with a supported audio file within your transcription capacity.';
 
+    private const TOO_LARGE_MESSAGE =
+        'The recording is still too large for the transcription service after compression. Please split it into shorter sections and try again.';
+
     private const PROVIDER_MESSAGE =
         'OpenAI transcription failed. gpt-4o-transcribe: Audio file might be corrupted or unsupported | whisper-1: 413: Maximum content size limit exceeded.';
 
@@ -28,9 +31,9 @@ class MeetingRecordingTranscriptionErrorTest extends TestCase
         $this->actingAs($user)
             ->post(route('meeting-recordings.transcribe', $recording))
             ->assertRedirect()
-            ->assertSessionHasErrors(['transcription' => self::USER_MESSAGE]);
+            ->assertSessionHasErrors(['transcription' => self::TOO_LARGE_MESSAGE]);
 
-        $this->assertSame(self::USER_MESSAGE, $recording->fresh()->transcription_error);
+        $this->assertSame(self::TOO_LARGE_MESSAGE, $recording->fresh()->transcription_error);
     }
 
     public function test_api_transcription_hides_provider_error_details(): void
@@ -41,10 +44,10 @@ class MeetingRecordingTranscriptionErrorTest extends TestCase
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/meeting-recordings/{$recording->id}/transcribe")
             ->assertUnprocessable()
-            ->assertJson(['message' => self::USER_MESSAGE])
+            ->assertJson(['message' => self::TOO_LARGE_MESSAGE])
             ->assertJsonMissing(['message' => self::PROVIDER_MESSAGE]);
 
-        $this->assertSame(self::USER_MESSAGE, $recording->fresh()->transcription_error);
+        $this->assertSame(self::TOO_LARGE_MESSAGE, $recording->fresh()->transcription_error);
     }
 
     /** @return array{User, MeetingRecording} */

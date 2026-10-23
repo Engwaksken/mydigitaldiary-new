@@ -530,6 +530,11 @@ class MeetingRecordingController extends Controller
             $rawMessage = strtolower((string) $e->getMessage());
             if (str_contains($rawMessage, 'per-meeting transcription limit')) {
                 $errorMessage = $e->getMessage();
+            } elseif (
+                str_contains($rawMessage, 'maximum content size limit exceeded')
+                || str_contains($rawMessage, '413')
+            ) {
+                $errorMessage = 'The recording is still too large for the transcription service after compression. Please split it into shorter sections and try again.';
             } elseif (str_contains($rawMessage, 'top up')) {
                 $errorMessage = 'The recording is too large. Please top up your recording quota to complete full transcription.';
             }

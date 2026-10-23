@@ -143,7 +143,11 @@ class MeetingRecordingController extends Controller
             report($e);
 
             $raw = strtolower((string) $e->getMessage());
-            $tooLarge = str_contains($raw, 'too large');
+            $tooLarge = str_contains($raw, 'too large')
+                || str_contains($raw, 'maximum content size limit exceeded')
+                || str_contains($raw, '413');
+            $providerTooLarge = str_contains($raw, 'maximum content size limit exceeded')
+                || str_contains($raw, '413');
             $meetingLimitExceeded = str_contains($raw, 'per-meeting transcription limit');
             $quotaRequired = str_contains($raw, 'requires an active subscription or valid extra recording quota');
             $unsupportedAudio = str_contains($raw, 'clipboard')
@@ -159,6 +163,9 @@ class MeetingRecordingController extends Controller
             if ($meetingLimitExceeded) {
                 $message = $e->getMessage();
                 $errorCode = 'meeting_duration_limit_exceeded';
+            } elseif ($providerTooLarge) {
+                $message = 'The recording is still too large for the transcription service after compression. Please split it into shorter sections and try again.';
+                $errorCode = 'recording_too_large';
             } elseif ($tooLarge) {
                 $message = self::TRANSCRIPTION_TOO_LARGE_MESSAGE;
                 $errorCode = 'recording_too_large';

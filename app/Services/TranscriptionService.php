@@ -48,9 +48,11 @@ class TranscriptionService
     ];
 
     /**
-     * Upload size supported for transcription: 30 MB.
+     * Keep below the transcription provider's 25 MB request limit, leaving
+     * room for multipart request overhead. A 57-minute recording may exceed
+     * this at 64 kbps, so it is re-encoded at 32 kbps before upload.
      */
-    private const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
+    private const MAX_FILE_SIZE_BYTES = 24_000_000;
 
     /**
      * Transcribe a stored meeting recording.
