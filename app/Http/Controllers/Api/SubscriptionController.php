@@ -177,6 +177,7 @@ class SubscriptionController extends Controller
                     'invoice_status' => $p->invoice?->status,
                     'created_at' => $p->created_at->toIso8601String(),
                     'receipt_download_url' => $p->status === 'completed' ? url('/subscription/receipt/' . $p->id) : null,
+                    'receipt_view_url' => $p->status === 'completed' ? url('/subscription/receipt/' . $p->id . '/view') : null,
                     'invoice_download_url' => $p->invoice ? url('/subscription/invoice/' . $p->invoice->id) : null,
                 ];
             })->values(),

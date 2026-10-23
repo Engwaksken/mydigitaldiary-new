@@ -29,7 +29,7 @@ class EnsureUserHasAccess
         'profile.avatar', 'profile.avatar.remove', 'profile.theme',
         'subscription.show', 'subscription.subscribe', 'subscription.cancel',
         'subscription.pay.card', 'subscription.pay.card.callback', 'subscription.pay.manual',
-        'subscription.invoice', 'subscription.receipt',
+        'subscription.invoice', 'subscription.receipt', 'subscription.receipt.view',
         'privacy.show', 'privacy.destroy-account', 'privacy.export.request', 'privacy.export.download',
         'help.show',
         'organization.show', 'organization.invite',

@@ -253,9 +253,14 @@
                             <td class="px-4 py-3 font-mono text-xs break-all">{{ $payment->gateway_transaction_id ?? '—' }}</td>
                             <td class="px-4 py-3 whitespace-nowrap">{{ $payment->created_at->format('Y-m-d') }}</td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <a href="{{ route('subscription.receipt', $payment->id) }}" class="text-[var(--brand-1)] hover:underline">
-                                    <i class="fa-solid fa-download" aria-hidden="true"></i>
-                                </a>
+                                <div class="inline-flex items-center justify-end gap-3">
+                                    <a href="{{ route('subscription.receipt.view', $payment->id) }}" target="_blank" rel="noopener" class="text-[var(--brand-1)] hover:underline" title="View receipt PDF">
+                                        <i class="fa-solid fa-eye" aria-hidden="true"></i><span class="sr-only">View receipt PDF</span>
+                                    </a>
+                                    <a href="{{ route('subscription.receipt', $payment->id) }}" class="text-[var(--brand-1)] hover:underline" title="Download receipt PDF">
+                                        <i class="fa-solid fa-download" aria-hidden="true"></i><span class="sr-only">Download receipt PDF</span>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     @empty

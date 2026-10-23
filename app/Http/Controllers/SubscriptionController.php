@@ -1052,16 +1052,30 @@ class SubscriptionController extends Controller
 
     public function downloadReceipt(Request $request, Payment $payment)
     {
-        // Account owners can download their own receipt; administrators need
-        // access to receipts linked from the admin billing/payment screens.
-        abort_unless(
-            $payment->user_id === $request->user()->id || $request->user()->isAdmin(),
-            403
-        );
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('subscription.receipt-pdf', ['payment' => $payment])->setPaper('a4');
+        $pdf = $this->receiptPdf($request, $payment);
 
         return $pdf->download('receipt-' . $payment->id . '.pdf');
+    }
+
+    public function viewReceipt(Request $request, Payment $payment)
+    {
+        $pdf = $this->receiptPdf($request, $payment);
+
+        return $pdf->stream('receipt-' . $payment->id . '.pdf');
+    }
+
+    private function receiptPdf(Request $request, Payment $payment)
+    {
+        // Account owners can access their own receipt; administrators can
+        // access receipts from the admin billing/payment screens.
+        abort_unless($payment->user_id === $request->user()->id || $request->user()->isAdmin(), 403);
+
+        $payment->loadMissing(['user', 'plan', 'invoice', 'transactionLogs']);
+
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('subscription.receipt-pdf', [
+            'payment' => $payment,
+            'siteSettings' => SiteSetting::current(),
+        ])->setPaper('a4');
     }
 
     public function downloadInvoice(Request $request, Invoice $invoice)

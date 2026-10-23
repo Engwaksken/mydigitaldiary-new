@@ -21,6 +21,10 @@ class SubscriptionReceiptAccessTest extends TestCase
 
         $response->assertOk();
         $this->assertStringContainsString('application/pdf', $response->headers->get('content-type'));
+
+        $viewResponse = $this->actingAs($admin)->get(route('subscription.receipt.view', $payment));
+        $viewResponse->assertOk();
+        $this->assertStringContainsString('inline', $viewResponse->headers->get('content-disposition'));
     }
 
     public function test_non_owner_non_admin_cannot_download_a_users_subscription_receipt(): void
@@ -31,6 +35,10 @@ class SubscriptionReceiptAccessTest extends TestCase
 
         $this->actingAs($otherUser)
             ->get(route('subscription.receipt', $payment))
+            ->assertForbidden();
+
+        $this->actingAs($otherUser)
+            ->get(route('subscription.receipt.view', $payment))
             ->assertForbidden();
     }
 

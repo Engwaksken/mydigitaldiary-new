@@ -1057,8 +1057,11 @@
                                                             </a>
                                                         @endif
                                                         @if ($payment->status === 'completed')
+                                                            <a href="{{ route('subscription.receipt.view', $payment->id) }}" target="_blank" rel="noopener" class="pm-dt-menu-item">
+                                                                <i class="fa-solid fa-eye" aria-hidden="true"></i> View receipt PDF
+                                                            </a>
                                                             <a href="{{ route('subscription.receipt', $payment->id) }}" class="pm-dt-menu-item">
-                                                                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Receipt
+                                                                <i class="fa-solid fa-download" aria-hidden="true"></i> Download receipt PDF
                                                             </a>
                                                         @endif
                                                         @if ($payment->status === 'pending')

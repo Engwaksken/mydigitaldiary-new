@@ -226,6 +226,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereNumber('transaction')
         ->name('subscription.pay.iotec.status');
     Route::get('/subscription/receipt/{payment}', [SubscriptionController::class, 'downloadReceipt'])->name('subscription.receipt');
+    Route::get('/subscription/receipt/{payment}/view', [SubscriptionController::class, 'viewReceipt'])->name('subscription.receipt.view');
     Route::get('/subscription/invoice/{invoice}', [SubscriptionController::class, 'downloadInvoice'])->name('subscription.invoice');
     Route::post('/subscription/pay/manual', [SubscriptionController::class, 'submitManualPayment'])->middleware(\App\Http\Middleware\OrganizationMemberBillingContext::class)
         ->name('subscription.pay.manual');
