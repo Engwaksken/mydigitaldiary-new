@@ -48,6 +48,11 @@ Schedule::command('meetings:generate-recurring')
     ->dailyAt('06:30')
     ->withoutOverlapping();
 
+// Retain transcripts and summaries, but remove successfully transcribed audio after 30 days.
+Schedule::command('meetings:purge-transcribed-audio')
+    ->dailyAt('02:30')
+    ->withoutOverlapping();
+
 /*
 |--------------------------------------------------------------------------
 | Recurring Spiritual Growth

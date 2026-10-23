@@ -4243,8 +4243,11 @@ document.addEventListener(
 
 
                 const options = {
+                    // Speech recordings do not need music-quality bitrates.
+                    // 32 kbps keeps a 60-minute recording near 14 MB, reducing
+                    // storage and upload time while preserving clear speech.
                     audioBitsPerSecond:
-                        128000
+                        32000
                 };
 
 
