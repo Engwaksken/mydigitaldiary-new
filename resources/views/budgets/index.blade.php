@@ -98,9 +98,7 @@
     </div>
 
     @if(session('success'))
-        <div class="mb-4">
-            <x-alert type="success" :message="session('success')" :dismissible="false" :autoDismiss="false" />
-        </div>
+        <x-alert type="success" :message="session('success')" class="mb-4" />
     @endif
 
     @if(session('error'))

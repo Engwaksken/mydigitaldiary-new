@@ -27,4 +27,17 @@ class FlashMessagesTest extends TestCase
             substr_count($response->getContent(), 'Plan added successfully.')
         );
     }
+
+    public function test_page_success_flash_auto_dismisses_after_five_seconds(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        $response = $this->withoutMiddleware(EnsureSubscribedOrOrganizationMember::class)
+            ->actingAs($user)
+            ->withSession(['success' => 'Plan added successfully.'])
+            ->get('/annual-plans');
+
+        $response->assertOk();
+        $response->assertSee('data-auto-dismiss="5000"', false);
+    }
 }

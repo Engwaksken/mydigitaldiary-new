@@ -124,7 +124,7 @@
 
     {{-- Flash messages --}}
     @if (session('success'))
-        <div class="mb-5"><x-alert type="success" :message="session('success')" :dismissible="false" /></div>
+        <x-alert type="success" :message="session('success')" class="mb-5" />
     @endif
 
     @if (session('warning'))

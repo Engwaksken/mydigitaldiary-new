@@ -32,10 +32,8 @@
 <div class="space-y-4" id="social-media-analytics">
     @include('social-media-planner.partials.navigation-tabs')
 
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-            {{ session('success') }}
-        </div>
+    @if (session('success'))
+        <x-alert type="success" :message="session('success')" />
     @endif
 
     @if($errors->any())

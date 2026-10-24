@@ -12,9 +12,7 @@
     </div>
 
     @if (session('success'))
-        <div class="p-4 mb-4 text-sm text-emerald-700 bg-emerald-100 rounded-lg">
-            {{ session('success') }}
-        </div>
+        <x-alert type="success" :message="session('success')" class="mb-4" />
     @endif
 
     <div class="bg-white shadow rounded-lg overflow-hidden border border-slate-200">

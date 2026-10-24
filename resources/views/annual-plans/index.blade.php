@@ -62,7 +62,7 @@
         <button type="button" onclick="openAnnualPlanModal()" class="btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium"><i class="fa-solid fa-plus mr-1"></i> Add Plan</button>
     </div>
 
-    @if(session('success'))<x-alert type="success" :message="session('success')" :dismissible="false" :autoDismiss="false" />@endif
+    @if(session('success'))<x-alert type="success" :message="session('success')" />@endif
     @if($errors->any())<x-alert type="error" :dismissible="false" :autoDismiss="false"><ul class="list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></x-alert>@endif
 
     <x-summary-strip label="Annual plans summary" :stats="[

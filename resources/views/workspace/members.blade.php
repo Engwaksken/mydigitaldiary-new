@@ -50,7 +50,7 @@
 </div>
 
 @if(session('success'))
-<div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
+<x-alert type="success" :message="session('success')" />
 @endif
 
 @if($errors->any())

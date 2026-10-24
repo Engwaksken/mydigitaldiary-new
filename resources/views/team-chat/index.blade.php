@@ -80,9 +80,7 @@
         </header>
 
         @if(session('success'))
-            <div class="mx-4 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-                {{ session('success') }}
-            </div>
+            <x-alert type="success" :message="session('success')" class="mx-4 mt-3" />
         @endif
 
         @if($errors->any())

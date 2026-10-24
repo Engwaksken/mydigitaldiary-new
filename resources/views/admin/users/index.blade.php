@@ -76,7 +76,7 @@
 @endphp
 <div class="space-y-4 max-w-7xl">
     @if(session('success'))
-        <x-alert type="success" :message="session('success')" :dismissible="false" :autoDismiss="false" />
+        <x-alert type="success" :message="session('success')" />
     @endif
 
     @if($errors->any())
