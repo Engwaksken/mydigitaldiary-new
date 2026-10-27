@@ -108,6 +108,34 @@ class MeetingsTableTest extends TestCase
         $this->assertStringContainsString('Currently active', $html);
     }
 
+    public function test_past_meeting_is_not_shown_as_happening_now_when_a_future_meeting_exists(): void
+    {
+        $user = $this->subscriber();
+        Meeting::create([
+            'user_id' => $user->id,
+            'title' => 'WITU Staff Meeting',
+            'start_at' => now()->subDays(22)->setTime(8, 0),
+            'end_at' => now()->subDays(22)->setTime(9, 0),
+            'status' => 'scheduled',
+        ]);
+        Meeting::create([
+            'user_id' => $user->id,
+            'title' => 'Incoming meeting',
+            'start_at' => now()->addHour(),
+            'end_at' => now()->addHours(2),
+            'status' => 'scheduled',
+        ]);
+
+        $html = $this->actingAs($user)->get(route('meetings.index'))->assertOk()->getContent();
+        preg_match('/<section[^>]*aria-label="Nearest meeting"[^>]*>.*?<\/section>/s', $html, $nearestSection);
+
+        $this->assertNotEmpty($nearestSection);
+        $this->assertStringContainsString('Incoming meeting', $nearestSection[0]);
+        $this->assertStringNotContainsString('WITU Staff Meeting', $nearestSection[0]);
+        $this->assertStringContainsString('Next meeting', $html);
+        $this->assertStringNotContainsString('Happening now', $html);
+    }
+
     public function test_due_reminder_for_completed_meeting_is_deactivated_without_sending(): void
     {
         $user = $this->subscriber();
