@@ -235,6 +235,18 @@ class MeetingRecordingController extends Controller
             $recording
         );
 
+        // A completed stop is final: retries must not replace its audio or
+        // start a second transcription.
+        if ($recording->status === 'completed') {
+            return response()->json([
+                'ok' => true,
+                'recording_id' => $recording->id,
+                'transcription_status' => $recording->transcription_status ?? 'pending',
+                'message' => $recording->transcription_error
+                    ?: 'This recording has already been stopped.',
+            ]);
+        }
+
         $request->validate([
             'recording' => [
                 'nullable',
@@ -311,11 +323,37 @@ class MeetingRecordingController extends Controller
 
         $this->validateRecordingFile($audioFile);
 
-        $audioPath =
-            $this->storeRecordingFile(
-                $audioFile,
-                $request->user()
-            );
+        // Claim the transcription slot before doing work so concurrent stop
+        // requests cannot both replace the audio and invoke the provider.
+        $claimed = MeetingRecording::query()
+            ->whereKey($recording->id)
+            ->where('status', '!=', 'completed')
+            ->where(function ($query) {
+                $query->whereNull('transcription_status')
+                    ->orWhereNotIn('transcription_status', ['processing', 'completed']);
+            })
+            ->update([
+                'transcription_status' => 'processing',
+                'transcription_error' => null,
+            ]);
+
+        if (! $claimed) {
+            $recording->refresh();
+
+            return response()->json([
+                'ok' => $recording->status === 'completed',
+                'recording_id' => $recording->id,
+                'transcription_status' => $recording->transcription_status ?? 'processing',
+                'message' => $recording->transcription_status === 'completed'
+                    ? 'This recording has already been transcribed.'
+                    : 'This recording is already being processed. Please wait before retrying.',
+            ], 202);
+        }
+
+        $audioPath = $this->storeRecordingFile(
+            $audioFile,
+            $request->user()
+        );
 
         if (
             $recording->audio_path
@@ -352,9 +390,54 @@ class MeetingRecordingController extends Controller
             . $recording->formattedDuration()
         );
 
+        $transcriptionStatus = 'completed';
+        $transcriptionMessage = 'Transcription completed successfully.';
+
+        try {
+            $result = app(TranscriptionService::class)->transcribe(
+                $request->user(),
+                $recording->audio_path,
+                'auto',
+                (int) $recording->duration_seconds
+            );
+
+            $recording->update([
+                'transcript' => $result['transcript'],
+                'transcript_segments' => $result['segments'],
+                'transcription_status' => 'completed',
+                'transcription_error' => null,
+            ]);
+
+            MeetingAuditLog::record(
+                $recording->meeting_id,
+                $request->user()->id,
+                'transcribed_recording'
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            $rawMessage = strtolower((string) $e->getMessage());
+            $transcriptionMessage = self::TRANSCRIPTION_FAILURE_MESSAGE;
+            if (str_contains($rawMessage, 'per-meeting transcription limit')) {
+                $transcriptionMessage = $e->getMessage();
+            } elseif (str_contains($rawMessage, 'maximum content size limit exceeded') || str_contains($rawMessage, '413')) {
+                $transcriptionMessage = 'The recording is still too large for the transcription service after compression. Please split it into shorter sections and try again.';
+            } elseif (str_contains($rawMessage, 'top up')) {
+                $transcriptionMessage = 'The recording is too large. Please top up your recording quota to complete full transcription.';
+            }
+
+            $transcriptionStatus = 'failed';
+            $recording->update([
+                'transcription_status' => 'failed',
+                'transcription_error' => $transcriptionMessage,
+            ]);
+        }
+
         return response()->json([
             'ok' => true,
             'recording_id' => $recording->id,
+            'transcription_status' => $transcriptionStatus,
+            'message' => $transcriptionMessage,
         ]);
     }
 
