@@ -105,7 +105,31 @@ class MeetingRecordingController extends Controller
 
         MeetingAuditLog::record($recording->meeting_id, $request->user()->id, 'stopped_recording', "Duration: {$recording->formattedDuration()}");
 
-        return response()->json(['data' => $this->transform($recording, $request->user())]);
+        // Start transcription as soon as the completed audio is available.
+        // TranscriptionService reserves the user's included minutes and checks
+        // their top-up balance before contacting the provider.
+        $recording->update(['transcription_status' => 'processing', 'transcription_error' => null]);
+        try {
+            $result = app(TranscriptionService::class)->transcribe(
+                $request->user(), $recording->audio_path, 'auto', (int) $recording->duration_seconds
+            );
+            $recording->update([
+                'transcript' => $result['transcript'],
+                'transcript_segments' => $result['segments'],
+                'transcription_status' => 'completed',
+            ]);
+            MeetingAuditLog::record($recording->meeting_id, $request->user()->id, 'transcribed_recording');
+        } catch (\Throwable $e) {
+            report($e);
+            $recording->update([
+                'transcription_status' => 'failed',
+                'transcription_error' => str_contains(strtolower($e->getMessage()), 'top up')
+                    ? 'Not enough transcription minutes. Top up your recording quota to proceed.'
+                    : $e->getMessage(),
+            ]);
+        }
+
+        return response()->json(['data' => $this->transform($recording->fresh(), $request->user())]);
     }
 
     public function transcribe(Request $request, MeetingRecording $recording): JsonResponse

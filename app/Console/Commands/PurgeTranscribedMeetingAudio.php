@@ -11,7 +11,7 @@ class PurgeTranscribedMeetingAudio extends Command
 {
     protected $signature = 'meetings:purge-transcribed-audio';
 
-    protected $description = 'Delete audio for successfully transcribed meetings after 30 days, retaining transcripts and summaries';
+    protected $description = 'Archive meeting audio after transcription or 14 days, retaining transcripts and activity logs';
 
     public function handle(): int
     {
@@ -20,11 +20,13 @@ class PurgeTranscribedMeetingAudio extends Command
 
         MeetingRecording::query()
             ->where('status', 'completed')
-            ->where('transcription_status', 'completed')
-            ->whereNotNull('transcript')
-            ->where('transcript', '!=', '')
             ->whereNotNull('audio_path')
-            ->where('created_at', '<=', now()->subDays(30))
+            ->where(function ($query): void {
+                $query->where(function ($completed): void {
+                    $completed->where('transcription_status', 'completed')
+                        ->whereNotNull('transcript')->where('transcript', '!=', '');
+                })->orWhere('created_at', '<=', now()->subDays(14));
+            })
             ->chunkById(100, function ($recordings) use ($disk, &$deleted): void {
                 foreach ($recordings as $recording) {
                     try {
