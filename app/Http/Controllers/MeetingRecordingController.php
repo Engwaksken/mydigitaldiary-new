@@ -235,8 +235,8 @@ class MeetingRecordingController extends Controller
             $recording
         );
 
-        // A completed stop is final: retries must not replace its audio or
-        // start a second transcription.
+        // Completed recordings are immutable; a retry reports their current
+        // transcription outcome without validating, claiming or reprocessing.
         if ($recording->status === 'completed') {
             return response()->json([
                 'ok' => true,
@@ -350,37 +350,61 @@ class MeetingRecordingController extends Controller
             ], 202);
         }
 
-        $audioPath = $this->storeRecordingFile(
-            $audioFile,
-            $request->user()
-        );
+        // The claim was a query-level update, so reload the bound model;
+        // otherwise its stale attributes can make later writes look clean.
+        $recording->refresh();
 
-        if (
-            $recording->audio_path
-            && Storage::disk('public')
-                ->exists(
-                    $recording->audio_path
-                )
-        ) {
-            Storage::disk('public')
-                ->delete(
-                    $recording->audio_path
-                );
+        $previousAudioPath = $recording->audio_path;
+        $audioPath = null;
+
+        try {
+            $audioPath = $this->storeRecordingFile(
+                $audioFile,
+                $request->user()
+            );
+
+            $recording->update([
+                'status' => 'completed',
+                'audio_path' => $audioPath,
+                'duration_seconds' => (int) $request->input('duration_seconds', 0),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            // Release the claim so a later stop can retry. The column is
+            // non-nullable, so return it to its default rather than null.
+            try {
+                MeetingRecording::query()
+                    ->whereKey($recording->getKey())
+                    ->where('transcription_status', 'processing')
+                    ->update([
+                        'transcription_status' => 'pending',
+                        'transcription_error' => null,
+                    ]);
+
+                if ($audioPath && $audioPath !== $previousAudioPath) {
+                    Storage::disk('public')->delete($audioPath);
+                }
+            } catch (\Throwable $resetException) {
+                report($resetException);
+            }
+
+            return response()->json([
+                'ok' => false,
+                'recording_id' => $recording->id,
+                'transcription_status' => 'pending',
+                'message' => 'Unable to save the meeting recording. Please try again.',
+            ], 500);
         }
 
-        $recording->update([
-            'status' =>
-                'completed',
-
-            'audio_path' =>
-                $audioPath,
-
-            'duration_seconds' =>
-                (int) $request->input(
-                    'duration_seconds',
-                    0
-                ),
-        ]);
+        // Only drop the old audio once the new file is recorded on the model.
+        if (
+            $previousAudioPath
+            && $previousAudioPath !== $audioPath
+            && Storage::disk('public')->exists($previousAudioPath)
+        ) {
+            Storage::disk('public')->delete($previousAudioPath);
+        }
 
         MeetingAuditLog::record(
             $recording->meeting_id,
@@ -419,7 +443,9 @@ class MeetingRecordingController extends Controller
             $rawMessage = strtolower((string) $e->getMessage());
             $transcriptionMessage = self::TRANSCRIPTION_FAILURE_MESSAGE;
             if (str_contains($rawMessage, 'per-meeting transcription limit')) {
-                $transcriptionMessage = $e->getMessage();
+                $transcriptionMessage = str_contains($rawMessage, 'expired')
+                    ? 'This meeting exceeds the per-meeting transcription limit, and your extra recording minutes have expired.'
+                    : 'This meeting exceeds the per-meeting transcription limit. Top up your recording quota to transcribe longer meetings.';
             } elseif (str_contains($rawMessage, 'maximum content size limit exceeded') || str_contains($rawMessage, '413')) {
                 $transcriptionMessage = 'The recording is still too large for the transcription service after compression. Please split it into shorter sections and try again.';
             } elseif (str_contains($rawMessage, 'top up')) {
