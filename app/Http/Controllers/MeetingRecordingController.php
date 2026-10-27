@@ -6,6 +6,7 @@ use App\Mail\MeetingSummaryMail;
 use App\Models\Meeting;
 use App\Models\MeetingAuditLog;
 use App\Models\MeetingRecording;
+use App\Models\User;
 use App\Services\Ai\AiCredentialResolver;
 use App\Services\MeetingSummaryService;
 use App\Services\TranscriptionService;
