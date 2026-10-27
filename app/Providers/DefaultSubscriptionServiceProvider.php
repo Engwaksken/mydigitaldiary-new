@@ -13,7 +13,7 @@ use Illuminate\Support\ServiceProvider;
 
 final class DefaultSubscriptionServiceProvider extends ServiceProvider
 {
-    private const DEFAULT_TRIAL_DAYS = 14;
+    private const DEFAULT_TRIAL_DAYS = 30;
 
     public function register(): void
     {

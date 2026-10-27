@@ -331,6 +331,11 @@
                     </div>
                 </div>
 
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-5 text-xs leading-5 text-amber-950">
+                    <p><strong>Subscription terms:</strong> The amount shown above is a one-time payment for the selected plan period. Your subscription will not renew automatically unless you separately enable auto-renewal in your account. If enabled, we will initiate a renewal payment request at the end of the current period; you can turn auto-renewal off before then.</p>
+                    <p class="mt-2">The 30-day free trial ends without a charge. Access ends when the trial expires unless you purchase a plan. Payments are not refundable except where required by applicable law. This does not limit any cancellation or refund rights you may have under the laws that apply to you. Please review our <a href="{{ route('terms-of-use') }}" class="underline font-semibold">Terms of Use</a>.</p>
+                </div>
+
                 {{-- Optional: pay for another existing user. The payer keeps the
                      invoice and receipt; the subscription is activated on them. --}}
                 <div class="mb-5 rounded-xl border border-slate-200 p-4 text-sm">
