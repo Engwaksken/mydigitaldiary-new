@@ -380,24 +380,30 @@ class MeetingController extends CrudController
             ? \App\Models\MeetingPlatformConfig::where('is_enabled', true)->get()
             : collect();
 
+        $now = now();
         $nearestMeeting = (clone $query)
             ->where('status', 'scheduled')
+            ->where(function (Builder $statusQuery): void {
+                $statusQuery->whereNull('meeting_status')->orWhere('meeting_status', 'scheduled');
+            })
             ->get()
-            ->filter(function (Meeting $meeting) {
-                $now = now();
-                return $meeting->start_at && (
-                    $meeting->start_at->greaterThanOrEqualTo($now)
-                    || ($meeting->start_at->lessThanOrEqualTo($now)
-                        && $meeting->end_at
-                        && $meeting->end_at->greaterThanOrEqualTo($now))
-                );
+            ->filter(function (Meeting $meeting) use ($now): bool {
+                if (! $meeting->start_at) {
+                    return false;
+                }
+
+                if ($meeting->start_at->greaterThan($now)) {
+                    return true;
+                }
+
+                // A started meeting is current only while its explicit end
+                // time is still ahead. Never promote an elapsed meeting just
+                // because it is the closest scheduled item in the past.
+                return $meeting->end_at !== null && $meeting->end_at->greaterThan($now);
             })
-            ->sortBy(function (Meeting $meeting) {
-                $now = now();
-                return $meeting->start_at->greaterThan($now)
-                    ? $meeting->start_at->timestamp
-                    : $now->timestamp - 1;
-            })
+            ->sortBy(fn (Meeting $meeting) => $meeting->start_at->greaterThan($now)
+                ? $meeting->start_at->timestamp
+                : PHP_INT_MIN)
             ->first();
 
         return $this->renderIndex($request, $query, [
