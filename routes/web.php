@@ -542,6 +542,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::delete('meetings/connect/{platform}', [MeetingConnectionController::class, 'disconnect'])->name('meetings.disconnect');
     Route::post('meetings/sync', [MeetingConnectionController::class, 'sync'])->name('meetings.sync');
     Route::post('meetings/{meeting}/add-to-calendar', [MeetingController::class, 'addToCalendar'])->name('meetings.add-to-calendar');
+    Route::patch('meetings/{meeting}/toggle', [MeetingController::class, 'toggle'])->name('meetings.toggle');
     Route::resource('meetings', MeetingController::class);
     // Must be registered BEFORE the resource() call below — otherwise
     // Route::resource's GET /reminders/{reminder} would greedily match

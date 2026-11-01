@@ -71,6 +71,15 @@ class MeetingController extends ApiCrudController
         return response()->json($items);
     }
 
+    public function toggle(Request $request, int $id): JsonResponse
+    {
+        $meeting = Meeting::where('user_id', $request->user()->id)->findOrFail($id);
+        $next = $meeting->status === 'completed' ? 'scheduled' : 'completed';
+        $meeting->update(['status' => $next, 'meeting_status' => $next]);
+
+        return response()->json($meeting->fresh());
+    }
+
     public function syncCalendar(Request $request, ExternalCalendarSyncService $service): JsonResponse
     {
         $data=$request->validate([

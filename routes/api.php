@@ -282,6 +282,7 @@ Route::middleware(['auth:sanctum', 'verified.api', 'mobile.idempotent'])->name('
 
     // Literal module actions MUST remain before the shared apiResource loop.
     Route::post('meetings/sync-calendar', [MeetingController::class, 'syncCalendar'])->name('meetings.sync-calendar');
+    Route::patch('meetings/{meeting}/toggle', [MeetingController::class, 'toggle'])->name('meetings.toggle');
     Route::post('budgets/extract', [BudgetController::class, 'extractImport'])->middleware('throttle:5,1')->name('budgets.extract');
     Route::post('budgets/import/confirm', [BudgetController::class, 'confirmImport'])->name('budgets.import.confirm');
     Route::get('budgets/debts', [BudgetController::class, 'debts'])->name('budgets.debts');

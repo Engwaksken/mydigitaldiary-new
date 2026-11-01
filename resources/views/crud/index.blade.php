@@ -666,13 +666,29 @@
                             </td>
                         @endif
                         <td class="pm-dt-main">
-                            <button type="button"
-                                    onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, {{ $pmIsOwner ? "true" : "false" }})'
-                                    class="pm-dt-title"
-                                    title="View {{ $rowLabel }}">{!! $pmPrimaryHtml !!}</button>
-                            @if (!empty($pmSubParts))
-                                <span class="pm-dt-sub">{!! implode('', $pmSubParts) !!}</span>
-                            @endif
+                            <div class="flex items-start gap-2">
+                                @if ($routeName === 'meetings' && $pmIsOwner)
+                                    <form method="POST" action="{{ route('meetings.toggle', $item->id) }}" class="mt-0.5 shrink-0">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                                class="text-base leading-none {{ $item->status === 'completed' ? 'text-emerald-500' : 'text-slate-300 hover:text-emerald-500' }}"
+                                                title="{{ $item->status === 'completed' ? 'Reopen meeting' : 'Mark meeting as done' }}"
+                                                aria-label="{{ $item->status === 'completed' ? 'Reopen meeting' : 'Mark meeting as done' }}">
+                                            <i class="fa-{{ $item->status === 'completed' ? 'solid fa-circle-check' : 'regular fa-circle' }}" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                                <div class="min-w-0">
+                                    <button type="button"
+                                            onclick='openCrudViewModal({{ json_encode($rowValues) }}, {{ $item->id }}, {{ $pmIsOwner ? "true" : "false" }})'
+                                            class="pm-dt-title {{ $routeName === 'meetings' && $item->status === 'completed' ? 'line-through text-slate-400' : '' }}"
+                                            title="View {{ $rowLabel }}">{!! $pmPrimaryHtml !!}</button>
+                                    @if (!empty($pmSubParts))
+                                        <span class="pm-dt-sub">{!! implode('', $pmSubParts) !!}</span>
+                                    @endif
+                                </div>
+                            </div>
                         </td>
                         @if ($pmStatusField)
                             <td class="pm-dt-aux">

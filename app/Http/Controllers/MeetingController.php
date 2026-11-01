@@ -358,6 +358,34 @@ class MeetingController extends CrudController
             : "{$deleted} Meetings deleted.");
     }
 
+    /**
+     * Quick "mark done" toggle, mirroring the daily planner tasks: checking
+     * marks a meeting completed, unchecking reopens it as scheduled. Keeps
+     * both `status` (the form/filter column) and `meeting_status` (what
+     * Meeting::displayStatus() reads) in sync. Owner-only, like edit/delete.
+     */
+    public function toggle(Request $request, Meeting $meeting)
+    {
+        $meeting = Meeting::where('user_id', $request->user()->id)->whereKey($meeting->id)->firstOrFail();
+
+        $completed = $meeting->status !== 'completed';
+        $next = $completed ? 'completed' : 'scheduled';
+
+        $meeting->update(['status' => $next, 'meeting_status' => $next]);
+
+        if ($request->expectsJson() || $request->input('respond') === 'json') {
+            return response()->json([
+                'id' => $meeting->id,
+                'status' => $next,
+                'meeting_status' => $next,
+            ]);
+        }
+
+        return back()->with('success', $completed
+            ? 'Meeting marked as completed.'
+            : 'Meeting reopened as scheduled.');
+    }
+
     public function index(Request $request)
     {
         $query = $this->visibleMeetingsQuery($request);
