@@ -15,4 +15,15 @@ class PersonalGoal extends Model
     public function reflections(){ return $this->hasMany(GoalReflection::class, 'personal_goal_id')->latest('reflected_on')->latest('id'); }
 
     protected $casts = ['start_date'=>'date','target_date'=>'date','target_value'=>'decimal:2','current_value'=>'decimal:2','progress_percent'=>'integer','reminder_at'=>'datetime','is_archived'=>'boolean'];
+
+    /**
+     * progress_percent is a NOT NULL column, but the field is optional on the
+     * form/API (it's derived from target_value/current_value and recalculated
+     * on save). Coerce null to 0 here so a blank field never violates the
+     * NOT NULL constraint before the saved-event recalc kicks in.
+     */
+    protected function setProgressPercentAttribute($value): void
+    {
+        $this->attributes['progress_percent'] = $value === null ? 0 : (int) $value;
+    }
 }
