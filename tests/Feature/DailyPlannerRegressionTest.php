@@ -328,6 +328,11 @@ class DailyPlannerRegressionTest extends TestCase
     #[DataProvider('transports')]
     public function test_recurring_toggle_uses_occurrence_state_for_reminder_and_wellbeing(bool $api): void
     {
+        // Freeze time before the toggled occurrence date so the reminder
+        // cadence schedules its pre-due nudges relative to the occurrence
+        // instead of falling back to "now + a few minutes" once today has
+        // drifted past the hardcoded date.
+        $this->travelTo(Carbon::parse('2026-10-06 07:00:00'));
         $user = $this->subscriber();
         $goal = PersonalGoalFactory::new()->create(['user_id' => $user->id]);
         $item = $this->item($user, ['personal_goal_id' => $goal->id, 'reminder_enabled' => true, 'reminder_offset_minutes' => 15]);
