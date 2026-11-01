@@ -141,6 +141,21 @@ class MeetingRecordingStopTranscriptionTest extends TestCase
             ->assertOk()->assertJson(['ok' => true, 'transcription_status' => 'completed']);
     }
 
+    public function test_stop_does_not_reclaim_recording_already_being_transcribed(): void
+    {
+        [$user, $recording] = $this->setupRecording();
+        $recording->update(['transcription_status' => 'processing']);
+        Storage::fake('public');
+        $this->mock(TranscriptionService::class)->shouldNotReceive('transcribe');
+
+        $this->actingAs($user)->postJson(route('meeting-recordings.stop', $recording), [
+            'recording' => UploadedFile::fake()->createWithContent('meeting.webm', str_repeat('a', 2048)),
+            'duration_seconds' => 15,
+        ])->assertStatus(202)->assertJson(['transcription_status' => 'processing']);
+
+        $this->assertSame('processing', $recording->fresh()->transcription_status);
+    }
+
     private function setupRecording(): array
     {
         $user = User::factory()->create(['subscription_status' => 'active', 'subscription_expires_at' => null]);

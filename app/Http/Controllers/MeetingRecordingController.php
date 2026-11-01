@@ -397,22 +397,40 @@ class MeetingRecordingController extends Controller
             ], 500);
         }
 
-        // Only drop the old audio once the new file is recorded on the model.
-        if (
-            $previousAudioPath
-            && $previousAudioPath !== $audioPath
-            && Storage::disk('public')->exists($previousAudioPath)
-        ) {
-            Storage::disk('public')->delete($previousAudioPath);
-        }
+        $saveFollowupFailureMessage = 'The recording was saved, but transcription could not start. Please try transcribing again.';
 
-        MeetingAuditLog::record(
-            $recording->meeting_id,
-            $request->user()->id,
-            'stopped_recording',
-            'Duration: '
-            . $recording->formattedDuration()
-        );
+        try {
+            // Only drop the old audio once the new file is recorded on the model.
+            if (
+                $previousAudioPath
+                && $previousAudioPath !== $audioPath
+                && Storage::disk('public')->exists($previousAudioPath)
+            ) {
+                Storage::disk('public')->delete($previousAudioPath);
+            }
+
+            MeetingAuditLog::record(
+                $recording->meeting_id,
+                $request->user()->id,
+                'stopped_recording',
+                'Duration: '
+                . $recording->formattedDuration()
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            $recording->update([
+                'transcription_status' => 'failed',
+                'transcription_error' => $saveFollowupFailureMessage,
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'recording_id' => $recording->id,
+                'transcription_status' => 'failed',
+                'message' => $saveFollowupFailureMessage,
+            ], 500);
+        }
 
         $transcriptionStatus = 'completed';
         $transcriptionMessage = 'Transcription completed successfully.';
