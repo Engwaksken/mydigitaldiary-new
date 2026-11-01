@@ -16,8 +16,10 @@ class GoalProgressService
 
         $components = [];
 
+        $valueProgress = null;
         if ($goal->target_value !== null && (float)$goal->target_value > 0 && $goal->current_value !== null) {
-            $components['value'] = min(100, max(0, (int) round(((float)$goal->current_value / (float)$goal->target_value) * 100)));
+            $valueProgress = min(100, max(0, (int) round(((float)$goal->current_value / (float)$goal->target_value) * 100)));
+            $components['value'] = $valueProgress;
         }
 
         $milestones = Schema::hasTable('goal_milestones') ? $goal->milestones : collect();
@@ -40,7 +42,18 @@ class GoalProgressService
             $components['plans'] = (int) round($goal->annualPlans->avg(fn($p) => $p->status === 'completed' ? 100 : (int)($p->progress_percent ?? 0)));
         }
 
-        $automatic = $components ? (int) round(array_sum($components) / count($components)) : (int)($goal->progress_percent ?? 0);
+        if ($valueProgress !== null) {
+            // A target/current value pair is the clearest signal of progress, so
+            // it drives the percentage directly rather than being averaged with
+            // milestones/tasks/plans (which would otherwise dilute it — e.g. a
+            // goal at 50% of its target but with two unfinished tasks used to
+            // read ~17%).
+            $automatic = $valueProgress;
+        } elseif ($components) {
+            $automatic = (int) round(array_sum($components) / count($components));
+        } else {
+            $automatic = (int) ($goal->progress_percent ?? 0);
+        }
         $automatic = min(100, max(0, $automatic));
 
         return [

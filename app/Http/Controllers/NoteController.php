@@ -8,8 +8,10 @@ class NoteController extends CrudController {
     protected string $title='Note';
     protected string $icon='fa-solid fa-note-sticky';
     protected string $accent='amber';
+    protected string $dateField='note_date';
     protected array $fields=[
         ['name'=>'title','label'=>'Title','type'=>'text','required'=>true],
+        ['name'=>'note_date','label'=>'Note Date','type'=>'date'],
         ['name'=>'category','label'=>'Category','type'=>'text'],
         ['name'=>'tags','label'=>'Tags','type'=>'text','placeholder'=>'e.g. work, ideas, personal'],
         ['name'=>'color','label'=>'Sticky note color','type'=>'select','options'=>['sunshine'=>'Sunshine yellow','peach'=>'Warm peach','mint'=>'Fresh mint','lavender'=>'Soft lavender','sky'=>'Clear sky','rose'=>'Rose pink'],'default'=>'sunshine'],
@@ -17,7 +19,19 @@ class NoteController extends CrudController {
         ['name'=>'is_pinned','label'=>'Pinned','type'=>'checkbox'],
         ['name'=>'is_favorite','label'=>'Favourite','type'=>'checkbox'],
     ];
-    protected array $rules=['title'=>'required|string|max:255','category'=>'nullable|string|max:100','tags'=>'nullable|string|max:500','color'=>'nullable|in:sunshine,peach,mint,lavender,sky,rose','content'=>'nullable|string','is_pinned'=>'sometimes|boolean','is_favorite'=>'sometimes|boolean'];
+    protected array $rules=['title'=>'required|string|max:255','note_date'=>'nullable|date','category'=>'nullable|string|max:100','tags'=>'nullable|string|max:500','color'=>'nullable|in:sunshine,peach,mint,lavender,sky,rose','content'=>'nullable|string','is_pinned'=>'sometimes|boolean','is_favorite'=>'sometimes|boolean'];
+    public function __construct()
+    {
+        // A diary note defaults to today's date. Property initializers can't
+        // call now(), so the create form's default is set here at runtime.
+        foreach ($this->fields as &$field) {
+            if ($field['name'] === 'note_date') {
+                $field['default'] = now()->format('Y-m-d');
+                break;
+            }
+        }
+        unset($field);
+    }
     public function index(Request $request)
     {
         $query = Note::where('user_id', $request->user()->id)

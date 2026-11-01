@@ -24,7 +24,7 @@ class PersonalGoalController extends CrudController
         ['tab'=>'Progress','name'=>'target_date','label'=>'Target Date','type'=>'date'],
         ['tab'=>'Progress','name'=>'target_value','label'=>'Target Value (optional)','type'=>'number'],
         ['tab'=>'Progress','name'=>'current_value','label'=>'Current Value (optional)','type'=>'number', 'placeholder'=>'Auto-filled for health goals'],
-        ['tab'=>'Progress','table'=>'meta','name'=>'progress_percent','label'=>'Progress %','type'=>'number','required'=>true, 'placeholder'=>'0–100 (auto for health goals)'],
+        ['tab'=>'Progress','table'=>'meta','name'=>'progress_percent','label'=>'Progress %','type'=>'number', 'placeholder'=>'Auto from target & current value'],
         ['tab'=>'Goal','name'=>'status','label'=>'Status','type'=>'select','required'=>true,'options'=>['not_started'=>'Not started','in_progress'=>'In progress','completed'=>'Completed','paused'=>'Paused']],
         ['tab'=>'Goal','table'=>'meta','name'=>'priority','label'=>'Priority','type'=>'select','required'=>true,'options'=>['low'=>'Low','medium'=>'Medium','high'=>'High']],
         ['tab'=>'Reminder & Notes','name'=>'reminder_at','label'=>'Reminder Date & Time','type'=>'datetime-local'],
@@ -34,7 +34,7 @@ class PersonalGoalController extends CrudController
     protected array $rules = [
         'module'=>'required|in:finance,savings,education,spiritual,health,exercise,diet,productivity,projects,personal',
         'title'=>'required|string|max:255','description'=>'nullable|string','start_date'=>'nullable|date','target_date'=>'nullable|date|after_or_equal:start_date',
-        'target_value'=>'nullable|numeric|min:0','current_value'=>'nullable|numeric|min:0','progress_percent'=>'required|integer|min:0|max:100',
+        'target_value'=>'nullable|numeric|min:0','current_value'=>'nullable|numeric|min:0','progress_percent'=>'nullable|integer|min:0|max:100',
         'status'=>'required|in:not_started,in_progress,completed,paused','priority'=>'required|in:low,medium,high','reminder_at'=>'nullable|date','notes'=>'nullable|string'
     ];
 

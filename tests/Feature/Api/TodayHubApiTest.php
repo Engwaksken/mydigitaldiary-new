@@ -157,10 +157,8 @@ class TodayHubApiTest extends TestCase
         $user = $this->user();
         $other = $this->user();
 
-        $mine = Note::create(['user_id' => $user->id, 'title' => 'First day at the new job']);
-        $mine->forceFill(['created_at' => Carbon::parse('2025-10-08 15:00:00', 'Africa/Kampala')->setTimezone(config('app.timezone'))])->save();
-        $theirs = Note::create(['user_id' => $other->id, 'title' => 'Someone else memory']);
-        $theirs->forceFill(['created_at' => Carbon::parse('2025-10-08 15:00:00', 'Africa/Kampala')->setTimezone(config('app.timezone'))])->save();
+        $mine = Note::create(['user_id' => $user->id, 'title' => 'First day at the new job', 'note_date' => '2025-10-08']);
+        $theirs = Note::create(['user_id' => $other->id, 'title' => 'Someone else memory', 'note_date' => '2025-10-08']);
 
         Sanctum::actingAs($user);
 

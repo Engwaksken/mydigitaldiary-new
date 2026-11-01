@@ -21,7 +21,7 @@ class PersonalGoalController extends ApiCrudController
         'target_date' => 'nullable|date|after_or_equal:start_date',
         'target_value' => 'nullable|numeric|min:0',
         'current_value' => 'nullable|numeric|min:0',
-        'progress_percent' => 'required|integer|min:0|max:100',
+        'progress_percent' => 'nullable|integer|min:0|max:100',
         'status' => 'required|in:not_started,in_progress,completed,paused',
         'priority' => 'required|in:low,medium,high',
         'reminder_at' => 'nullable|date',

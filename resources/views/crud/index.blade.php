@@ -499,8 +499,17 @@
                         <p class="min-h-24 text-sm italic text-slate-500">No note text yet.</p>
                     @endif
                     <div class="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/10 pt-3 text-xs text-slate-600">
-                        <span class="break-words">{{ filled($item->tags) ? '#'.str_replace(',', ' #', $item->tags) : 'Sticky note' }}</span>
-                        <time datetime="{{ $item->updated_at?->toIso8601String() }}">Updated {{ $item->updated_at?->diffForHumans() }}</time>
+                        <span class="break-words">
+                            @if ($item->note_date)
+                                <i class="fa-regular fa-calendar mr-1" aria-hidden="true"></i>{{ $item->note_date->format('d M Y') }}
+                            @else
+                                Sticky note
+                            @endif
+                        </span>
+                        <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            @if (filled($item->tags))<span class="break-words">#{{ str_replace(',', ' #', $item->tags) }}</span>@endif
+                            <time datetime="{{ $item->updated_at?->toIso8601String() }}">Updated {{ $item->updated_at?->diffForHumans() }}</time>
+                        </span>
                     </div>
                 </article>
             @empty

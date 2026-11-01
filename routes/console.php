@@ -115,6 +115,18 @@ Schedule::command('subscriptions:expire')
     ->withoutOverlapping(10);
 
 /*
+| Weekly reminder for expired users
+|
+| A single weekly nudge to everyone whose subscription has lapsed, sent
+| Monday morning. The command itself guards against re-sending to the same
+| user within a week, so an occasional manual run is harmless.
+|
+*/
+Schedule::command('subscriptions:send-expired-weekly-reminder')
+    ->weeklyOn(1, '09:00')
+    ->withoutOverlapping(15);
+
+/*
 |--------------------------------------------------------------------------
 | Automatic Subscription Renewal
 |--------------------------------------------------------------------------

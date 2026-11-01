@@ -41,8 +41,7 @@ class OnThisDayTest extends TestCase
         $user = $this->subscriber();
 
         // Two days ago is not an anchor day.
-        $note = Note::create(['user_id' => $user->id, 'title' => 'Not a memory yet']);
-        $note->forceFill(['created_at' => now()->subDays(2)])->save();
+        $note = Note::create(['user_id' => $user->id, 'title' => 'Not a memory yet', 'note_date' => now()->subDays(2)->toDateString()]);
 
         $this->actingAs($user)
             ->get(route('dashboard'))
@@ -56,16 +55,14 @@ class OnThisDayTest extends TestCase
         $user = $this->subscriber();
         $other = $this->subscriber();
 
-        $note = Note::create(['user_id' => $user->id, 'title' => 'First day at the new job']);
-        $note->forceFill(['created_at' => Carbon::parse('2025-10-08 15:00:00', 'Africa/Kampala')->setTimezone(config('app.timezone'))])->save();
+        $note = Note::create(['user_id' => $user->id, 'title' => 'First day at the new job', 'note_date' => '2025-10-08']);
 
         $plan = DailyPlan::create(['user_id' => $user->id, 'plan_date' => '2026-09-08', 'title' => 'My Daily Plan']);
         DailyPlanItem::create(['daily_plan_id' => $plan->id, 'title' => 'Ran 5km', 'priority' => 'high', 'is_completed' => true, 'completed_at' => now()->subMonth()]);
         DailyPlanItem::create(['daily_plan_id' => $plan->id, 'title' => 'Never finished', 'priority' => 'low', 'is_completed' => false]);
 
         // Someone else's memory must never leak.
-        $foreign = Note::create(['user_id' => $other->id, 'title' => 'Someone else entirely']);
-        $foreign->forceFill(['created_at' => now()->subYear()])->save();
+        $foreign = Note::create(['user_id' => $other->id, 'title' => 'Someone else entirely', 'note_date' => now()->subYear()->toDateString()]);
 
         $response = $this->actingAs($user)->get(route('dashboard'));
 

@@ -95,15 +95,15 @@ class OnThisDayService
     private function sources(): array
     {
         return [
-            // Personal notes / diary entries.
+            // Personal notes / diary entries, by the day they were written for.
             function (User $user, array $anchors) {
                 return Note::query()
                     ->where('user_id', $user->id)
-                    ->where(fn ($q) => $this->withinDays($q, 'created_at', $anchors))
-                    ->orderBy('created_at')
+                    ->where(fn ($q) => $this->onDates($q, 'note_date', $anchors))
+                    ->orderBy('note_date')
                     ->limit(self::PER_SOURCE)
-                    ->get(['id', 'title', 'created_at'])
-                    ->map(fn ($note) => $this->item($anchors, $note->created_at, 'fa-note-sticky', 'amber',
+                    ->get(['id', 'title', 'note_date'])
+                    ->map(fn ($note) => $this->item($anchors, $note->note_date, 'fa-note-sticky', 'amber',
                         'You wrote “'.Str::limit((string) ($note->title ?: 'a note'), 60).'”',
                         Route::has('notes.show') ? route('notes.show', $note->id) : null));
             },
