@@ -125,6 +125,53 @@ class ExpenseBudgetPickerApiTest extends TestCase
         $response->assertJsonPath('budget_id', $budget->id);
     }
 
+    public function test_backdated_expense_and_its_new_budget_use_the_selected_month(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $spentAt = now()->subMonthNoOverflow()->day(12)->toDateString();
+        $selectedMonth = now()->subMonthNoOverflow()->format('Y-m');
+
+        $response = $this->postJson('/api/expenses', [
+            'budget_id' => 'new',
+            'add_to_budget' => true,
+            'category' => 'Backdated travel',
+            'amount' => 90,
+            'spent_at' => $spentAt,
+        ])->assertCreated();
+
+        $expense = Expense::findOrFail($response->json('id'));
+        $budget = Budget::findOrFail($expense->budget_id);
+        $this->assertSame($spentAt, $expense->spent_at->toDateString());
+        $this->assertSame($selectedMonth, $budget->month_year);
+    }
+
+    public function test_updating_expense_date_keeps_automatic_budget_in_selected_month(): void
+    {
+        $user = User::factory()->create();
+        $expense = Expense::create([
+            'user_id' => $user->id,
+            'category' => 'Travel',
+            'amount' => 90,
+            'spent_at' => now()->toDateString(),
+        ]);
+        Sanctum::actingAs($user);
+        $spentAt = now()->subMonthNoOverflow()->day(12)->toDateString();
+        $selectedMonth = now()->subMonthNoOverflow()->format('Y-m');
+
+        $this->putJson("/api/expenses/{$expense->id}", [
+            'budget_id' => 'new',
+            'add_to_budget' => true,
+            'category' => 'Travel',
+            'amount' => 90,
+            'spent_at' => $spentAt,
+        ])->assertOk();
+
+        $expense->refresh();
+        $this->assertSame($spentAt, $expense->spent_at->toDateString());
+        $this->assertSame($selectedMonth, $expense->budget->month_year);
+    }
+
     public function test_update_cannot_relink_to_another_users_budget_item(): void
     {
         $owner = User::factory()->create();

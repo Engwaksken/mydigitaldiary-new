@@ -18,23 +18,28 @@ class AnnualPlanWellbeingSyncService
 {
     public function syncCompletion(User $user, Plan $plan, bool $completed): ?string
     {
-        $plan->loadMissing('personalGoal');
-        $goal = $plan->personalGoal;
-
-        if (! $goal) {
-            return null;
-        }
-
-        $module = strtolower(trim((string) $goal->module));
-        if (! in_array($module, ['diet', 'sleep', 'exercise'], true)) {
-            return null;
-        }
-
-        $timezone = $user->timezone ?: config('app.timezone', 'Africa/Kampala');
-        $date = Carbon::now($timezone)->startOfDay();
-        $sourceKey = "annual-plan:{$plan->id}:{$module}";
+        $module = 'unknown';
 
         try {
+            // Keep the entire optional wellbeing integration best-effort. In
+            // particular, a relationship/schema error here must not turn an
+            // otherwise successful Annual Plan update into an HTTP 500.
+            $plan->loadMissing('personalGoal');
+            $goal = $plan->personalGoal;
+
+            if (! $goal) {
+                return null;
+            }
+
+            $module = strtolower(trim((string) $goal->module));
+            if (! in_array($module, ['diet', 'sleep', 'exercise'], true)) {
+                return null;
+            }
+
+            $timezone = $user->timezone ?: config('app.timezone', 'Africa/Kampala');
+            $date = Carbon::now($timezone)->startOfDay();
+            $sourceKey = "annual-plan:{$plan->id}:{$module}";
+
             if (! $completed) {
                 $this->remove($module, (int) $user->id, $sourceKey);
                 app(DailyWellbeingSyncService::class)->sync($user, $date->toDateString());
