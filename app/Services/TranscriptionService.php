@@ -42,8 +42,8 @@ class TranscriptionService
      * Models attempted in priority order.
      */
     private const MODELS = [
-        'gpt-4o-transcribe',
         'gpt-4o-mini-transcribe',
+        'gpt-4o-transcribe',
         'whisper-1',
     ];
 
@@ -151,7 +151,8 @@ class TranscriptionService
         | Browser MediaRecorder output can occasionally produce WebM/Opus files
         | that browsers can play but transcription providers reject.
         |
-        | When FFmpeg is available, normalise every recording to MP3 first.
+         | Only convert unsupported formats or oversized files; re-encoding
+         | every valid recording adds avoidable processing time.
         |
         */
 
@@ -447,19 +448,6 @@ class TranscriptionService
             );
 
         /*
-         * Prefer FFmpeg because it normalises browser recordings
-         * into a reliable speech-friendly MP3.
-         */
-        if (
-            $this->ffmpegAvailable()
-        ) {
-            return $this->convertToMp3(
-                $sourcePath,
-                $user
-            );
-        }
-
-        /*
          * If FFmpeg is unavailable, only submit an original file
          * when its extension is supported.
          */
@@ -470,6 +458,10 @@ class TranscriptionService
                 true
             )
         ) {
+            if ($this->ffmpegAvailable()) {
+                return $this->convertToMp3($sourcePath, $user);
+            }
+
             throw new RuntimeException(
                 'The recording format is not supported for transcription. Install FFmpeg on the server or upload MP3, WAV, M4A, OGG, FLAC or WebM audio.'
             );
@@ -489,6 +481,8 @@ class TranscriptionService
 
         if ($fileSize > self::MAX_FILE_SIZE_BYTES) {
             if (
+                $this->ffmpegAvailable()
+                &&
                 $user
                 && (
                     $fileSize <= $user->effectiveTranscriptionCapacityBytes()
@@ -824,11 +818,6 @@ class TranscriptionService
                     )
                     ->connectTimeout(
                         20
-                    )
-                    ->retry(
-                        2,
-                        1000,
-                        throw: false
                     )
                     ->attach(
                         'file',
