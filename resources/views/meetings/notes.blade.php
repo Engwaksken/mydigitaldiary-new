@@ -5210,6 +5210,8 @@ document.addEventListener(
             if (!validationEl) return;
             validationEl.textContent = message;
             validationEl.className = 'meeting-recording-message ' + type;
+            // The dialog body scrolls; bring the message next to the user's view.
+            validationEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
 
         function clearAudioEditorValidation() {
@@ -5251,6 +5253,14 @@ document.addEventListener(
                 }
 
                 audioEditorState.audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                // The stored duration can be 0 (uploaded files) or shorter than the
+                // real audio (browser timer); the decoded audio is the real length.
+                if (audioEditorState.audioBuffer.duration > 0) {
+                    audioEditorState.duration = audioEditorState.audioBuffer.duration;
+                    audioEditorState.selectionEnd = Math.min(30, audioEditorState.duration);
+                }
+
                 audioEditorState.peaks = computePeaks(audioEditorState.audioBuffer, waveformCanvas.width || 800);
 
                 drawWaveform();
@@ -5667,8 +5677,9 @@ document.addEventListener(
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            start_seconds: Math.round(start),
-                            end_seconds: Math.round(end),
+                            start_seconds: Math.floor(start),
+                            end_seconds: Math.min(Math.ceil(end), Math.ceil(audioEditorState.duration)),
+                            source_duration_seconds: Math.ceil(audioEditorState.duration),
                             title: segmentTitleInput.value.trim() || null,
                             notes: segmentNotesInput.value.trim() || null,
                         }),
@@ -5899,7 +5910,12 @@ document.addEventListener(
                 return;
             }
 
-            if (event.target === createSegmentButton) {
+            // closest(): a click on the scissors icon targets the <i>, not the button.
+            if (
+                createSegmentButton
+                && event.target.closest('#create-segment-button') === createSegmentButton
+                && !createSegmentButton.disabled
+            ) {
                 event.preventDefault();
                 handleCreateSegment();
             }

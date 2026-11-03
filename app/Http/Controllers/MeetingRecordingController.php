@@ -1526,12 +1526,26 @@ class MeetingRecordingController extends Controller
             'end_seconds' => ['required', 'integer', 'min:1'],
             'title' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            // Length of the decoded audio in the editor. The stored duration is 0
+            // for uploaded files and can trail the real audio for browser
+            // recordings (the client timer), which rejected valid end times.
+            'source_duration_seconds' => ['nullable', 'integer', 'min:1', 'max:86400'],
         ]);
 
         if ($data['end_seconds'] <= $data['start_seconds']) {
             return response()->json([
                 'message' => 'End time must be greater than start time.',
             ], 422);
+        }
+
+        $sourceDuration = (int) ($data['source_duration_seconds'] ?? 0);
+
+        // Only ever raise the stored duration, so it cannot be used to shrink
+        // the length that transcription limits are charged against.
+        if ($sourceDuration > (int) $recording->duration_seconds) {
+            $recording->forceFill([
+                'duration_seconds' => $sourceDuration,
+            ])->save();
         }
 
         if ($data['end_seconds'] > $recording->duration_seconds) {
