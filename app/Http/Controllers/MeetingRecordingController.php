@@ -155,9 +155,9 @@ class MeetingRecordingController extends Controller
                         $audioPath,
 
                     'duration_seconds' =>
-                        (int) (
-                            $data['duration_seconds']
-                            ?? 0
+                        app(\App\Services\AudioDurationProbe::class)->storedSeconds(
+                            $audioPath,
+                            (int) ($data['duration_seconds'] ?? 0)
                         ),
                 ]);
 
@@ -366,7 +366,10 @@ class MeetingRecordingController extends Controller
             $recording->update([
                 'status' => 'completed',
                 'audio_path' => $audioPath,
-                'duration_seconds' => (int) $request->input('duration_seconds', 0),
+                'duration_seconds' => app(\App\Services\AudioDurationProbe::class)->storedSeconds(
+                    $audioPath,
+                    (int) $request->input('duration_seconds', 0)
+                ),
             ]);
         } catch (\Throwable $e) {
             report($e);

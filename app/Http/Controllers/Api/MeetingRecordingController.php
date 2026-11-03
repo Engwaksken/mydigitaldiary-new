@@ -100,7 +100,10 @@ class MeetingRecordingController extends Controller
         $recording->update([
             'status' => 'completed',
             'audio_path' => $audioPath,
-            'duration_seconds' => $data['duration_seconds'],
+            'duration_seconds' => app(\App\Services\AudioDurationProbe::class)->storedSeconds(
+                $audioPath,
+                (int) $data['duration_seconds']
+            ),
         ]);
 
         MeetingAuditLog::record($recording->meeting_id, $request->user()->id, 'stopped_recording', "Duration: {$recording->formattedDuration()}");

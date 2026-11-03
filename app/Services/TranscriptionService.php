@@ -134,6 +134,13 @@ class TranscriptionService
             );
         }
 
+        // Charge limits against the real audio length: uploads store 0 and the
+        // browser timer can under-count, which let long meetings bypass limits.
+        $durationSeconds = max(
+            $durationSeconds,
+            (int) app(AudioDurationProbe::class)->seconds($sourcePath)
+        );
+
         if (
             $sourceSize > $user->effectiveTranscriptionCapacityBytes()
             && $user->availableExtraRecordingQuotaMinutes() === 0
