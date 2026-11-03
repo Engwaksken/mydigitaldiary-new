@@ -335,6 +335,20 @@
                         ></div>
 
 
+                        {{-- Unsaved recordings kept in this browser (IndexedDB) after a failed upload or closed tab --}}
+                        <div
+                            id="recording-recovery"
+                            class="hidden meeting-recording-recovery"
+                            role="region"
+                            aria-label="Unsaved recordings"
+                        >
+                            <p class="meeting-recording-recovery-title">
+                                Unsaved recordings found in this browser
+                            </p>
+                            <ul id="recording-recovery-list"></ul>
+                        </div>
+
+
                         {{-- Sources --}}
                         <div class="mt-4 grid gap-3 sm:grid-cols-2">
 
@@ -1891,6 +1905,58 @@
     border:1px solid #bfdbfe;
     background:#eff6ff;
     color:#1d4ed8;
+}
+
+.meeting-recording-recovery{
+    margin-top:12px;
+    padding:10px 12px;
+    border:1px solid #fde68a;
+    border-radius:10px;
+    background:#fffbeb;
+    color:#92400e;
+    font-size:.75rem;
+}
+
+.meeting-recording-recovery-title{
+    font-weight:900;
+    margin-bottom:6px;
+}
+
+.meeting-recording-recovery li{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px;
+    padding:6px 0;
+    border-top:1px dashed #fde68a;
+}
+
+.meeting-recording-recovery li:first-child{
+    border-top:0;
+}
+
+.meeting-recording-recovery-label{
+    flex:1 1 180px;
+    font-weight:700;
+}
+
+.meeting-recording-recovery button{
+    padding:4px 10px;
+    border:1px solid #f59e0b;
+    border-radius:8px;
+    background:#fff;
+    color:#92400e;
+    font-weight:800;
+}
+
+.meeting-recording-recovery button.is-primary{
+    background:#f59e0b;
+    color:#fff;
+}
+
+.meeting-recording-recovery button:disabled{
+    opacity:.6;
+    cursor:wait;
 }
 
 .meeting-status-pill{
@@ -3530,6 +3596,331 @@ document.addEventListener(
         let recorderStopping =
             false;
 
+        let recordingStartedAt =
+            null;
+
+        // Recordings whose upload failed while IndexedDB was unavailable;
+        // kept in memory so the user can still retry or download them.
+        const unsavedInMemory =
+            new Map();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Local backup of recording chunks (IndexedDB)
+        |--------------------------------------------------------------------------
+        | Audio exists only in the browser until Stop uploads it, so a closed
+        | tab, crash or failed upload used to lose the whole meeting. Every
+        | chunk is mirrored to IndexedDB and removed only after a successful
+        | upload; leftovers are offered for recovery on the next visit.
+        */
+
+        const recordingBackup = (function () {
+            const DB_NAME = 'mdd-meeting-recording-backup';
+            const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+            let dbPromise = null;
+            let writeQueue = Promise.resolve();
+
+            function open() {
+                if (!window.indexedDB) {
+                    return Promise.reject(new Error('IndexedDB is not available.'));
+                }
+
+                if (!dbPromise) {
+                    dbPromise = new Promise(function (resolve, reject) {
+                        const request = indexedDB.open(DB_NAME, 1);
+
+                        request.onupgradeneeded = function () {
+                            const db = request.result;
+
+                            if (!db.objectStoreNames.contains('sessions')) {
+                                db.createObjectStore('sessions', { keyPath: 'recordingId' });
+                            }
+
+                            if (!db.objectStoreNames.contains('chunks')) {
+                                db.createObjectStore('chunks', { autoIncrement: true })
+                                    .createIndex('recordingId', 'recordingId');
+                            }
+                        };
+
+                        request.onsuccess = function () { resolve(request.result); };
+                        request.onerror = function () { reject(request.error); };
+                    });
+
+                    dbPromise.catch(function () { dbPromise = null; });
+                }
+
+                return dbPromise;
+            }
+
+            function run(storeNames, mode, work) {
+                return open().then(function (db) {
+                    return new Promise(function (resolve, reject) {
+                        const tx = db.transaction(storeNames, mode);
+                        let result;
+
+                        work(tx, function (value) { result = value; });
+
+                        tx.oncomplete = function () { resolve(result); };
+                        tx.onerror = function () { reject(tx.error); };
+                        tx.onabort = function () { reject(tx.error); };
+                    });
+                });
+            }
+
+            // Writes are serialized so a delete never races ahead of a pending chunk.
+            function enqueue(task) {
+                const next = writeQueue.then(task, task);
+                writeQueue = next.catch(function () {});
+                return next;
+            }
+
+            function deleteNow(recordingId) {
+                return run(['sessions', 'chunks'], 'readwrite', function (tx) {
+                    tx.objectStore('sessions').delete(recordingId);
+
+                    const cursorRequest = tx.objectStore('chunks')
+                        .index('recordingId')
+                        .openKeyCursor(IDBKeyRange.only(recordingId));
+
+                    cursorRequest.onsuccess = function () {
+                        const cursor = cursorRequest.result;
+
+                        if (cursor) {
+                            tx.objectStore('chunks').delete(cursor.primaryKey);
+                            cursor.continue();
+                        }
+                    };
+                });
+            }
+
+            return {
+                addChunk: function (session, blob) {
+                    return enqueue(function () {
+                        return run(['sessions', 'chunks'], 'readwrite', function (tx) {
+                            tx.objectStore('sessions').put(
+                                Object.assign({}, session, { updatedAt: Date.now() })
+                            );
+                            tx.objectStore('chunks').add({
+                                recordingId: session.recordingId,
+                                blob: blob
+                            });
+                        });
+                    });
+                },
+
+                list: function (meetingId, userId) {
+                    return run(['sessions'], 'readonly', function (tx, done) {
+                        const request = tx.objectStore('sessions').getAll();
+                        request.onsuccess = function () {
+                            done(request.result || []);
+                        };
+                    }).then(function (sessions) {
+                        const now = Date.now();
+
+                        sessions
+                            .filter(function (s) { return now - (s.updatedAt || 0) > MAX_AGE_MS; })
+                            .forEach(function (s) { enqueue(function () { return deleteNow(s.recordingId); }); });
+
+                        return sessions.filter(function (s) {
+                            return s.meetingId === meetingId
+                                && s.userId === userId
+                                && now - (s.updatedAt || 0) <= MAX_AGE_MS;
+                        });
+                    });
+                },
+
+                loadBlob: function (session) {
+                    return run(['chunks'], 'readonly', function (tx, done) {
+                        const request = tx.objectStore('chunks')
+                            .index('recordingId')
+                            .getAll(IDBKeyRange.only(session.recordingId));
+
+                        request.onsuccess = function () {
+                            done(request.result || []);
+                        };
+                    }).then(function (rows) {
+                        return new Blob(
+                            rows.map(function (row) { return row.blob; }),
+                            { type: session.mimeType || 'audio/webm' }
+                        );
+                    });
+                },
+
+                remove: function (recordingId) {
+                    return enqueue(function () { return deleteNow(recordingId); });
+                }
+            };
+        })();
+
+        const backupMeetingId = @json($meeting->id);
+        const backupUserId = @json(auth()->id());
+
+        let backupFailed = false;
+
+
+        function backupSession() {
+            return {
+                recordingId: recordingId,
+                meetingId: backupMeetingId,
+                userId: backupUserId,
+                mimeType: (recorder && recorder.mimeType) || 'audio/webm',
+                startedAt: recordingStartedAt,
+                elapsedSeconds: elapsedSeconds
+            };
+        }
+
+
+        function recordingFileExtension(mimeType) {
+            return String(mimeType || '').includes('ogg') ? 'ogg' : 'webm';
+        }
+
+
+        function downloadRecordingBlob(blob, startedAt) {
+            const stamp = new Date(startedAt || Date.now())
+                .toISOString()
+                .slice(0, 16)
+                .replace(/[:T]/g, '-');
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'meeting-recording-' + stamp + '.' + recordingFileExtension(blob.type);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.setTimeout(function () { URL.revokeObjectURL(link.href); }, 60000);
+        }
+
+
+        async function getUnsavedRecordings() {
+            let stored = [];
+
+            try {
+                stored = await recordingBackup.list(backupMeetingId, backupUserId);
+            } catch (_) {
+                stored = [];
+            }
+
+            const items = stored
+                .filter(function (s) { return s.recordingId !== recordingId || !recorder; })
+                .map(function (s) { return { session: s, blob: null }; });
+
+            unsavedInMemory.forEach(function (entry, id) {
+                if (!items.some(function (item) { return item.session.recordingId === id; })) {
+                    items.push(entry);
+                }
+            });
+
+            return items.sort(function (a, b) {
+                return (b.session.startedAt || 0) - (a.session.startedAt || 0);
+            });
+        }
+
+
+        async function renderRecoveryPanel() {
+            const panel = document.getElementById('recording-recovery');
+            const list = document.getElementById('recording-recovery-list');
+
+            if (!panel || !list) {
+                return;
+            }
+
+            const items = await getUnsavedRecordings();
+
+            list.innerHTML = '';
+            panel.classList.toggle('hidden', items.length === 0);
+
+            items.forEach(function (item) {
+                const session = item.session;
+                const li = document.createElement('li');
+
+                const label = document.createElement('span');
+                label.className = 'meeting-recording-recovery-label';
+                label.textContent =
+                    (session.startedAt
+                        ? new Date(session.startedAt).toLocaleString()
+                        : 'Recording')
+                    + ' · ' + formatRecordingTime(session.elapsedSeconds || 0);
+
+                const blobFor = function () {
+                    return item.blob
+                        ? Promise.resolve(item.blob)
+                        : recordingBackup.loadBlob(session);
+                };
+
+                const makeButton = function (text, primary, onClick) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = text;
+                    if (primary) {
+                        button.classList.add('is-primary');
+                    }
+                    button.addEventListener('click', async function () {
+                        li.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+                        try {
+                            await onClick();
+                        } finally {
+                            li.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+                        }
+                    });
+                    return button;
+                };
+
+                const forget = async function () {
+                    unsavedInMemory.delete(session.recordingId);
+                    await recordingBackup.remove(session.recordingId).catch(function () {});
+                };
+
+                li.appendChild(label);
+
+                li.appendChild(makeButton('Save to meeting', true, async function () {
+                    try {
+                        const blob = await blobFor();
+
+                        if (!blob.size) {
+                            throw new Error('This backup contains no audio.');
+                        }
+
+                        showRecordingMessage('Uploading recovered recording...', 'info');
+
+                        await saveRecording(blob, session.recordingId, session.elapsedSeconds);
+                        await forget();
+
+                        showRecordingMessage('Recovered recording saved successfully.', 'success');
+
+                        window.location.hash = '#transcripts-summary';
+                        window.location.reload();
+                    } catch (error) {
+                        showRecordingMessage(
+                            (error.message || 'Could not save the recording.')
+                            + ' Your audio is still kept in this browser — try again or download it.',
+                            'error'
+                        );
+                    }
+                }));
+
+                li.appendChild(makeButton('Download', false, async function () {
+                    try {
+                        downloadRecordingBlob(await blobFor(), session.startedAt);
+                    } catch (error) {
+                        showRecordingMessage('Could not read the saved audio from this browser.', 'error');
+                    }
+                }));
+
+                li.appendChild(makeButton('Discard', false, async function () {
+                    if (!window.confirm('Permanently delete this unsaved recording from this browser? This cannot be undone.')) {
+                        return;
+                    }
+
+                    await forget();
+                    await renderRecoveryPanel();
+                }));
+
+                list.appendChild(li);
+            });
+        }
+
 
         function showRecordingMessage(
             text,
@@ -3924,9 +4315,11 @@ document.addEventListener(
 
 
         async function saveRecording(
-            blob
+            blob,
+            targetRecordingId = recordingId,
+            durationSeconds = elapsedSeconds
         ) {
-            if (!recordingId) {
+            if (!targetRecordingId) {
                 throw new Error(
                     'The recording session could not be identified.'
                 );
@@ -3934,11 +4327,9 @@ document.addEventListener(
 
 
             const extension =
-                blob.type.includes(
-                    'ogg'
-                )
-                    ? 'ogg'
-                    : 'webm';
+                recordingFileExtension(
+                    blob.type
+                );
 
 
             const formData =
@@ -3960,7 +4351,7 @@ document.addEventListener(
                 String(
                     Math.max(
                         1,
-                        elapsedSeconds
+                        Number(durationSeconds) || 0
                     )
                 )
             );
@@ -3996,7 +4387,7 @@ document.addEventListener(
                 )
                 .replace(
                     '__ID__',
-                    String(recordingId)
+                    String(targetRecordingId)
                 );
 
 
@@ -4034,7 +4425,12 @@ document.addEventListener(
                     );
 
 
-            if (!response.ok) {
+            // A 202 "already being processed" reply has ok:false; treat it as
+            // not-yet-saved so the local backup is kept for a later retry.
+            if (
+                !response.ok
+                || payload.ok === false
+            ) {
                 throw new Error(
                     payload.message
                     || 'Could not save recording.'
@@ -4237,6 +4633,12 @@ document.addEventListener(
                 recordingId =
                     await createRecordingSession();
 
+                recordingStartedAt =
+                    Date.now();
+
+                backupFailed =
+                    false;
+
 
                 const mimeType =
                     preferredMimeType();
@@ -4274,6 +4676,20 @@ document.addEventListener(
                             recorderChunks.push(
                                 event.data
                             );
+
+                            recordingBackup
+                                .addChunk(
+                                    backupSession(),
+                                    event.data
+                                )
+                                .catch(
+                                    function (error) {
+                                        if (!backupFailed) {
+                                            backupFailed = true;
+                                            console.warn('Recording backup unavailable:', error);
+                                        }
+                                    }
+                                );
                         }
                     }
                 );
@@ -4305,6 +4721,13 @@ document.addEventListener(
                         }
 
 
+                        let blob =
+                            null;
+
+                        const session =
+                            backupSession();
+
+
                         try {
                             if (
                                 !recorderChunks.length
@@ -4315,7 +4738,7 @@ document.addEventListener(
                             }
 
 
-                            const blob =
+                            blob =
                                 new Blob(
                                     recorderChunks,
                                     {
@@ -4331,6 +4754,15 @@ document.addEventListener(
                             );
 
 
+                            await recordingBackup
+                                .remove(
+                                    session.recordingId
+                                )
+                                .catch(
+                                    function () {}
+                                );
+
+
                             showRecordingMessage(
                                 'Meeting recording saved successfully.',
                                 'success'
@@ -4338,6 +4770,12 @@ document.addEventListener(
 
 
                             await releaseMedia();
+
+
+                            // Audio is safely on the server; don't trigger
+                            // the unsaved-recording leave warning on reload.
+                            recorderStopping =
+                                false;
 
 
                             /*
@@ -4357,9 +4795,32 @@ document.addEventListener(
                             );
 
 
+                            // Never throw the audio away on a failed upload:
+                            // keep it for Retry / Download below.
+                            if (
+                                blob
+                                && blob.size
+                            ) {
+                                unsavedInMemory.set(
+                                    session.recordingId,
+                                    {
+                                        session: session,
+                                        blob: blob
+                                    }
+                                );
+                            }
+
+
                             showRecordingMessage(
-                                error.message
-                                || 'Could not save recording.',
+                                (
+                                    error.message
+                                    || 'Could not save recording.'
+                                )
+                                + (
+                                    blob && blob.size
+                                        ? ' Your audio is kept in this browser — use "Save to meeting" to retry or "Download" to keep a copy.'
+                                        : ''
+                                ),
                                 'error'
                             );
 
@@ -4373,6 +4834,8 @@ document.addEventListener(
                         } finally {
                             recorder =
                                 null;
+
+                            renderRecoveryPanel();
 
                             recorderChunks =
                                 [];
@@ -4600,7 +5063,18 @@ document.addEventListener(
 
         window.addEventListener(
             'beforeunload',
-            function () {
+            function (event) {
+                // Warn before leaving while audio has not reached the server.
+                if (
+                    (recorder && recorder.state !== 'inactive')
+                    || recorderStopping
+                    || (backupFailed && unsavedInMemory.size)
+                ) {
+                    event.preventDefault();
+                    event.returnValue = '';
+                    return;
+                }
+
                 [
                     displayStream,
                     microphoneStream,
@@ -4666,6 +5140,9 @@ document.addEventListener(
 
 
         renderRecordingTimer();
+
+
+        renderRecoveryPanel();
 
 
         /*
