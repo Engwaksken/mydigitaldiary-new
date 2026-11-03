@@ -14,6 +14,9 @@ use RuntimeException;
 
 class ApplyExtraRequestService
 {
+    /** Days purchased extra minutes stay usable, counted from when they are applied. */
+    public const QUOTA_VALIDITY_DAYS = 30;
+
     public function __construct(
         private readonly IoTecPayService $iotecPayService
     ) {}
@@ -34,7 +37,7 @@ class ApplyExtraRequestService
                 'currency' => $currency,
                 'quota_amount' => $quotaAmount,
                 'quota_used' => 0,
-                'expires_at' => now()->addDays(30),
+                'expires_at' => now()->addDays(self::QUOTA_VALIDITY_DAYS),
             ]);
         });
     }
@@ -155,29 +158,25 @@ class ApplyExtraRequestService
             /*
              * Determine the new extra_quota_expires_at value.
              *
-             * When the user's current expiry is null the account is in a
-             * "never-expires" / lifetime state — keep it null so this
-             * purchased extra request does not shrink the entitlement to
-             * only 30 days.
+             * Purchased minutes are valid for QUOTA_VALIDITY_DAYS counted
+             * from when they are applied, not from when the request was
+             * created: an admin applying an older request used to hand out
+             * minutes that had already expired, so transcription still
+             * reported "exceeds the per-meeting transcription limit".
              *
-             * When the current expiry is in the future, extend to the
-             * later of current expiry / request expiry.
-             *
-             * When the current expiry is in the past (stale), adopt the
-             * request's expiry.
+             * - Current expiry null ("never expires" / lifetime): keep null
+             *   so this purchase does not shrink the entitlement.
+             * - Current expiry in the future: take the later date.
+             * - Current expiry in the past (stale): use the new grant expiry.
              */
+            $grantExpiresAt = now()->addDays(self::QUOTA_VALIDITY_DAYS);
+
             if (is_null($user->extra_quota_expires_at)) {
-                // Never-expires / lifetime — preserve null.
                 $expiresAt = null;
-            } elseif ($user->extra_quota_expires_at->isFuture()) {
-                // Future expiry — take whichever is later.
-                $expiresAt = $lockedRequest->expires_at
-                    && $lockedRequest->expires_at->gt($user->extra_quota_expires_at)
-                    ? $lockedRequest->expires_at
-                    : $user->extra_quota_expires_at;
+            } elseif ($user->extra_quota_expires_at->gt($grantExpiresAt)) {
+                $expiresAt = $user->extra_quota_expires_at;
             } else {
-                // Past / stale expiry — adopt the request expiry.
-                $expiresAt = $lockedRequest->expires_at ?? now()->addDays(30);
+                $expiresAt = $grantExpiresAt;
             }
 
             $user->forceFill([
@@ -189,6 +188,7 @@ class ApplyExtraRequestService
                 'status' => 'applied',
                 'applied_at' => now(),
                 'quota_used' => 0,
+                'expires_at' => $grantExpiresAt,
             ]);
 
             return $lockedRequest->fresh();
