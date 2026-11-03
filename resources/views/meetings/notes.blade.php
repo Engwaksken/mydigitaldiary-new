@@ -1563,25 +1563,27 @@
             {{-- Manual Time Input --}}
             <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
-                    <label class="meeting-label">Set Start (seconds)</label>
+                    <label for="segment-start-input" class="meeting-label">Set Start (min:sec)</label>
                     <input
-                        type="number"
+                        type="text"
                         id="segment-start-input"
-                        class="pm-input mt-1 w-full"
-                        min="0"
-                        step="0.1"
-                        placeholder="e.g., 30.5"
+                        class="pm-input mt-1 w-full font-mono"
+                        inputmode="text"
+                        autocomplete="off"
+                        pattern="^\s*(\d+:){0,2}\d+(\.\d+)?\s*$"
+                        placeholder="e.g. 1:20"
                     >
                 </div>
                 <div>
-                    <label class="meeting-label">Set End (seconds)</label>
+                    <label for="segment-end-input" class="meeting-label">Set End (min:sec)</label>
                     <input
-                        type="number"
+                        type="text"
                         id="segment-end-input"
-                        class="pm-input mt-1 w-full"
-                        min="0.1"
-                        step="0.1"
-                        placeholder="e.g., 60.0"
+                        class="pm-input mt-1 w-full font-mono"
+                        inputmode="text"
+                        autocomplete="off"
+                        pattern="^\s*(\d+:){0,2}\d+(\.\d+)?\s*$"
+                        placeholder="e.g. 2:45"
                     >
                 </div>
             </div>
@@ -5514,30 +5516,70 @@ document.addEventListener(
             document.removeEventListener('touchend', handleWaveformPointerUp);
         }
 
-        function handleStartInputChange() {
-            const value = parseFloat(segmentStartInput.value);
-            if (!isNaN(value) && value >= 0 && value < audioEditorState.duration) {
-                audioEditorState.selectionStart = value;
-                if (audioEditorState.selectionEnd <= audioEditorState.selectionStart) {
-                    audioEditorState.selectionEnd = Math.min(audioEditorState.duration, audioEditorState.selectionStart + 1);
-                }
-                drawSelection();
-                updateSelectionDisplay();
-                updatePreviewAudio();
-            }
+        // Accepts "80", "1:20", "1:20.5" or "1:02:30" (h:mm:ss); returns seconds or NaN.
+        function parseTimeInput(raw) {
+            const text = String(raw || '').trim();
+            if (!/^(\d+:){0,2}\d+(\.\d+)?$/.test(text)) return NaN;
+
+            const parts = text.split(':').map(Number);
+
+            // Seconds (and minutes, when hours are given) must stay below 60.
+            if (parts.length > 1 && parts[parts.length - 1] >= 60) return NaN;
+            if (parts.length === 3 && parts[1] >= 60) return NaN;
+
+            return parts.reduce(function (total, part) { return total * 60 + part; }, 0);
         }
 
-        function handleEndInputChange() {
-            const value = parseFloat(segmentEndInput.value);
-            if (!isNaN(value) && value > 0 && value <= audioEditorState.duration) {
+        function applyTimeInput(input, isStart) {
+            const raw = input.value.trim();
+            if (raw === '') return;
+
+            const value = parseTimeInput(raw);
+            const duration = audioEditorState.duration;
+
+            if (isNaN(value)) {
+                showAudioEditorValidation('Enter a time like 1:20 (minutes:seconds).', 'warning');
+                return;
+            }
+
+            const valid = isStart
+                ? value >= 0 && value < duration
+                : value > 0 && value <= duration;
+
+            if (!valid) {
+                showAudioEditorValidation(
+                    'Time must be within the recording (0:00 – ' + formatTime(duration) + ').',
+                    'warning'
+                );
+                return;
+            }
+
+            clearAudioEditorValidation();
+
+            if (isStart) {
+                audioEditorState.selectionStart = value;
+                if (audioEditorState.selectionEnd <= audioEditorState.selectionStart) {
+                    audioEditorState.selectionEnd = Math.min(duration, audioEditorState.selectionStart + 1);
+                }
+            } else {
                 audioEditorState.selectionEnd = value;
                 if (audioEditorState.selectionStart >= audioEditorState.selectionEnd) {
                     audioEditorState.selectionStart = Math.max(0, audioEditorState.selectionEnd - 1);
                 }
-                drawSelection();
-                updateSelectionDisplay();
-                updatePreviewAudio();
             }
+
+            input.value = formatTime(value);
+            drawSelection();
+            updateSelectionDisplay();
+            updatePreviewAudio();
+        }
+
+        function handleStartInputChange() {
+            applyTimeInput(segmentStartInput, true);
+        }
+
+        function handleEndInputChange() {
+            applyTimeInput(segmentEndInput, false);
         }
 
         async function handlePreviewPlay() {
