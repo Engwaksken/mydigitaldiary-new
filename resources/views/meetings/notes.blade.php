@@ -4739,10 +4739,10 @@ document.addEventListener(
 
 
                 /*
-                 * Stop/save when user stops sharing.
+                 * Stop/save if the microphone stream ends.
                  */
-                displayStream
-                    .getTracks()
+                microphoneStream
+                    ?.getTracks()
                     .forEach(
                         function (track) {
                             track.addEventListener(
