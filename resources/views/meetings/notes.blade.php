@@ -308,7 +308,7 @@
                                 </h2>
 
                                 <p class="mt-1 text-xs leading-5 text-slate-500">
-                                    Record the meeting/tab audio together with your microphone or headset.
+                                    For in-person meetings, record with your microphone or headset—no meeting tab selection is needed.
                                 </p>
                             </div>
 
@@ -404,18 +404,8 @@
                             <i class="fa-solid fa-circle-info mt-0.5"></i>
 
                             <div>
-                                <strong>
-                                    When Chrome or Edge asks what to share:
-                                </strong>
-
-                                <p class="mt-1">
-                                    Select the browser tab where the meeting is running and enable
-                                    <strong>Share tab audio</strong> or <strong>Share audio</strong>.
-                                </p>
-
-                                <p class="mt-1">
-                                    Your wired, Bluetooth or USB headset microphone is captured separately.
-                                </p>
+                                <strong>Recording an in-person meeting:</strong>
+                                <p class="mt-1">Allow microphone access when prompted. Keep this page open while recording; you do not need to select or open another tab.</p>
                             </div>
                         </div>
 
@@ -4463,7 +4453,6 @@ document.addEventListener(
 
             if (
                 !navigator.mediaDevices
-                || !navigator.mediaDevices.getDisplayMedia
                 || !navigator.mediaDevices.getUserMedia
                 || !window.MediaRecorder
             ) {
@@ -4498,39 +4487,12 @@ document.addEventListener(
 
                 if (recordingStatus) {
                     recordingStatus.textContent =
-                        'Select the meeting browser tab and enable Share tab audio.';
+                        'Allow microphone access to start recording.';
                 }
 
 
-                /*
-                 * Meeting/tab/system audio.
-                 */
-                displayStream =
-                    await navigator
-                        .mediaDevices
-                        .getDisplayMedia({
-                            video:true,
-                            audio:true
-                        });
-
-
-                const meetingAudioTracks =
-                    displayStream
-                        .getAudioTracks();
-
-
-                if (
-                    !meetingAudioTracks.length
-                ) {
-                    throw new Error(
-                        'Meeting audio is not being captured. Select the meeting tab and enable Share tab audio.'
-                    );
-                }
-
-
-                /*
-                 * User microphone / headset.
-                 */
+                // In-person meetings are captured directly from the mic.
+                // No screen/tab capture prompt is needed.
                 microphoneStream =
                     await navigator
                         .mediaDevices
@@ -4556,80 +4518,7 @@ document.addEventListener(
                 }
 
 
-                /*
-                 * Mix both streams.
-                 */
-                const AudioContextClass =
-                    window.AudioContext
-                    || window.webkitAudioContext;
-
-
-                if (!AudioContextClass) {
-                    throw new Error(
-                        'Your browser does not support audio mixing.'
-                    );
-                }
-
-
-                audioContext =
-                    new AudioContextClass();
-
-
-                if (
-                    audioContext.state
-                    === 'suspended'
-                ) {
-                    await audioContext.resume();
-                }
-
-
-                const destination =
-                    audioContext
-                        .createMediaStreamDestination();
-
-
-                const meetingSource =
-                    audioContext
-                        .createMediaStreamSource(
-                            new MediaStream(
-                                meetingAudioTracks
-                            )
-                        );
-
-
-                const microphoneSource =
-                    audioContext
-                        .createMediaStreamSource(
-                            microphoneStream
-                        );
-
-
-                meetingSource.connect(
-                    destination
-                );
-
-
-                microphoneSource.connect(
-                    destination
-                );
-
-
-                mixedStream =
-                    new MediaStream(
-                        destination.stream
-                            .getAudioTracks()
-                    );
-
-
-                if (
-                    !mixedStream
-                        .getAudioTracks()
-                        .length
-                ) {
-                    throw new Error(
-                        'The meeting and microphone audio could not be combined.'
-                    );
-                }
+                mixedStream = microphoneStream;
 
 
                 recordingId =
@@ -4882,7 +4771,7 @@ document.addEventListener(
 
                 setAudioSourceState(
                     true,
-                    true
+                    false
                 );
 
 
@@ -4896,12 +4785,12 @@ document.addEventListener(
 
                 if (recordingStatus) {
                     recordingStatus.textContent =
-                        'Recording meeting audio and microphone.';
+                        'Recording in-person meeting audio from your microphone.';
                 }
 
 
                 showRecordingMessage(
-                    'Recording started. Meeting audio and your microphone are both being captured.',
+                    'Recording started. Your microphone is capturing the in-person meeting.',
                     'success'
                 );
 
@@ -4936,7 +4825,7 @@ document.addEventListener(
                     === 'NotAllowedError'
                 ) {
                     errorMessage =
-                        'Permission was not granted. Allow microphone access, select the meeting tab and enable Share tab audio.';
+                        'Permission was not granted. Allow microphone access to record this in-person meeting.';
                 }
 
 
