@@ -57,6 +57,9 @@ class TranscriptionService
     /**
      * Transcribe a stored meeting recording.
      *
+     * $meetingRecordingId is set when transcribing one part of a split
+     * recording, so all parts share one per-meeting minute allowance.
+     *
      * @return array{
      *     transcript:string,
      *     segments:array<int,array<string,mixed>>
@@ -66,7 +69,8 @@ class TranscriptionService
         User $user,
         string $audioPath,
         string $language = 'auto',
-        int $durationSeconds = 1
+        int $durationSeconds = 1,
+        ?int $meetingRecordingId = null
     ): array {
         $hasActive = $user->hasActiveAccess();
         $extraMinutes = (int) ($user->extra_recording_quota_minutes ?? 0);
@@ -183,7 +187,7 @@ class TranscriptionService
         $usageReservation = null;
 
         try {
-            $usageReservation = $usageService->reserve($user, $durationSeconds);
+            $usageReservation = $usageService->reserve($user, $durationSeconds, $meetingRecordingId);
 
             try {
                 $result = $this->sendToOpenAi(

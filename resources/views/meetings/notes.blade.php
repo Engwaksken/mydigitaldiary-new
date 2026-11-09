@@ -308,7 +308,7 @@
                                 </h2>
 
                                 <p class="mt-1 text-xs leading-5 text-slate-500">
-                                    For in-person meetings, record with your microphone or headset—no meeting tab selection is needed.
+                                    Click Start Recording, then choose a physical (in-person) or online meeting.
                                 </p>
                             </div>
 
@@ -404,8 +404,11 @@
                             <i class="fa-solid fa-circle-info mt-0.5"></i>
 
                             <div>
-                                <strong>Recording an in-person meeting:</strong>
-                                <p class="mt-1">Allow microphone access when prompted. Keep this page open while recording; you do not need to select or open another tab.</p>
+                                <strong>Physical meeting:</strong>
+                                <p class="mt-1">Only your microphone is recorded. Allow microphone access and keep this page open.</p>
+
+                                <strong class="mt-2 block">Online meeting:</strong>
+                                <p class="mt-1">When Chrome or Edge asks what to share, pick the meeting tab and turn on <strong>Share tab audio</strong>. Your microphone is recorded too.</p>
                             </div>
                         </div>
 
@@ -614,6 +617,30 @@
                                 </button>
 
                             </div>
+
+
+                            {{-- Long recordings are transcribed part by part in the background --}}
+                            @if($recording->status === 'completed' && $recording->transcription_status === 'processing' && ! $recording->transcript)
+
+                                <div
+                                    class="meeting-recording-message info mt-4"
+                                    role="status"
+                                    aria-live="polite"
+                                    data-transcription-poll="{{ route('meeting-recordings.transcription-status', $recording) }}"
+                                >
+                                    <i class="fa-solid fa-spinner fa-spin mr-1"></i>
+                                    <span data-transcription-poll-text>
+                                        Transcribing this recording. The transcript will appear here automatically.
+                                    </span>
+                                </div>
+
+                            @elseif($recording->transcription_status === 'failed' && $recording->transcription_error && ! $recording->transcript)
+
+                                <div class="meeting-recording-message error mt-4" role="status">
+                                    {{ $recording->transcription_error }}
+                                </div>
+
+                            @endif
 
 
                             @if($recording->audio_path)
@@ -1351,6 +1378,112 @@
 
 
 {{-- =============================================================
+     RECORDING MODE MODAL (physical vs online)
+============================================================== --}}
+<dialog
+    id="recording-mode-dialog"
+    class="meeting-simple-dialog"
+    aria-labelledby="recording-mode-title"
+>
+
+    <div class="meeting-simple-dialog-card">
+
+        <header class="meeting-dialog-header">
+
+            <div>
+                <h3
+                    id="recording-mode-title"
+                    class="text-lg font-black text-slate-900"
+                >
+                    What kind of meeting is this?
+                </h3>
+
+                <p class="mt-1 text-xs text-slate-500">
+                    This decides which audio is recorded.
+                </p>
+            </div>
+
+
+            <button
+                type="button"
+                data-close-recording-mode
+                class="meeting-dialog-close"
+                aria-label="Close meeting type dialog"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </header>
+
+
+        <div class="meeting-dialog-body">
+
+            <div class="grid gap-3 sm:grid-cols-2">
+
+                <button
+                    type="button"
+                    class="meeting-mode-option"
+                    data-recording-mode="physical"
+                >
+                    <span class="meeting-audio-source-icon">
+                        <i class="fa-solid fa-people-group"></i>
+                    </span>
+
+                    <span>
+                        <span class="block text-sm font-black text-slate-900">
+                            Physical meeting
+                        </span>
+
+                        <span class="mt-1 block text-xs leading-5 text-slate-500">
+                            In-person. Records your microphone only.
+                        </span>
+                    </span>
+                </button>
+
+
+                <button
+                    type="button"
+                    class="meeting-mode-option"
+                    data-recording-mode="online"
+                >
+                    <span class="meeting-audio-source-icon">
+                        <i class="fa-solid fa-laptop"></i>
+                    </span>
+
+                    <span>
+                        <span class="block text-sm font-black text-slate-900">
+                            Online meeting
+                        </span>
+
+                        <span class="mt-1 block text-xs leading-5 text-slate-500">
+                            Zoom, Meet, Teams… Records the meeting tab audio and your microphone.
+                        </span>
+                    </span>
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <footer class="meeting-dialog-footer">
+
+            <button
+                type="button"
+                data-close-recording-mode
+                class="apple-btn rounded-xl px-4 py-2.5 text-sm font-bold"
+            >
+                Cancel
+            </button>
+
+        </footer>
+
+    </div>
+
+</dialog>
+
+
+{{-- =============================================================
      DELETE RECORDING MODAL
 ============================================================== --}}
 <dialog
@@ -1789,6 +1922,33 @@
 .meeting-audio-source.is-active .meeting-audio-source-icon{
     border-color:#86efac;
     color:#047857;
+}
+
+.meeting-mode-option{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    width:100%;
+    padding:14px;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:#f8fafc;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+}
+
+.meeting-mode-option:hover,
+.meeting-mode-option:focus-visible{
+    border-color:#fda4af;
+    background:#fff1f2;
+    outline:none;
+}
+
+.meeting-mode-option:hover .meeting-audio-source-icon,
+.meeting-mode-option:focus-visible .meeting-audio-source-icon{
+    border-color:#fda4af;
+    color:#e11d48;
 }
 
 .meeting-recording-help{
@@ -3381,6 +3541,7 @@ document.addEventListener(
         [
             'meeting-share-dialog',
             'recording-delete-dialog',
+            'recording-mode-dialog',
             'email-notes-dialog'
         ].forEach(
             function (id) {
@@ -3598,6 +3759,40 @@ document.addEventListener(
 
 
         /*
+         * Long meetings are recorded in parts. Every PART_SECONDS of
+         * recorded time the current part is closed, a new one starts
+         * straight away on the same audio stream, and the finished part
+         * is uploaded and transcribed in the background. Meetings shorter
+         * than one part keep the single-upload flow.
+         */
+        const PART_SECONDS =
+            Math.max(
+                60,
+                Number(@json(config('meeting_recordings.part_seconds', 1200))) || 1200
+            );
+
+        let recorderOptions =
+            {};
+
+        // { number, chunks, startElapsed, endElapsed, chunked, recorder, stopped }
+        let currentPart =
+            null;
+
+        let rotatingPart =
+            false;
+
+        let partUploads =
+            Promise.resolve();
+
+        let partUploadsInFlight =
+            0;
+
+        // part number -> { part, blob, duration } for uploads still owed.
+        const failedParts =
+            new Map();
+
+
+        /*
         |--------------------------------------------------------------------------
         | Local backup of recording chunks (IndexedDB)
         |--------------------------------------------------------------------------
@@ -3795,7 +3990,10 @@ document.addEventListener(
             }
 
             const items = stored
-                .filter(function (s) { return s.recordingId !== recordingId || !recorder; })
+                .filter(function (s) {
+                    // Hide the recording that is still being captured.
+                    return (s.serverRecordingId || s.recordingId) !== recordingId || !recorder;
+                })
                 .map(function (s) { return { session: s, blob: null }; });
 
             unsavedInMemory.forEach(function (entry, id) {
@@ -3833,6 +4031,7 @@ document.addEventListener(
                     (session.startedAt
                         ? new Date(session.startedAt).toLocaleString()
                         : 'Recording')
+                    + (isPartSession(session) ? ' · part ' + session.partNumber : '')
                     + ' · ' + formatRecordingTime(session.elapsedSeconds || 0);
 
                 const blobFor = function () {
@@ -3876,8 +4075,25 @@ document.addEventListener(
 
                         showRecordingMessage('Uploading recovered recording...', 'info');
 
-                        await saveRecording(blob, session.recordingId, session.elapsedSeconds);
-                        await forget();
+                        if (isPartSession(session)) {
+                            await uploadPart(session.serverRecordingId, session.partNumber, blob, session.elapsedSeconds);
+                            await forget();
+
+                            const finished = await finishParts(session.serverRecordingId);
+
+                            if (!finished.ok) {
+                                // Other parts of this meeting are still only in this browser.
+                                showRecordingMessage(
+                                    'Part ' + session.partNumber + ' saved. Save the other unsaved parts of this recording to finish it.',
+                                    'info'
+                                );
+                                await renderRecoveryPanel();
+                                return;
+                            }
+                        } else {
+                            await saveRecording(blob, session.recordingId, session.elapsedSeconds);
+                            await forget();
+                        }
 
                         showRecordingMessage('Recovered recording saved successfully.', 'success');
 
@@ -4142,6 +4358,15 @@ document.addEventListener(
                         elapsedSeconds++;
 
                         renderRecordingTimer();
+
+                        // Close the current part and upload it once it
+                        // reaches the part length; recording carries on.
+                        if (
+                            currentPart
+                            && elapsedSeconds - currentPart.startElapsed >= PART_SECONDS
+                        ) {
+                            rotatePart();
+                        }
                     },
                     1000
                 );
@@ -4434,7 +4659,471 @@ document.addEventListener(
         }
 
 
-        async function startMeetingRecording() {
+        /*
+        |--------------------------------------------------------------------------
+        | Recording parts
+        |--------------------------------------------------------------------------
+        */
+
+        // A backup that must be saved through the parts endpoint rather than
+        // the single-file stop endpoint.
+        function isPartSession(session) {
+            return Boolean(
+                session
+                && session.partNumber
+                && session.serverRecordingId
+                && (session.chunked || session.partNumber > 1)
+            );
+        }
+
+
+        // Part 1 keeps the plain recording ID so a meeting that never
+        // reaches a second part backs up exactly as before.
+        function partBackupKey(part) {
+            return part.number === 1
+                ? recordingId
+                : recordingId + ':' + part.number;
+        }
+
+
+        function partBackupSession(part) {
+            const end =
+                part.endElapsed === null
+                    ? elapsedSeconds
+                    : part.endElapsed;
+
+            return Object.assign(backupSession(), {
+                recordingId: partBackupKey(part),
+                serverRecordingId: recordingId,
+                partNumber: part.number,
+                chunked: part.chunked,
+                mimeType: (part.recorder && part.recorder.mimeType) || 'audio/webm',
+                elapsedSeconds: Math.max(0, end - part.startElapsed)
+            });
+        }
+
+
+        function partBlob(part) {
+            return new Blob(
+                part.chunks,
+                { type: (part.recorder && part.recorder.mimeType) || 'audio/webm' }
+            );
+        }
+
+
+        function waitFor(milliseconds) {
+            return new Promise(function (resolve) {
+                window.setTimeout(resolve, milliseconds);
+            });
+        }
+
+
+        async function uploadPart(
+            targetRecordingId,
+            partNumber,
+            blob,
+            durationSeconds
+        ) {
+            const formData =
+                new FormData();
+
+            formData.append(
+                'audio',
+                blob,
+                'meeting-recording-part-' + partNumber + '.' + recordingFileExtension(blob.type)
+            );
+
+            formData.append('part_number', String(partNumber));
+
+            formData.append(
+                'duration_seconds',
+                String(Math.max(1, Math.round(Number(durationSeconds) || 0)))
+            );
+
+            const url =
+                @json(route('meeting-recordings.parts.store', ['recording' => '__ID__']))
+                    .replace('__ID__', String(targetRecordingId));
+
+            const response =
+                await fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRF-TOKEN': @json(csrf_token()),
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+            const payload =
+                await response.json().catch(function () { return {}; });
+
+            if (!response.ok || payload.ok === false) {
+                throw new Error(
+                    payload.message
+                    || 'Could not upload part ' + partNumber + ' of the recording.'
+                );
+            }
+
+            return payload;
+        }
+
+
+        // Resolves { ok:false, missing } when other parts are still owed,
+        // throws for any other failure.
+        async function finishParts(
+            targetRecordingId,
+            partsCount = null
+        ) {
+            const url =
+                @json(route('meeting-recordings.parts.finish', ['recording' => '__ID__']))
+                    .replace('__ID__', String(targetRecordingId));
+
+            const response =
+                await fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRF-TOKEN': @json(csrf_token()),
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(
+                        partsCount ? { parts_count: partsCount } : {}
+                    )
+                });
+
+            const payload =
+                await response.json().catch(function () { return {}; });
+
+            if (response.status === 422 && Array.isArray(payload.missing_parts)) {
+                return { ok: false, missing: payload.missing_parts, payload: payload };
+            }
+
+            if (!response.ok || payload.ok === false) {
+                throw new Error(
+                    payload.message
+                    || 'Could not finish saving the recording.'
+                );
+            }
+
+            return { ok: true, payload: payload };
+        }
+
+
+        async function uploadPartWithRetry(part, blob, durationSeconds) {
+            const delays = [0, 5000, 15000];
+            let lastError = null;
+
+            for (const delay of delays) {
+                if (delay) {
+                    await waitFor(delay);
+                }
+
+                try {
+                    await uploadPart(recordingId, part.number, blob, durationSeconds);
+                    return true;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            console.warn('Recording part upload failed:', lastError);
+
+            return false;
+        }
+
+
+        // Uploads run one at a time, in part order, behind the recording.
+        function queuePartUpload(part, blob, durationSeconds) {
+            partUploadsInFlight++;
+
+            const job =
+                partUploads.then(async function () {
+                    const session = partBackupSession(part);
+                    const uploaded = await uploadPartWithRetry(part, blob, durationSeconds);
+
+                    if (uploaded) {
+                        failedParts.delete(part.number);
+                        unsavedInMemory.delete(session.recordingId);
+
+                        await recordingBackup
+                            .remove(session.recordingId)
+                            .catch(function () {});
+
+                        return;
+                    }
+
+                    failedParts.set(part.number, {
+                        part: part,
+                        blob: blob,
+                        duration: durationSeconds
+                    });
+
+                    // Covers browsers where the IndexedDB backup is unavailable.
+                    unsavedInMemory.set(session.recordingId, {
+                        session: session,
+                        blob: blob
+                    });
+
+                    if (recorder && recorder.state !== 'inactive') {
+                        showRecordingMessage(
+                            'Part ' + part.number + ' could not be uploaded yet. It is kept in this browser and will be retried when you stop.',
+                            'warning'
+                        );
+                    }
+                }).finally(function () {
+                    partUploadsInFlight--;
+                });
+
+            partUploads =
+                job.catch(function () {});
+
+            return job;
+        }
+
+
+        function beginPart(number) {
+            const rec =
+                new MediaRecorder(
+                    mixedStream,
+                    recorderOptions
+                );
+
+            const part = {
+                number: number,
+                chunks: [],
+                startElapsed: elapsedSeconds,
+                endElapsed: null,
+                chunked: number > 1,
+                recorder: rec,
+                stopped: null
+            };
+
+            part.stopped =
+                new Promise(function (resolve) {
+                    rec.addEventListener('stop', resolve, { once: true });
+                });
+
+            rec.addEventListener(
+                'dataavailable',
+                function (event) {
+                    if (!event.data || event.data.size <= 0) {
+                        return;
+                    }
+
+                    part.chunks.push(event.data);
+
+                    recordingBackup
+                        .addChunk(partBackupSession(part), event.data)
+                        .catch(function (error) {
+                            if (!backupFailed) {
+                                backupFailed = true;
+                                console.warn('Recording backup unavailable:', error);
+                            }
+                        });
+                }
+            );
+
+            rec.start(1000);
+
+            currentPart = part;
+            recorder = rec;
+
+            return part;
+        }
+
+
+        // Stops a part's recorder and resolves with its complete audio file.
+        async function endPart(part) {
+            if (part.endElapsed === null) {
+                part.endElapsed = elapsedSeconds;
+            }
+
+            if (part.recorder.state !== 'inactive') {
+                part.recorder.stop();
+            }
+
+            await part.stopped;
+
+            return partBlob(part);
+        }
+
+
+        async function rotatePart() {
+            if (
+                rotatingPart
+                || recorderStopping
+                || !currentPart
+                || currentPart.recorder.state !== 'recording'
+            ) {
+                return;
+            }
+
+            rotatingPart = true;
+
+            try {
+                const finished = currentPart;
+
+                // Start the next part before stopping this one so no audio
+                // falls between them.
+                beginPart(finished.number + 1);
+                finished.chunked = true;
+
+                const blob = await endPart(finished);
+
+                queuePartUpload(
+                    finished,
+                    blob,
+                    finished.endElapsed - finished.startElapsed
+                );
+
+                if (recordingStatus) {
+                    recordingStatus.textContent =
+                        'Recording part ' + currentPart.number + '. Earlier parts are uploading and being transcribed in the background.';
+                }
+            } catch (error) {
+                // The current part keeps recording; it is just longer.
+                console.error('Could not start the next recording part:', error);
+            } finally {
+                rotatingPart = false;
+            }
+        }
+
+
+        async function finishRecording() {
+            if (recorderStopping || !currentPart) {
+                return;
+            }
+
+            recorderStopping = true;
+
+            stopRecordingTimer();
+            setRecorderState('saving');
+
+            if (recordingStatus) {
+                recordingStatus.textContent = 'Saving recording...';
+            }
+
+            while (rotatingPart) {
+                await waitFor(100);
+            }
+
+            const last = currentPart;
+            const singleFile = last.number === 1 && !last.chunked;
+            let blob = null;
+
+            try {
+                blob = await endPart(last);
+
+                if (!last.chunks.length) {
+                    throw new Error('No audio was captured in the last part of the recording.');
+                }
+
+                if (singleFile) {
+                    // Short meeting: one upload, transcribed straight away.
+                    const session = partBackupSession(last);
+
+                    try {
+                        await saveRecording(blob);
+                    } catch (error) {
+                        unsavedInMemory.set(session.recordingId, { session: session, blob: blob });
+                        throw error;
+                    }
+
+                    await recordingBackup.remove(session.recordingId).catch(function () {});
+
+                    showRecordingMessage('Meeting recording saved successfully.', 'success');
+                } else {
+                    last.chunked = true;
+
+                    queuePartUpload(last, blob, last.endElapsed - last.startElapsed);
+                    await partUploads;
+
+                    // One more attempt for parts that failed during the meeting.
+                    Array.from(failedParts.values()).forEach(function (entry) {
+                        queuePartUpload(entry.part, entry.blob, entry.duration);
+                    });
+                    await partUploads;
+
+                    if (failedParts.size) {
+                        throw new Error(
+                            failedParts.size === 1
+                                ? '1 part of the recording could not be uploaded.'
+                                : failedParts.size + ' parts of the recording could not be uploaded.'
+                        );
+                    }
+
+                    if (recordingStatus) {
+                        recordingStatus.textContent = 'Combining the recording...';
+                    }
+
+                    const finished = await finishParts(recordingId, last.number);
+
+                    if (!finished.ok) {
+                        throw new Error('Some parts of the recording did not reach the server.');
+                    }
+
+                    showRecordingMessage(
+                        finished.payload.transcription_status === 'completed'
+                            ? 'Meeting recording saved and transcribed.'
+                            : 'Meeting recording saved. The last part is being transcribed and will appear shortly.',
+                        'success'
+                    );
+                }
+
+                await releaseMedia();
+
+                // Audio is safely on the server; don't trigger the
+                // unsaved-recording leave warning on reload.
+                recorderStopping = false;
+
+                window.location.href =
+                    window.location.pathname
+                    + window.location.search
+                    + '#transcripts-summary';
+
+                window.location.reload();
+            } catch (error) {
+                console.error(error);
+
+                const kept =
+                    (blob && blob.size) || failedParts.size;
+
+                showRecordingMessage(
+                    (error.message || 'Could not save recording.')
+                    + (kept
+                        ? ' Your audio is kept in this browser — use "Save to meeting" to retry or "Download" to keep a copy.'
+                        : ''),
+                    'error'
+                );
+
+                await releaseMedia();
+
+                setRecorderState('idle');
+            } finally {
+                recorder = null;
+                currentPart = null;
+                failedParts.clear();
+                recorderChunks = [];
+                recorderStopping = false;
+
+                renderRecoveryPanel();
+            }
+        }
+
+
+        const recordingModeDialog =
+            document.getElementById(
+                'recording-mode-dialog'
+            );
+
+
+        /*
+         * Start Recording click: check consent, then ask whether
+         * this is a physical (in-person) or online meeting.
+         */
+        function promptRecordingMode() {
             clearRecordingMessage();
 
 
@@ -4457,7 +5146,85 @@ document.addEventListener(
                 || !window.MediaRecorder
             ) {
                 showRecordingMessage(
-                    'Your browser does not support complete meeting recording. Please use a recent version of Chrome or Edge.',
+                    'Your browser does not support meeting recording. Please use a recent version of Chrome or Edge.',
+                    'error'
+                );
+
+                return;
+            }
+
+
+            if (!recordingModeDialog) {
+                startMeetingRecording(
+                    'physical'
+                );
+
+                return;
+            }
+
+
+            openDialog(
+                recordingModeDialog
+            );
+        }
+
+
+        document
+            .querySelectorAll(
+                '[data-recording-mode]'
+            )
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        'click',
+                        function () {
+                            closeDialog(
+                                recordingModeDialog
+                            );
+
+                            startMeetingRecording(
+                                button.dataset.recordingMode
+                            );
+                        }
+                    );
+                }
+            );
+
+
+        document
+            .querySelectorAll(
+                '[data-close-recording-mode]'
+            )
+            .forEach(
+                function (button) {
+                    button.addEventListener(
+                        'click',
+                        function () {
+                            closeDialog(
+                                recordingModeDialog
+                            );
+                        }
+                    );
+                }
+            );
+
+
+        async function startMeetingRecording(
+            mode
+        ) {
+            clearRecordingMessage();
+
+
+            const isOnline =
+                mode === 'online';
+
+
+            if (
+                isOnline
+                && !navigator.mediaDevices.getDisplayMedia
+            ) {
+                showRecordingMessage(
+                    'This browser cannot capture meeting tab audio. Use a recent version of Chrome or Edge on a computer, or choose Physical meeting.',
                     'error'
                 );
 
@@ -4485,14 +5252,50 @@ document.addEventListener(
                 renderRecordingTimer();
 
 
+                let meetingAudioTracks =
+                    [];
+
+
+                if (isOnline) {
+                    if (recordingStatus) {
+                        recordingStatus.textContent =
+                            'Select the meeting browser tab and enable Share tab audio.';
+                    }
+
+
+                    // Online meetings: capture the meeting tab/system audio.
+                    // Chrome requires video:true for tab audio; the video
+                    // track is never recorded.
+                    displayStream =
+                        await navigator
+                            .mediaDevices
+                            .getDisplayMedia({
+                                video:true,
+                                audio:true
+                            });
+
+
+                    meetingAudioTracks =
+                        displayStream
+                            .getAudioTracks();
+
+
+                    if (
+                        !meetingAudioTracks.length
+                    ) {
+                        throw new Error(
+                            'Meeting audio is not being captured. Select the meeting tab and enable Share tab audio.'
+                        );
+                    }
+                }
+
+
                 if (recordingStatus) {
                     recordingStatus.textContent =
                         'Allow microphone access to start recording.';
                 }
 
 
-                // In-person meetings are captured directly from the mic.
-                // No screen/tab capture prompt is needed.
                 microphoneStream =
                     await navigator
                         .mediaDevices
@@ -4518,7 +5321,78 @@ document.addEventListener(
                 }
 
 
-                mixedStream = microphoneStream;
+                if (isOnline) {
+                    // Mix meeting tab audio with the microphone.
+                    const AudioContextClass =
+                        window.AudioContext
+                        || window.webkitAudioContext;
+
+
+                    if (!AudioContextClass) {
+                        throw new Error(
+                            'Your browser does not support audio mixing.'
+                        );
+                    }
+
+
+                    audioContext =
+                        new AudioContextClass();
+
+
+                    if (
+                        audioContext.state
+                        === 'suspended'
+                    ) {
+                        await audioContext.resume();
+                    }
+
+
+                    const destination =
+                        audioContext
+                            .createMediaStreamDestination();
+
+
+                    audioContext
+                        .createMediaStreamSource(
+                            new MediaStream(
+                                meetingAudioTracks
+                            )
+                        )
+                        .connect(
+                            destination
+                        );
+
+
+                    audioContext
+                        .createMediaStreamSource(
+                            microphoneStream
+                        )
+                        .connect(
+                            destination
+                        );
+
+
+                    mixedStream =
+                        new MediaStream(
+                            destination.stream
+                                .getAudioTracks()
+                        );
+
+
+                    if (
+                        !mixedStream
+                            .getAudioTracks()
+                            .length
+                    ) {
+                        throw new Error(
+                            'The meeting and microphone audio could not be combined.'
+                        );
+                    }
+                } else {
+                    // Physical meetings: the mic hears the room directly.
+                    mixedStream =
+                        microphoneStream;
+                }
 
 
                 recordingId =
@@ -4550,199 +5424,23 @@ document.addEventListener(
                 }
 
 
-                recorder =
-                    new MediaRecorder(
-                        mixedStream,
-                        options
-                    );
+                recorderOptions =
+                    options;
 
+                failedParts.clear();
 
-                recorder.addEventListener(
-                    'dataavailable',
-                    function (event) {
-                        if (
-                            event.data
-                            && event.data.size > 0
-                        ) {
-                            recorderChunks.push(
-                                event.data
-                            );
-
-                            recordingBackup
-                                .addChunk(
-                                    backupSession(),
-                                    event.data
-                                )
-                                .catch(
-                                    function (error) {
-                                        if (!backupFailed) {
-                                            backupFailed = true;
-                                            console.warn('Recording backup unavailable:', error);
-                                        }
-                                    }
-                                );
-                        }
-                    }
-                );
-
-
-                recorder.addEventListener(
-                    'stop',
-                    async function () {
-                        if (recorderStopping) {
-                            return;
-                        }
-
-
-                        recorderStopping =
-                            true;
-
-
-                        stopRecordingTimer();
-
-
-                        setRecorderState(
-                            'saving'
-                        );
-
-
-                        if (recordingStatus) {
-                            recordingStatus.textContent =
-                                'Saving recording...';
-                        }
-
-
-                        let blob =
-                            null;
-
-                        const session =
-                            backupSession();
-
-
-                        try {
-                            if (
-                                !recorderChunks.length
-                            ) {
-                                throw new Error(
-                                    'No audio was captured.'
-                                );
-                            }
-
-
-                            blob =
-                                new Blob(
-                                    recorderChunks,
-                                    {
-                                        type:
-                                            recorder.mimeType
-                                            || 'audio/webm'
-                                    }
-                                );
-
-
-                            await saveRecording(
-                                blob
-                            );
-
-
-                            await recordingBackup
-                                .remove(
-                                    session.recordingId
-                                )
-                                .catch(
-                                    function () {}
-                                );
-
-
-                            showRecordingMessage(
-                                'Meeting recording saved successfully.',
-                                'success'
-                            );
-
-
-                            await releaseMedia();
-
-
-                            // Audio is safely on the server; don't trigger
-                            // the unsaved-recording leave warning on reload.
-                            recorderStopping =
-                                false;
-
-
-                            /*
-                             * Reload directly into transcript tab.
-                             */
-                            window.location.href =
-                                window.location.pathname
-                                + window.location.search
-                                + '#transcripts-summary';
-
-
-                            window.location.reload();
-
-                        } catch (error) {
-                            console.error(
-                                error
-                            );
-
-
-                            // Never throw the audio away on a failed upload:
-                            // keep it for Retry / Download below.
-                            if (
-                                blob
-                                && blob.size
-                            ) {
-                                unsavedInMemory.set(
-                                    session.recordingId,
-                                    {
-                                        session: session,
-                                        blob: blob
-                                    }
-                                );
-                            }
-
-
-                            showRecordingMessage(
-                                (
-                                    error.message
-                                    || 'Could not save recording.'
-                                )
-                                + (
-                                    blob && blob.size
-                                        ? ' Your audio is kept in this browser — use "Save to meeting" to retry or "Download" to keep a copy.'
-                                        : ''
-                                ),
-                                'error'
-                            );
-
-
-                            await releaseMedia();
-
-
-                            setRecorderState(
-                                'idle'
-                            );
-                        } finally {
-                            recorder =
-                                null;
-
-                            renderRecoveryPanel();
-
-                            recorderChunks =
-                                [];
-
-                            recorderStopping =
-                                false;
-                        }
-                    }
-                );
+                currentPart =
+                    null;
 
 
                 /*
-                 * Stop/save if the microphone stream ends.
+                 * Stop/save if the microphone ends or the user
+                 * stops sharing the meeting tab.
                  */
-                microphoneStream
-                    ?.getTracks()
+                [
+                    ...(microphoneStream?.getTracks() || []),
+                    ...(displayStream?.getTracks() || [])
+                ]
                     .forEach(
                         function (track) {
                             track.addEventListener(
@@ -4753,7 +5451,7 @@ document.addEventListener(
                                         && recorder.state
                                             !== 'inactive'
                                     ) {
-                                        recorder.stop();
+                                        finishRecording();
                                     }
                                 },
                                 {
@@ -4764,14 +5462,14 @@ document.addEventListener(
                     );
 
 
-                recorder.start(
-                    1000
+                beginPart(
+                    1
                 );
 
 
                 setAudioSourceState(
                     true,
-                    false
+                    isOnline
                 );
 
 
@@ -4785,12 +5483,16 @@ document.addEventListener(
 
                 if (recordingStatus) {
                     recordingStatus.textContent =
-                        'Recording in-person meeting audio from your microphone.';
+                        isOnline
+                            ? 'Recording online meeting audio and your microphone.'
+                            : 'Recording physical meeting from your microphone.';
                 }
 
 
                 showRecordingMessage(
-                    'Recording started. Your microphone is capturing the in-person meeting.',
+                    isOnline
+                        ? 'Recording started. Meeting tab audio and your microphone are both being captured.'
+                        : 'Recording started. Your microphone is capturing the physical meeting.',
                     'success'
                 );
 
@@ -4804,6 +5506,9 @@ document.addEventListener(
 
 
                 recorder =
+                    null;
+
+                currentPart =
                     null;
 
                 recorderChunks =
@@ -4825,7 +5530,9 @@ document.addEventListener(
                     === 'NotAllowedError'
                 ) {
                     errorMessage =
-                        'Permission was not granted. Allow microphone access to record this in-person meeting.';
+                        isOnline
+                            ? 'Permission was not granted. Allow microphone access, select the meeting tab and enable Share tab audio.'
+                            : 'Permission was not granted. Allow microphone access to record this meeting.';
                 }
 
 
@@ -4846,7 +5553,7 @@ document.addEventListener(
         startButton
             ?.addEventListener(
                 'click',
-                startMeetingRecording
+                promptRecordingMode
             );
 
 
@@ -4927,21 +5634,7 @@ document.addEventListener(
                     }
 
 
-                    stopRecordingTimer();
-
-
-                    setRecorderState(
-                        'saving'
-                    );
-
-
-                    if (recordingStatus) {
-                        recordingStatus.textContent =
-                            'Finishing and saving recording...';
-                    }
-
-
-                    recorder.stop();
+                    finishRecording();
                 }
             );
 
@@ -4959,6 +5652,7 @@ document.addEventListener(
                 if (
                     (recorder && recorder.state !== 'inactive')
                     || recorderStopping
+                    || partUploadsInFlight > 0
                     || (backupFailed && unsavedInMemory.size)
                 ) {
                     event.preventDefault();
@@ -5015,6 +5709,62 @@ document.addEventListener(
                         },
                         5000
                     );
+                }
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Background transcription progress
+        |--------------------------------------------------------------------------
+        | Long recordings finish transcribing on the server after Stop; poll
+        | and reload once the combined transcript (or an error) is ready.
+        */
+
+        document
+            .querySelectorAll(
+                '[data-transcription-poll]'
+            )
+            .forEach(
+                function (banner) {
+                    const url = banner.dataset.transcriptionPoll;
+                    const text = banner.querySelector('[data-transcription-poll-text]');
+                    let polls = 0;
+
+                    const poll = async function () {
+                        polls++;
+
+                        try {
+                            const response = await fetch(url, {
+                                credentials: 'same-origin',
+                                headers: { 'Accept': 'application/json' }
+                            });
+
+                            if (response.ok) {
+                                const status = await response.json();
+
+                                if (status.transcription_status !== 'processing') {
+                                    window.location.hash = '#transcripts-summary';
+                                    window.location.reload();
+                                    return;
+                                }
+
+                                if (text && status.parts_total > 1) {
+                                    text.textContent =
+                                        'Transcribing this recording: '
+                                        + status.parts_completed + ' of ' + status.parts_total
+                                        + ' parts done. The transcript will appear here automatically.';
+                                }
+                            }
+                        } catch (_) {
+                            // Network blip; try again on the next tick.
+                        }
+
+                        // Every 10 s for the first 10 minutes, then every minute.
+                        window.setTimeout(poll, polls < 60 ? 10000 : 60000);
+                    };
+
+                    window.setTimeout(poll, 5000);
                 }
             );
 

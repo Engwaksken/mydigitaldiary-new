@@ -15,6 +15,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use App\Models\MeetingRecordingSegment;
+use App\Models\MeetingRecordingPart;
+use App\Jobs\TranscribeMeetingRecordingPart;
 use FFMpeg\FFMpeg;
 use FFMpeg\Format\Audio\Mp3;
 use Illuminate\Support\Facades\Mail;
@@ -584,6 +586,10 @@ class MeetingRecordingController extends Controller
             $recording
         );
 
+        if ($retry = $this->retryFailedParts($recording)) {
+            return $retry;
+        }
+
         if (! $recording->audio_path) {
             return back()->withErrors([
                 'transcription' =>
@@ -808,6 +814,10 @@ class MeetingRecordingController extends Controller
             $request,
             $recording
         );
+
+        if ($retry = $this->retryFailedParts($recording)) {
+            return $retry;
+        }
 
         if (
             ! $recording->audio_path
@@ -1489,6 +1499,12 @@ class MeetingRecordingController extends Controller
                 );
         }
 
+        // Part rows cascade with the recording; their files do not.
+        $partPaths = $recording->parts()->whereNotNull('audio_path')->pluck('audio_path')->all();
+        if ($partPaths !== []) {
+            Storage::disk('public')->delete($partPaths);
+        }
+
         MeetingAuditLog::record(
             $recording->meeting_id,
             $request->user()->id,
@@ -1501,6 +1517,231 @@ class MeetingRecordingController extends Controller
             'success',
             'Recording removed.'
         );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Split recordings: background-uploaded parts
+    |--------------------------------------------------------------------------
+    |
+    | Long browser recordings upload a part every few minutes while the
+    | meeting continues. Each part is transcribed on the queue, so when the
+    | meeting ends only the final part is left before the transcripts are
+    | combined.
+    |
+    */
+
+    public function storePart(
+        Request $request,
+        MeetingRecording $recording
+    ): JsonResponse {
+        $this->authorizeRecording($request, $recording);
+
+        $data = $request->validate([
+            'audio' => ['required', 'file', 'max:204800'],
+            'part_number' => ['required', 'integer', 'min:1', 'max:1000'],
+            'duration_seconds' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        // A retried upload of a part that already arrived is a no-op, so a
+        // lost response never stores or transcribes the same audio twice.
+        $existing = $recording->parts()
+            ->where('part_number', (int) $data['part_number'])
+            ->first();
+
+        if ($existing && ($existing->audio_path || $existing->transcription_status === 'completed')) {
+            return response()->json([
+                'ok' => true,
+                'part_id' => $existing->id,
+                'part_number' => $existing->part_number,
+                'transcription_status' => $existing->transcription_status,
+            ]);
+        }
+
+        /** @var UploadedFile $audioFile */
+        $audioFile = $request->file('audio');
+
+        $this->validateRecordingFile($audioFile);
+
+        try {
+            $audioPath = $this->storeRecordingFile($audioFile, $request->user());
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Unable to save this part of the recording. It will be retried.',
+            ], 500);
+        }
+
+        $part = MeetingRecordingPart::query()->updateOrCreate(
+            [
+                'meeting_recording_id' => $recording->id,
+                'part_number' => (int) $data['part_number'],
+            ],
+            [
+                'audio_path' => $audioPath,
+                'duration_seconds' => app(\App\Services\AudioDurationProbe::class)->storedSeconds(
+                    $audioPath,
+                    (int) ($data['duration_seconds'] ?? 0)
+                ),
+                'transcription_status' => 'pending',
+                'transcription_error' => null,
+            ]
+        );
+
+        // A part recovered after the recording was stopped re-opens the
+        // combined transcript so it is rebuilt with this part included.
+        if ($recording->status === 'completed') {
+            $recording->update([
+                'transcription_status' => 'processing',
+                'transcription_error' => null,
+            ]);
+        }
+
+        $this->dispatchPartTranscription($part);
+
+        return response()->json([
+            'ok' => true,
+            'part_id' => $part->id,
+            'part_number' => $part->part_number,
+            'transcription_status' => $part->transcription_status,
+        ]);
+    }
+
+    public function finishParts(
+        Request $request,
+        MeetingRecording $recording
+    ): JsonResponse {
+        $this->authorizeRecording($request, $recording);
+
+        $data = $request->validate([
+            'parts_count' => ['nullable', 'integer', 'min:1', 'max:1000'],
+        ]);
+
+        $numbers = $recording->parts()->pluck('part_number')->map(fn ($n) => (int) $n)->all();
+
+        if ($numbers === []) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No parts of this recording have been uploaded yet.',
+            ], 422);
+        }
+
+        $expected = (int) ($data['parts_count'] ?? max($numbers));
+        $missing = array_values(array_diff(range(1, $expected), $numbers));
+
+        if ($missing !== []) {
+            return response()->json([
+                'ok' => false,
+                'missing_parts' => $missing,
+                'message' => 'Some parts of the recording have not been uploaded yet.',
+            ], 422);
+        }
+
+        $wasRecording = $recording->status !== 'completed';
+
+        $recording->update([
+            'status' => 'completed',
+            'duration_seconds' => (int) $recording->parts()->sum('duration_seconds'),
+            'transcription_status' => 'processing',
+            'transcription_error' => null,
+        ]);
+
+        if ($wasRecording) {
+            MeetingAuditLog::record(
+                $recording->meeting_id,
+                $request->user()->id,
+                'stopped_recording',
+                'Duration: ' . $recording->formattedDuration() . ' (' . count($numbers) . ' parts)'
+            );
+        }
+
+        // Normally the last part's job combines the recording; this covers
+        // the case where every part finished transcribing before Stop.
+        try {
+            app(\App\Services\MeetingRecordingPartAssembler::class)->finalizeIfReady($recording);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $recording->refresh();
+
+        return response()->json([
+            'ok' => true,
+            'recording_id' => $recording->id,
+            'transcription_status' => $recording->transcription_status,
+            'message' => $recording->transcription_status === 'completed'
+                ? 'Transcription completed successfully.'
+                : 'Recording saved. The remaining audio is being transcribed.',
+        ]);
+    }
+
+    public function transcriptionStatus(
+        Request $request,
+        MeetingRecording $recording
+    ): JsonResponse {
+        $this->authorizeRecording($request, $recording);
+
+        $parts = $recording->parts()->get(['part_number', 'transcription_status']);
+
+        return response()->json([
+            'recording_id' => $recording->id,
+            'transcription_status' => $recording->transcription_status,
+            'transcription_error' => $recording->transcription_error,
+            'parts_total' => $parts->count(),
+            'parts_completed' => $parts->where('transcription_status', 'completed')->count(),
+            'parts_failed' => $parts->where('transcription_status', 'failed')->count(),
+        ]);
+    }
+
+    /**
+     * For a split recording whose transcript is incomplete, re-queue only the
+     * parts that are not transcribed. Returns null for ordinary recordings.
+     */
+    private function retryFailedParts(MeetingRecording $recording): ?RedirectResponse
+    {
+        $parts = $recording->parts()->get();
+
+        if ($parts->isEmpty() || $recording->transcript) {
+            return null;
+        }
+
+        $retry = $parts->where('transcription_status', 'failed')->filter(fn ($part) => $part->audio_path);
+
+        if ($retry->isEmpty()) {
+            if ($parts->whereIn('transcription_status', ['pending', 'processing'])->isNotEmpty()) {
+                return back()->with('success', 'This recording is still being transcribed. The transcript will appear here shortly.');
+            }
+
+            return null;
+        }
+
+        foreach ($retry as $part) {
+            $part->update(['transcription_status' => 'pending', 'transcription_error' => null]);
+            $this->dispatchPartTranscription($part);
+        }
+
+        $recording->update(['transcription_status' => 'processing', 'transcription_error' => null]);
+
+        return back()->with(
+            'success',
+            'Retrying ' . $retry->count() . ' part' . ($retry->count() === 1 ? '' : 's')
+            . ' of this recording. The full transcript will appear here when done.'
+        );
+    }
+
+    private function dispatchPartTranscription(MeetingRecordingPart $part): void
+    {
+        // Without a queue worker, run after the response so the upload made
+        // during the meeting still returns immediately.
+        if (config('queue.default') === 'sync') {
+            TranscribeMeetingRecordingPart::dispatchAfterResponse($part->id);
+
+            return;
+        }
+
+        TranscribeMeetingRecordingPart::dispatch($part->id);
     }
 
     /*

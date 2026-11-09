@@ -517,6 +517,9 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureSubscribedOrOr
     Route::post('meetings/{meeting}/recordings/upload', [MeetingRecordingController::class, 'upload'])->middleware('throttle:5,1')->name('meetings.recordings.upload');
     Route::patch('meeting-recordings/{recording}/status', [MeetingRecordingController::class, 'updateStatus'])->name('meeting-recordings.status');
     Route::post('meeting-recordings/{recording}/stop', [MeetingRecordingController::class, 'stop'])->name('meeting-recordings.stop');
+    Route::post('meeting-recordings/{recording}/parts', [MeetingRecordingController::class, 'storePart'])->middleware('throttle:30,1')->name('meeting-recordings.parts.store');
+    Route::post('meeting-recordings/{recording}/parts/finish', [MeetingRecordingController::class, 'finishParts'])->name('meeting-recordings.parts.finish');
+    Route::get('meeting-recordings/{recording}/transcription-status', [MeetingRecordingController::class, 'transcriptionStatus'])->name('meeting-recordings.transcription-status');
     Route::post('meeting-recordings/{recording}/transcribe', [MeetingRecordingController::class, 'transcribe'])->middleware('throttle:5,1')->name('meeting-recordings.transcribe');
     Route::post('meeting-recordings/{recording}/check-capacity', [MeetingRecordingController::class, 'checkTranscriptionCapacity'])->name('meeting-recordings.check-capacity');
     Route::post('meeting-recordings/{recording}/process', [MeetingRecordingController::class, 'transcribeAndSummarize'])->name('meeting-recordings.process');

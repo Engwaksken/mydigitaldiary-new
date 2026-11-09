@@ -101,4 +101,10 @@ class MeetingRecording extends Model
     {
         return $this->hasMany(MeetingRecordingSegment::class, 'meeting_recording_id');
     }
+
+    /** Background-uploaded slices of a long browser recording, in order. */
+    public function parts()
+    {
+        return $this->hasMany(MeetingRecordingPart::class, 'meeting_recording_id')->orderBy('part_number');
+    }
 }

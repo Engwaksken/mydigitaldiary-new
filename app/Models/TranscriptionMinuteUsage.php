@@ -8,6 +8,7 @@ class TranscriptionMinuteUsage extends Model
 {
     protected $fillable = [
         'user_id',
+        'meeting_recording_id',
         'duration_seconds',
         'plan_seconds',
         'extra_minutes',

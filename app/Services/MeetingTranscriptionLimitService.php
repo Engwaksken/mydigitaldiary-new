@@ -9,17 +9,33 @@ use RuntimeException;
 
 class MeetingTranscriptionLimitService
 {
-    /** Reserve per-meeting plan minutes and any purchased overage before transcription. */
-    public function reserve(User $user, int $durationSeconds): TranscriptionMinuteUsage
+    /**
+     * Reserve per-meeting plan minutes and any purchased overage before transcription.
+     *
+     * Pass $meetingRecordingId when transcribing one part of a split recording:
+     * plan seconds already used by that recording's other parts are deducted,
+     * so splitting a meeting never grants a fresh per-meeting allowance per part.
+     */
+    public function reserve(User $user, int $durationSeconds, ?int $meetingRecordingId = null): TranscriptionMinuteUsage
     {
         $durationSeconds = max(1, $durationSeconds);
 
-        return DB::transaction(function () use ($user, $durationSeconds): TranscriptionMinuteUsage {
+        return DB::transaction(function () use ($user, $durationSeconds, $meetingRecordingId): TranscriptionMinuteUsage {
+            // The user row lock also serialises parts of the same recording.
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->getKey());
             $lockedUser->load('subscriptionPlan');
             $includedSeconds = $lockedUser->hasActiveAccess()
                 ? max(0, (int) ($lockedUser->subscriptionPlan?->max_transcription_minutes_per_meeting ?? 60)) * 60
                 : 0;
+
+            if ($meetingRecordingId !== null) {
+                $alreadyUsed = (int) TranscriptionMinuteUsage::query()
+                    ->where('meeting_recording_id', $meetingRecordingId)
+                    ->whereIn('status', ['reserved', 'consumed'])
+                    ->sum('plan_seconds');
+
+                $includedSeconds = max(0, $includedSeconds - $alreadyUsed);
+            }
             $includedSecondsUsed = min($durationSeconds, $includedSeconds);
             $overageMinutes = (int) ceil(max(0, $durationSeconds - $includedSeconds) / 60);
 
@@ -40,6 +56,7 @@ class MeetingTranscriptionLimitService
 
             return TranscriptionMinuteUsage::query()->create([
                 'user_id' => $lockedUser->getKey(),
+                'meeting_recording_id' => $meetingRecordingId,
                 'duration_seconds' => $durationSeconds,
                 'plan_seconds' => $includedSecondsUsed,
                 'extra_minutes' => $overageMinutes,
