@@ -306,6 +306,16 @@
     .td-h2 i{color:var(--td-brand);font-size:14px}
     .td-link{font-size:12px;font-weight:700;color:var(--td-brand)!important;white-space:nowrap}
     .td-link:hover{opacity:.8}
+    /* Collapsible dashboard sections (Coming up, Today's insight, On this day) */
+    .td-collapse-toggle{display:inline-flex;align-items:center;gap:8px;min-width:0;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+    .td-collapse-toggle:focus-visible{outline:2px solid var(--td-brand);outline-offset:3px;border-radius:6px}
+    .td-collapse-chev{font-size:11px!important;color:#94a3b8!important;transition:transform .2s ease}
+    .td-collapse-toggle[aria-expanded="false"] .td-collapse-chev{transform:rotate(-90deg)}
+    .td-collapse-count{display:none;min-width:20px;padding:1px 7px;border-radius:999px;background:#eef2f7;color:#475569;font-size:11px;font-weight:700;text-align:center}
+    .td-collapse-toggle[aria-expanded="false"] .td-collapse-count{display:inline-block}
+    .td-collapse-body[hidden]{display:none!important}
+    .td-is-collapsed .td-head{margin-bottom:0}
+    @media (prefers-reduced-motion: reduce){.td-collapse-chev{transition:none}}
     .td-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 16px;border-radius:12px;font-size:13px;font-weight:700;border:1px solid transparent;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease;white-space:nowrap}
     .td-btn:active{transform:scale(.97)}
     .td-btn-primary{background:var(--td-brand);color:#fff!important;box-shadow:0 6px 16px color-mix(in srgb,var(--td-brand) 28%,transparent)}
@@ -803,11 +813,18 @@
         </section>
 
         <div class="grid gap-4">
-            <section class="td-card td-pad" aria-labelledby="td-agenda-title">
+            <section class="td-card td-pad" aria-labelledby="td-agenda-title" data-td-collapsible="agenda">
                 <div class="td-head">
-                    <h2 class="td-h2" id="td-agenda-title"><i class="fa-regular fa-clock"></i> Coming up</h2>
+                    <h2 class="td-h2" id="td-agenda-title">
+                        <button type="button" class="td-collapse-toggle" aria-expanded="true" aria-controls="td-agenda-body">
+                            <i class="fa-regular fa-clock" aria-hidden="true"></i> Coming up
+                            <span class="td-collapse-count" aria-label="{{ $tdAgenda->count() }} items">{{ $tdAgenda->count() }}</span>
+                            <i class="fa-solid fa-chevron-down td-collapse-chev" aria-hidden="true"></i>
+                        </button>
+                    </h2>
                     <a href="{{ route('reminders.index') }}" class="td-link">Reminders</a>
                 </div>
+                <div id="td-agenda-body" class="td-collapse-body">
                 @if ($tdAgenda->isNotEmpty())
                     <ul class="td-agenda">
                         @foreach ($tdAgenda->take(4) as $row)
@@ -831,12 +848,19 @@
                         <a href="{{ route('reminders.index', ['new' => 1]) }}" class="td-link"><i class="fa-solid fa-plus mr-1"></i>Set a reminder</a>
                     </div>
                 @endif
+                </div>
             </section>
 
-            <section class="td-insight" style="--insight-bg:{{ $insightTone['bg'] }};--insight-fg:{{ $insightTone['fg'] }};--insight-border:{{ $insightTone['border'] }}">
+            <section class="td-insight" data-td-collapsible="insight" aria-labelledby="td-insight-title" style="--insight-bg:{{ $insightTone['bg'] }};--insight-fg:{{ $insightTone['fg'] }};--insight-border:{{ $insightTone['border'] }}">
                 <div class="td-insight-ic"><i class="fa-solid {{ $dailyInsight['icon'] ?? 'fa-lightbulb' }}"></i></div>
                 <div class="min-w-0 flex-1">
-                    <div class="td-insight-kicker">Today’s insight</div>
+                    <h2 class="td-insight-kicker" id="td-insight-title">
+                        <button type="button" class="td-collapse-toggle" aria-expanded="true" aria-controls="td-insight-body">
+                            Today’s insight
+                            <i class="fa-solid fa-chevron-down td-collapse-chev" aria-hidden="true"></i>
+                        </button>
+                    </h2>
+                    <div id="td-insight-body" class="td-collapse-body">
                     <div class="td-insight-title">{{ $dailyInsight['title'] ?? 'Your insight is on its way.' }}</div>
                     @if (! empty($dailyInsight['message']))
                         <div class="td-insight-msg">{{ $dailyInsight['message'] }}</div>
@@ -850,17 +874,25 @@
                             </form>
                         @endif
                     </div>
+                    </div>
                 </div>
             </section>
 
             @if ($tdMemories->isNotEmpty())
-                <section class="td-memory" aria-labelledby="td-memory-title">
+                <section class="td-memory" aria-labelledby="td-memory-title" data-td-collapsible="memories">
                     <div class="td-head" style="margin-bottom:0">
-                        <h2 class="td-h2" id="td-memory-title"><i class="fa-solid fa-clock-rotate-left" style="color:#d97706"></i> On this day</h2>
+                        <h2 class="td-h2" id="td-memory-title">
+                            <button type="button" class="td-collapse-toggle" aria-expanded="true" aria-controls="td-memory-body">
+                                <i class="fa-solid fa-clock-rotate-left" style="color:#d97706" aria-hidden="true"></i> On this day
+                                <span class="td-collapse-count" aria-label="{{ $tdMemories->count() }} memories">{{ $tdMemories->count() }}</span>
+                                <i class="fa-solid fa-chevron-down td-collapse-chev" aria-hidden="true"></i>
+                            </button>
+                        </h2>
                         @if ($tdMemoryMore)
                             <a href="{{ $tdMemoryMore }}" class="td-link">See more</a>
                         @endif
                     </div>
+                    <div id="td-memory-body" class="td-collapse-body">
                     <ul class="td-memory-list">
                         @foreach ($tdMemories as $memory)
                             @php $tone = $toneMap[$memory['tone']] ?? $toneMap['slate']; @endphp
@@ -886,9 +918,42 @@
                     @if ($tdMemoryComparison)
                         <p class="td-memory-note">{{ $tdMemoryComparison }}</p>
                     @endif
+                    </div>
                 </section>
             @endif
         </div>
+        <script>
+            // Collapse/expand for Coming up, Today's insight and On this day.
+            // Runs right after the markup so a remembered collapsed state applies
+            // before first paint. The state is a per-browser convenience only.
+            (function () {
+                var KEY = 'td-dashboard-collapsed';
+                var saved = {};
+                try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+
+                function apply(section, collapsed) {
+                    var btn = section.querySelector('.td-collapse-toggle');
+                    var body = btn && document.getElementById(btn.getAttribute('aria-controls'));
+                    if (!btn || !body) return;
+                    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                    body.hidden = collapsed;
+                    section.classList.toggle('td-is-collapsed', collapsed);
+                }
+
+                document.querySelectorAll('[data-td-collapsible]').forEach(function (section) {
+                    var name = section.getAttribute('data-td-collapsible');
+                    apply(section, saved[name] === true);
+                    var btn = section.querySelector('.td-collapse-toggle');
+                    if (!btn) return;
+                    btn.addEventListener('click', function () {
+                        var collapsed = btn.getAttribute('aria-expanded') === 'true';
+                        apply(section, collapsed);
+                        saved[name] = collapsed;
+                        try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+                    });
+                });
+            })();
+        </script>
     </div>
 
     {{-- 4. Progress at a glance --}}

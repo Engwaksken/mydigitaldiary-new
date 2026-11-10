@@ -108,4 +108,16 @@ class DashboardTodayHubTest extends TestCase
             ->patchJson(route('daily-planner.items.toggle', $item->id))
             ->assertRedirect();
     }
+
+    public function test_coming_up_and_insight_sections_are_collapsible(): void
+    {
+        $user = $this->subscriber();
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-td-collapsible="agenda"', false)
+            ->assertSee('aria-controls="td-agenda-body"', false)
+            ->assertSee('data-td-collapsible="insight"', false)
+            ->assertSee('aria-controls="td-insight-body"', false);
+    }
 }
