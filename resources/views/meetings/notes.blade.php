@@ -5835,8 +5835,9 @@ document.addEventListener(
             selectionStart: 0,
             selectionEnd: 0,
             isSelecting: false,
-            isPlaying: false,
-            previewSource: null,
+            isCreating: false,
+            dragAnchor: 0,
+            loadId: 0,
         };
 
         function formatTime(seconds) {
@@ -5859,57 +5860,147 @@ document.addEventListener(
             validationEl.className = 'hidden meeting-recording-message';
         }
 
+        // Decoding holds the whole recording in memory as raw samples (about
+        // 700 MB per hour), which fails for long meetings; above this length
+        // the editor works from dragging or typed times without a waveform.
+        const MAX_WAVEFORM_SECONDS = 1800;
+        const NO_WAVEFORM_LABEL = 'Drag here to select, or type the start and end times below';
+
+        // Reads the audio length from the file's metadata without decoding it.
+        function probeAudioDuration(audioUrl) {
+            return new Promise(function (resolve) {
+                const probe = new Audio();
+                let timer = null;
+                const done = function (value) {
+                    window.clearTimeout(timer);
+                    probe.removeAttribute('src');
+                    resolve(value);
+                };
+                timer = window.setTimeout(function () { done(0); }, 15000);
+
+                probe.preload = 'metadata';
+                probe.addEventListener('loadedmetadata', function () {
+                    done(Number.isFinite(probe.duration) && probe.duration > 0 ? probe.duration : 0);
+                });
+                probe.addEventListener('error', function () { done(0); });
+                probe.src = audioUrl;
+            });
+        }
+
         async function loadAudioForEditor(recordingId, audioUrl, duration) {
+            const loadId = (audioEditorState.loadId || 0) + 1;
+
+            audioEditorState.loadId = loadId;
             audioEditorState.recordingId = recordingId;
             audioEditorState.audioUrl = audioUrl;
-            audioEditorState.duration = duration;
+            audioEditorState.duration = duration > 0 ? duration : 0;
+            audioEditorState.audioBuffer = null;
+            audioEditorState.peaks = null;
             audioEditorState.selectionStart = 0;
-            audioEditorState.selectionEnd = Math.min(30, duration);
+            audioEditorState.selectionEnd = Math.min(30, audioEditorState.duration);
             audioEditorState.isSelecting = false;
-            audioEditorState.isPlaying = false;
+            audioEditorState.isCreating = false;
 
             segmentStartInput.value = '';
             segmentEndInput.value = '';
             segmentTitleInput.value = '';
             segmentNotesInput.value = '';
+            previewAudio.pause();
+            previewAudio.removeAttribute('src');
             previewAudio.classList.add('hidden');
             previewHint.classList.remove('hidden');
-            createSegmentButton.disabled = true;
+            previewHint.textContent = 'Loading audio…';
             clearAudioEditorValidation();
+            drawEmptyWaveform('Loading audio…');
+            refreshSelection();
+
+            const probed = await probeAudioDuration(audioUrl);
+            if (loadId !== audioEditorState.loadId) return;
+
+            if (probed > 0) {
+                audioEditorState.duration = probed;
+                audioEditorState.selectionEnd = Math.min(30, probed);
+            }
+
+            if (audioEditorState.duration > MAX_WAVEFORM_SECONDS) {
+                drawEmptyWaveform(NO_WAVEFORM_LABEL);
+                refreshSelection();
+                return;
+            }
 
             try {
-                const response = await fetch(audioUrl);
+                const response = await fetch(audioUrl, { credentials: 'same-origin' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
                 const arrayBuffer = await response.arrayBuffer();
 
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (!audioEditorState.audioContext) {
+                if (!audioEditorState.audioContext || audioEditorState.audioContext.state === 'closed') {
                     audioEditorState.audioContext = new AudioContextClass();
                 }
-                const audioContext = audioEditorState.audioContext;
 
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
+                const buffer = await audioEditorState.audioContext.decodeAudioData(arrayBuffer);
+                if (loadId !== audioEditorState.loadId) return;
+
+                audioEditorState.audioBuffer = buffer;
+
+                // Browser recordings often have no length in their metadata.
+                if (!(probed > 0) && buffer.duration > 0) {
+                    audioEditorState.duration = buffer.duration;
+                    audioEditorState.selectionEnd = Math.min(30, buffer.duration);
                 }
 
-                audioEditorState.audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-                // The stored duration can be 0 (uploaded files) or shorter than the
-                // real audio (browser timer); the decoded audio is the real length.
-                if (audioEditorState.audioBuffer.duration > 0) {
-                    audioEditorState.duration = audioEditorState.audioBuffer.duration;
-                    audioEditorState.selectionEnd = Math.min(30, audioEditorState.duration);
-                }
-
-                audioEditorState.peaks = computePeaks(audioEditorState.audioBuffer, waveformCanvas.width || 800);
-
+                audioEditorState.peaks = computePeaks(buffer, Math.round(waveformCanvas.getBoundingClientRect().width) || 800);
                 drawWaveform();
-
-                updateSelectionDisplay();
-                updatePreviewAudio();
             } catch (e) {
-                console.error('Failed to load audio for editor:', e);
-                showAudioEditorValidation('Failed to load audio waveform. Please try again.');
+                console.error('Failed to load audio waveform:', e);
+                if (loadId !== audioEditorState.loadId) return;
+
+                // Selecting still works without the picture.
+                drawEmptyWaveform(audioEditorState.duration > 0 ? NO_WAVEFORM_LABEL : 'Audio unavailable');
             }
+
+            if (!(audioEditorState.duration > 0)) {
+                previewHint.textContent = 'The audio could not be loaded.';
+                showAudioEditorValidation('Could not read this recording\'s audio. Please reload the page and try again.');
+            }
+
+            refreshSelection();
+        }
+
+        function drawEmptyWaveform(label) {
+            if (!waveformCanvas || !waveformCtx) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            const rect = waveformCanvas.getBoundingClientRect();
+            waveformCanvas.width = rect.width * dpr;
+            waveformCanvas.height = rect.height * dpr;
+            waveformCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            waveformCtx.fillStyle = '#e2e8f0';
+            waveformCtx.fillRect(0, 0, rect.width, rect.height);
+            waveformCtx.fillStyle = '#64748b';
+            waveformCtx.font = '13px system-ui, sans-serif';
+            waveformCtx.textAlign = 'center';
+            waveformCtx.textBaseline = 'middle';
+            waveformCtx.fillText(label, rect.width / 2, rect.height / 2);
+        }
+
+        function refreshSelection() {
+            drawSelection();
+            drawPlayhead();
+            updateSelectionDisplay();
+            updateCreateButton();
+            schedulePreviewUpdate();
+        }
+
+        // The button follows the selection alone, not whether the waveform
+        // or preview could be built.
+        function updateCreateButton() {
+            const length = audioEditorState.selectionEnd - audioEditorState.selectionStart;
+
+            createSegmentButton.disabled = audioEditorState.isCreating
+                || !(audioEditorState.duration > 0)
+                || length < 1;
         }
 
         function computePeaks(audioBuffer, width) {
@@ -5942,7 +6033,7 @@ document.addEventListener(
             const rect = waveformCanvas.getBoundingClientRect();
             waveformCanvas.width = rect.width * dpr;
             waveformCanvas.height = rect.height * dpr;
-            waveformCtx.scale(dpr, dpr);
+            waveformCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
             const width = rect.width;
             const height = rect.height;
@@ -5996,19 +6087,14 @@ document.addEventListener(
         }
 
         function drawPlayhead() {
-            if (!playheadOverlay || audioEditorState.duration === 0) return;
+            if (!playheadOverlay || !(audioEditorState.duration > 0)) return;
 
             const rect = waveformCanvas.getBoundingClientRect();
-            let playheadPos = 0;
+            const time = previewAudio && !previewAudio.paused
+                ? previewAudio.currentTime
+                : audioEditorState.selectionStart;
 
-            if (audioEditorState.previewSource && audioEditorState.isPlaying) {
-                const currentTime = audioEditorState.audioContext.currentTime - audioEditorState.previewStartTime;
-                playheadPos = (currentTime / audioEditorState.duration) * rect.width;
-            } else if (audioEditorState.selectionStart > 0) {
-                playheadPos = (audioEditorState.selectionStart / audioEditorState.duration) * rect.width;
-            }
-
-            playheadOverlay.style.left = playheadPos + 'px';
+            playheadOverlay.style.left = (time / audioEditorState.duration) * rect.width + 'px';
             playheadOverlay.classList.remove('hidden');
         }
 
@@ -6018,100 +6104,43 @@ document.addEventListener(
             if (segmentDurationEl) segmentDurationEl.value = formatTime(audioEditorState.selectionEnd - audioEditorState.selectionStart);
         }
 
-        function updatePreviewAudio() {
-            if (!previewAudio || !audioEditorState.audioBuffer) return;
+        let previewTimer = null;
 
-            const duration = audioEditorState.selectionEnd - audioEditorState.selectionStart;
-            if (duration < 0.1) {
+        // Resetting the preview on every drag step would reload the audio
+        // many times a second; wait until the selection settles.
+        function schedulePreviewUpdate() {
+            window.clearTimeout(previewTimer);
+            previewTimer = window.setTimeout(updatePreviewAudio, 300);
+        }
+
+        // Plays the original file between the selected times (a media
+        // fragment), so nothing has to be decoded or re-encoded here.
+        function updatePreviewAudio() {
+            if (!previewAudio) return;
+
+            const start = audioEditorState.selectionStart;
+            const end = audioEditorState.selectionEnd;
+
+            if (!audioEditorState.audioUrl || !(audioEditorState.duration > 0) || end - start < 1) {
+                previewAudio.pause();
                 previewAudio.classList.add('hidden');
                 previewHint.classList.remove('hidden');
-                previewHint.textContent = 'Select a region on the waveform to preview.';
-                createSegmentButton.disabled = true;
+                if (audioEditorState.duration > 0) {
+                    previewHint.textContent = 'Select at least one second of audio to preview.';
+                }
                 return;
             }
 
-            createSegmentButton.disabled = false;
+            const src = audioEditorState.audioUrl.split('#')[0]
+                + '#t=' + start.toFixed(2) + ',' + end.toFixed(2);
+
+            if (previewAudio.getAttribute('src') !== src) {
+                previewAudio.pause();
+                previewAudio.src = src;
+            }
+
+            previewAudio.classList.remove('hidden');
             previewHint.classList.add('hidden');
-
-            const startSample = Math.floor(audioEditorState.selectionStart * audioEditorState.audioBuffer.sampleRate);
-            const endSample = Math.floor(audioEditorState.selectionEnd * audioEditorState.audioBuffer.sampleRate);
-            const length = endSample - startSample;
-
-            const offlineContext = new OfflineAudioContext(
-                audioEditorState.audioBuffer.numberOfChannels,
-                length,
-                audioEditorState.audioBuffer.sampleRate
-            );
-
-            const bufferSource = offlineContext.createBufferSource();
-            bufferSource.buffer = audioEditorState.audioBuffer;
-            bufferSource.connect(offlineContext.destination);
-            bufferSource.start(0, audioEditorState.selectionStart, duration);
-
-            offlineContext.startRendering().then(renderedBuffer => {
-                const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
-                const url = URL.createObjectURL(wavBlob);
-
-                if (audioEditorState.previewObjectUrl) {
-                    URL.revokeObjectURL(audioEditorState.previewObjectUrl);
-                }
-                audioEditorState.previewObjectUrl = url;
-
-                previewAudio.src = url;
-                previewAudio.classList.remove('hidden');
-            }).catch(e => {
-                console.error('Failed to render preview:', e);
-                previewHint.textContent = 'Could not generate preview.';
-                previewHint.classList.remove('hidden');
-            });
-        }
-
-        function bufferToWave(abuffer, len) {
-            const numOfChan = abuffer.numberOfChannels;
-            const length = len * numOfChan * 2 + 44;
-            const buffer = new ArrayBuffer(length);
-            const view = new DataView(buffer);
-            const channels = [];
-            let sample;
-            let offset = 0;
-            let pos = 0;
-
-            writeString(view, 'RIFF'); offset += 4;
-            view.setUint32(offset, length - 8, true); offset += 4;
-            writeString(view, 'WAVE'); offset += 4;
-            writeString(view, 'fmt '); offset += 4;
-            view.setUint32(offset, 16, true); offset += 4;
-            view.setUint16(offset, 1, true); offset += 2;
-            view.setUint16(offset, numOfChan, true); offset += 2;
-            view.setUint32(offset, abuffer.sampleRate, true); offset += 4;
-            view.setUint32(offset, abuffer.sampleRate * numOfChan * 2, true); offset += 4;
-            view.setUint16(offset, numOfChan * 2, true); offset += 2;
-            view.setUint16(offset, 16, true); offset += 4;
-            writeString(view, 'data'); offset += 4;
-            view.setUint32(offset, len * numOfChan * 2, true); offset += 4;
-
-            for (let i = 0; i < abuffer.numberOfChannels; i++) {
-                channels.push(abuffer.getChannelData(i));
-            }
-
-            while (pos < len) {
-                for (let i = 0; i < numOfChan; i++) {
-                    sample = Math.max(-1, Math.min(1, channels[i][pos]));
-                    sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                    view.setInt16(offset, sample, true);
-                    offset += 2;
-                }
-                pos++;
-            }
-
-            return new Blob([buffer], { type: 'audio/wav' });
-        }
-
-        function writeString(view, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
-            offset += string.length;
         }
 
         function getClickPosition(event) {
@@ -6121,12 +6150,13 @@ document.addEventListener(
         }
 
         function handleWaveformPointerDown(event) {
-            if (!audioEditorState.audioBuffer) return;
+            if (!(audioEditorState.duration > 0)) return;
 
             const pos = getClickPosition(event);
             const time = Math.max(0, Math.min(audioEditorState.duration, pos * audioEditorState.duration));
 
             audioEditorState.isSelecting = true;
+            audioEditorState.dragAnchor = time;
             audioEditorState.selectionStart = time;
             audioEditorState.selectionEnd = time;
 
@@ -6139,26 +6169,23 @@ document.addEventListener(
         }
 
         function handleWaveformPointerMove(event) {
-            if (!audioEditorState.isSelecting || !audioEditorState.audioBuffer) return;
+            if (!audioEditorState.isSelecting || !(audioEditorState.duration > 0)) return;
 
             const pos = getClickPosition(event);
             const time = Math.max(0, Math.min(audioEditorState.duration, pos * audioEditorState.duration));
 
-            audioEditorState.selectionEnd = time;
+            // Measure from where the drag began, so dragging back past it
+            // keeps the right edges.
+            audioEditorState.selectionStart = Math.min(audioEditorState.dragAnchor, time);
+            audioEditorState.selectionEnd = Math.max(audioEditorState.dragAnchor, time);
 
-            if (audioEditorState.selectionStart > audioEditorState.selectionEnd) {
-                const temp = audioEditorState.selectionStart;
-                audioEditorState.selectionStart = audioEditorState.selectionEnd;
-                audioEditorState.selectionEnd = temp;
-            }
-
-            drawSelection();
-            updateSelectionDisplay();
-            updatePreviewAudio();
+            if (event.cancelable) event.preventDefault();
+            refreshSelection();
         }
 
         function handleWaveformPointerUp() {
             audioEditorState.isSelecting = false;
+            refreshSelection();
             document.removeEventListener('mousemove', handleWaveformPointerMove);
             document.removeEventListener('mouseup', handleWaveformPointerUp);
             document.removeEventListener('touchmove', handleWaveformPointerMove);
@@ -6185,6 +6212,11 @@ document.addEventListener(
 
             const value = parseTimeInput(raw);
             const duration = audioEditorState.duration;
+
+            if (!(duration > 0)) {
+                showAudioEditorValidation('The audio is still loading. Please wait a moment.', 'warning');
+                return;
+            }
 
             if (isNaN(value)) {
                 showAudioEditorValidation('Enter a time like 1:20 (minutes:seconds).', 'warning');
@@ -6218,9 +6250,7 @@ document.addEventListener(
             }
 
             input.value = formatTime(value);
-            drawSelection();
-            updateSelectionDisplay();
-            updatePreviewAudio();
+            refreshSelection();
         }
 
         function handleStartInputChange() {
@@ -6231,68 +6261,14 @@ document.addEventListener(
             applyTimeInput(segmentEndInput, false);
         }
 
-        async function handlePreviewPlay() {
-            if (!previewAudio.src || audioEditorState.isPlaying) return;
-
-            audioEditorState.isPlaying = true;
-
-            try {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (!audioEditorState.audioContext || audioEditorState.audioContext.state === 'closed') {
-                    audioEditorState.audioContext = new AudioContextClass();
-                }
-
-                if (audioEditorState.audioContext.state === 'suspended') {
-                    await audioEditorState.audioContext.resume();
-                }
-
-                audioEditorState.previewStartTime = audioEditorState.audioContext.currentTime - (audioEditorState.selectionStart || 0);
-
-                const source = audioEditorState.audioContext.createBufferSource();
-                source.buffer = audioEditorState.audioBuffer;
-                source.connect(audioEditorState.audioContext.destination);
-                source.start(0, audioEditorState.selectionStart, audioEditorState.selectionEnd - audioEditorState.selectionStart);
-
-                audioEditorState.previewSource = source;
-
-                const animatePlayhead = () => {
-                    if (audioEditorState.isPlaying && audioEditorState.previewSource) {
-                        drawPlayhead();
-                        requestAnimationFrame(animatePlayhead);
-                    }
-                };
-                animatePlayhead();
-
-                source.onended = () => {
-                    audioEditorState.isPlaying = false;
-                    audioEditorState.previewSource = null;
-                    drawPlayhead();
-                };
-            } catch (e) {
-                console.error('Preview play failed:', e);
-                audioEditorState.isPlaying = false;
-            }
-        }
-
-        function handlePreviewPause() {
-            if (audioEditorState.previewSource) {
-                try {
-                    audioEditorState.previewSource.stop();
-                } catch (_) {}
-                audioEditorState.previewSource = null;
-            }
-            audioEditorState.isPlaying = false;
-            drawPlayhead();
-        }
-
         async function handleCreateSegment() {
-            if (!audioEditorState.recordingId) return;
+            if (!audioEditorState.recordingId || audioEditorState.isCreating) return;
 
             const start = audioEditorState.selectionStart;
             const end = audioEditorState.selectionEnd;
 
-            if (end - start < 0.5) {
-                showAudioEditorValidation('Segment must be at least 0.5 seconds long.', 'warning');
+            if (end - start < 1) {
+                showAudioEditorValidation('Segment must be at least 1 second long.', 'warning');
                 return;
             }
 
@@ -6301,8 +6277,10 @@ document.addEventListener(
                 return;
             }
 
-            createSegmentButton.disabled = true;
+            audioEditorState.isCreating = true;
+            updateCreateButton();
             createSegmentButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Creating...';
+            previewAudio.pause();
 
             try {
                 const response = await fetch(
@@ -6332,15 +6310,20 @@ document.addEventListener(
                 }
 
                 closeDialog(audioEditorDialog);
-                showAudioEditorValidation('Segment created successfully!', 'success');
 
-                refreshSegments(audioEditorState.recordingId);
+                // Show the new segment where the user can see it.
+                await refreshSegments(audioEditorState.recordingId);
+                const segmentsEl = document.getElementById('segments-list-' + audioEditorState.recordingId);
+                if (segmentsEl) {
+                    segmentsEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
             } catch (e) {
                 console.error('Create segment failed:', e);
                 showAudioEditorValidation(e.message || 'Failed to create segment. Please try again.', 'error');
             } finally {
-                createSegmentButton.disabled = false;
+                audioEditorState.isCreating = false;
                 createSegmentButton.innerHTML = '<i class="fa-solid fa-scissors mr-1"></i> Create Segment';
+                updateCreateButton();
             }
         }
 
@@ -6528,8 +6511,9 @@ document.addEventListener(
                 const audioUrl = editButton.dataset.audioUrl;
                 const duration = parseInt(editButton.dataset.duration, 10);
 
-                loadAudioForEditor(recordingId, audioUrl, duration);
+                // Open first so the canvas has its size when the editor draws.
                 openDialog(audioEditorDialog);
+                loadAudioForEditor(recordingId, audioUrl, duration);
                 return;
             }
 
@@ -6537,15 +6521,9 @@ document.addEventListener(
                 event.preventDefault();
                 closeDialog(audioEditorDialog);
 
-                if (audioEditorState.previewObjectUrl) {
-                    URL.revokeObjectURL(audioEditorState.previewObjectUrl);
-                    audioEditorState.previewObjectUrl = null;
-                }
-                if (audioEditorState.previewSource) {
-                    try { audioEditorState.previewSource.stop(); } catch (_) {}
-                    audioEditorState.previewSource = null;
-                }
-                audioEditorState.isPlaying = false;
+                // Drop any load still in flight for this editor session.
+                audioEditorState.loadId = (audioEditorState.loadId || 0) + 1;
+                previewAudio.pause();
                 return;
             }
 
@@ -6557,14 +6535,6 @@ document.addEventListener(
             ) {
                 event.preventDefault();
                 handleCreateSegment();
-            }
-
-            if (event.target === previewAudio) {
-                if (previewAudio.paused) {
-                    handlePreviewPlay();
-                } else {
-                    handlePreviewPause();
-                }
             }
         });
 
@@ -6582,20 +6552,16 @@ document.addEventListener(
         }
 
         if (previewAudio) {
-            previewAudio.addEventListener('play', () => {
-                handlePreviewPlay();
-            });
-            previewAudio.addEventListener('pause', () => {
-                handlePreviewPause();
-            });
-            previewAudio.addEventListener('ended', () => {
-                handlePreviewPause();
-            });
+            previewAudio.addEventListener('timeupdate', drawPlayhead);
+            previewAudio.addEventListener('pause', drawPlayhead);
         }
 
         window.addEventListener('resize', () => {
             if (audioEditorState.peaks) {
                 drawWaveform();
+            } else if (audioEditorDialog && audioEditorDialog.open && audioEditorState.duration > 0) {
+                drawEmptyWaveform(NO_WAVEFORM_LABEL);
+                drawSelection();
             }
         });
 
