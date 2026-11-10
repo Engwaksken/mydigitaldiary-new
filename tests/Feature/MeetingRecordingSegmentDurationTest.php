@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Meeting;
 use App\Models\MeetingRecording;
 use App\Models\User;
+use App\Services\MeetingRecordingSegmentExtractor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -54,6 +55,28 @@ class MeetingRecordingSegmentDurationTest extends TestCase
             ]);
 
         $this->assertSame(900, $recording->fresh()->duration_seconds);
+    }
+
+    public function test_segment_is_cut_from_the_recording_and_saved(): void
+    {
+        [$user, $recording] = $this->recording(storedDuration: 3600);
+
+        $this->mock(MeetingRecordingSegmentExtractor::class)
+            ->shouldReceive('extract')
+            ->once()
+            ->with('meeting-recordings/upload.webm', 60, 90)
+            ->andReturn('meeting-recording-segments/cut.mp3');
+
+        $this->actingAs($user)
+            ->postJson(route('meeting-recordings.segments.store', $recording), [
+                'start_seconds' => 60,
+                'end_seconds' => 150,
+                'title' => 'Budget',
+            ])
+            ->assertOk()
+            ->assertJson(['ok' => true, 'segment' => ['start_seconds' => 60, 'end_seconds' => 150, 'duration_seconds' => 90, 'title' => 'Budget']]);
+
+        $this->assertSame('meeting-recording-segments/cut.mp3', $recording->segments()->firstOrFail()->audio_path);
     }
 
     /** @return array{0: User, 1: MeetingRecording} */

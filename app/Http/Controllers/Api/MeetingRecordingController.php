@@ -10,8 +10,6 @@ use App\Models\MeetingRecordingSegment;
 use App\Models\User;
 use App\Services\MeetingSummaryService;
 use App\Services\TranscriptionService;
-use FFMpeg\FFMpeg;
-use FFMpeg\Format\Audio\Mp3;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -452,62 +450,8 @@ class MeetingRecordingController extends Controller
         int $startSeconds,
         int $durationSeconds
     ): string {
-        $disk = Storage::disk('public');
-        $absoluteSourcePath = $disk->path($sourcePath);
-
-        if (! is_file($absoluteSourcePath)) {
-            throw new \RuntimeException('Source recording file not found.');
-        }
-
-        $temporaryDirectory = storage_path('app/transcription-temp');
-
-        if (! is_dir($temporaryDirectory)) {
-            if (! mkdir($temporaryDirectory, 0755, true) && ! is_dir($temporaryDirectory)) {
-                throw new \RuntimeException('Unable to create temporary directory.');
-            }
-        }
-
-        $destinationPath = $temporaryDirectory . DIRECTORY_SEPARATOR . \Illuminate\Support\Str::uuid() . '.mp3';
-
-        try {
-            $ffmpeg = FFMpeg::create();
-            $video = $ffmpeg->open($absoluteSourcePath);
-            $format = new Mp3();
-            $format->setAudioKiloBitrate(64);
-            $format->setAdditionalParameters([
-                '-ss' => (string) $startSeconds,
-                '-t' => (string) $durationSeconds,
-                '-vn' => null,
-                '-ac' => '1',
-                '-ar' => '16000',
-            ]);
-            $video->save($format, $destinationPath);
-        } catch (\Throwable $e) {
-            @unlink($destinationPath);
-            \Illuminate\Support\Facades\Log::warning('Audio segment extraction failed.', [
-                'source' => $sourcePath,
-                'start' => $startSeconds,
-                'duration' => $durationSeconds,
-                'error' => $e->getMessage(),
-            ]);
-            throw new \RuntimeException('Failed to extract audio segment: ' . $e->getMessage());
-        }
-
-        if (! is_file($destinationPath) || filesize($destinationPath) < 1024) {
-            @unlink($destinationPath);
-            throw new \RuntimeException('Failed to extract audio segment. The source audio may be incomplete or corrupted.');
-        }
-
-        $storedPath = $disk->putFileAs(
-            'meeting-recording-segments',
-            new \Illuminate\Http\File($destinationPath),
-            basename($destinationPath),
-            'public'
-        );
-
-        @unlink($destinationPath);
-
-        return $storedPath;
+        return app(\App\Services\MeetingRecordingSegmentExtractor::class)
+            ->extract($sourcePath, $startSeconds, $durationSeconds);
     }
 
     private function transformSegment(MeetingRecordingSegment $segment): array
