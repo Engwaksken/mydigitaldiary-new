@@ -102,6 +102,21 @@ Route::post('/csp-report', \App\Http\Controllers\CspReportController::class)
 Route::get('/privacy-policy', [PrivacyPolicyController::class, 'show'])->name('privacy-policy');
 Route::get('/terms-of-use', [TermsOfUseController::class, 'show'])->name('terms-of-use');
 
+// Public — Google Play requires a web page where people can request account
+// deletion without the app. The emailed link is signed; GET only shows a
+// confirm button so link-prefetching mail scanners cannot delete anyone.
+Route::get('/delete-account', [\App\Http\Controllers\AccountDeletionRequestController::class, 'show'])
+    ->name('account-deletion.show');
+Route::post('/delete-account', [\App\Http\Controllers\AccountDeletionRequestController::class, 'sendLink'])
+    ->middleware('throttle:5,1')
+    ->name('account-deletion.send');
+Route::get('/delete-account/confirm/{user}', [\App\Http\Controllers\AccountDeletionRequestController::class, 'confirmShow'])
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('account-deletion.confirm');
+Route::post('/delete-account/confirm/{user}', [\App\Http\Controllers\AccountDeletionRequestController::class, 'confirm'])
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('account-deletion.confirm.store');
+
 // Public — whoever scans a user's business-card QR code or opens their
 // shared link lands here with no account needed, same reasoning as
 // privacy-policy above.
