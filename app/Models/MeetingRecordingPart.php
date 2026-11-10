@@ -20,6 +20,8 @@ class MeetingRecordingPart extends Model
         'transcript',
         'transcript_segments',
         'transcription_status',
+        'transcription_attempts',
+        'processing_started_at',
         'transcription_error',
     ];
 
@@ -27,6 +29,8 @@ class MeetingRecordingPart extends Model
         'part_number' => 'integer',
         'duration_seconds' => 'integer',
         'transcript_segments' => 'array',
+        'transcription_attempts' => 'integer',
+        'processing_started_at' => 'datetime',
     ];
 
     public function recording()

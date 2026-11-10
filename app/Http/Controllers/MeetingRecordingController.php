@@ -1586,6 +1586,8 @@ class MeetingRecordingController extends Controller
                     (int) ($data['duration_seconds'] ?? 0)
                 ),
                 'transcription_status' => 'pending',
+                'transcription_attempts' => 0,
+                'processing_started_at' => null,
                 'transcription_error' => null,
             ]
         );
@@ -1683,6 +1685,23 @@ class MeetingRecordingController extends Controller
     ): JsonResponse {
         $this->authorizeRecording($request, $recording);
 
+        // Without a dependable queue worker (production runs the sync queue),
+        // the open page's progress poll is what drives transcription: each
+        // poll transcribes the next waiting part, and picks up a part whose
+        // earlier request was killed mid-way.
+        if (
+            $recording->parts()->exists()
+            && ! in_array($recording->transcription_status, ['completed', 'failed'], true)
+        ) {
+            try {
+                app(\App\Services\MeetingRecordingPartTranscriber::class)->processNext($recording);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            $recording->refresh();
+        }
+
         $parts = $recording->parts()->get(['part_number', 'transcription_status']);
 
         return response()->json([
@@ -1692,6 +1711,7 @@ class MeetingRecordingController extends Controller
             'parts_total' => $parts->count(),
             'parts_completed' => $parts->where('transcription_status', 'completed')->count(),
             'parts_failed' => $parts->where('transcription_status', 'failed')->count(),
+            'parts_waiting' => $parts->whereIn('transcription_status', ['pending', 'processing'])->count(),
         ]);
     }
 
@@ -1718,7 +1738,7 @@ class MeetingRecordingController extends Controller
         }
 
         foreach ($retry as $part) {
-            $part->update(['transcription_status' => 'pending', 'transcription_error' => null]);
+            app(\App\Services\MeetingRecordingPartTranscriber::class)->requeueFailed($part);
             $this->dispatchPartTranscription($part);
         }
 

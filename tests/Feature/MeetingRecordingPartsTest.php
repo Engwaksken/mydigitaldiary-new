@@ -199,6 +199,83 @@ class MeetingRecordingPartsTest extends TestCase
             ->assertJson(['transcription_status' => 'processing', 'parts_total' => 2, 'parts_completed' => 1]);
     }
 
+    public function test_status_poll_transcribes_parts_without_a_queue_worker(): void
+    {
+        Storage::fake('public');
+        [$user, $recording] = $this->setupRecording();
+        $recording->update(['status' => 'completed', 'transcription_status' => 'processing']);
+
+        // One part was never picked up; another was left "processing" by a
+        // request that was killed half an hour ago.
+        MeetingRecordingPart::query()->create([
+            'meeting_recording_id' => $recording->id, 'part_number' => 1, 'audio_path' => 'p1.webm',
+            'duration_seconds' => 1200, 'transcription_status' => 'processing', 'transcription_attempts' => 1,
+            'processing_started_at' => now()->subMinutes(30),
+        ]);
+        MeetingRecordingPart::query()->create([
+            'meeting_recording_id' => $recording->id, 'part_number' => 2, 'audio_path' => 'p2.webm',
+            'duration_seconds' => 300, 'transcription_status' => 'pending',
+        ]);
+
+        $calls = 0;
+        $this->mock(TranscriptionService::class)->shouldReceive('transcribe')
+            ->andReturnUsing(function ($u, $path) use (&$calls) {
+                $calls++;
+
+                // The first try of part 2 hits a transient error.
+                if ($path === 'p2.webm' && $calls === 2) {
+                    throw new RuntimeException('cURL error 28: Operation timed out');
+                }
+
+                return ['transcript' => $path, 'segments' => []];
+            });
+
+        $status = fn () => $this->actingAs($user)->getJson(route('meeting-recordings.transcription-status', $recording))->assertOk();
+
+        $status()->assertJson(['transcription_status' => 'processing', 'parts_completed' => 1]);
+        $status()->assertJson(['transcription_status' => 'processing', 'parts_completed' => 1, 'parts_waiting' => 1]);
+        $status()->assertJson(['transcription_status' => 'completed', 'parts_completed' => 2]);
+
+        $this->assertSame(3, $calls);
+        $this->assertSame("p1.webm
+
+p2.webm", $recording->fresh()->transcript);
+    }
+
+    public function test_part_killed_too_many_times_is_marked_failed(): void
+    {
+        Storage::fake('public');
+        [$user, $recording] = $this->setupRecording();
+        $recording->update(['status' => 'completed', 'transcription_status' => 'processing']);
+        MeetingRecordingPart::query()->create([
+            'meeting_recording_id' => $recording->id, 'part_number' => 1, 'audio_path' => 'p1.webm',
+            'transcription_status' => 'processing', 'transcription_attempts' => 3,
+            'processing_started_at' => now()->subMinutes(30),
+        ]);
+        $this->mock(TranscriptionService::class)->shouldNotReceive('transcribe');
+
+        $this->actingAs($user)->getJson(route('meeting-recordings.transcription-status', $recording))
+            ->assertOk()
+            ->assertJson(['transcription_status' => 'failed', 'parts_failed' => 1]);
+    }
+
+    public function test_status_poll_leaves_a_part_another_request_is_working_on(): void
+    {
+        Storage::fake('public');
+        [$user, $recording] = $this->setupRecording();
+        $recording->update(['status' => 'completed', 'transcription_status' => 'processing']);
+        MeetingRecordingPart::query()->create([
+            'meeting_recording_id' => $recording->id, 'part_number' => 1, 'audio_path' => 'p1.webm',
+            'transcription_status' => 'processing', 'transcription_attempts' => 1,
+            'processing_started_at' => now()->subMinute(),
+        ]);
+        $this->mock(TranscriptionService::class)->shouldNotReceive('transcribe');
+
+        $this->actingAs($user)->getJson(route('meeting-recordings.transcription-status', $recording))
+            ->assertOk()
+            ->assertJson(['transcription_status' => 'processing', 'parts_completed' => 0]);
+    }
+
     public function test_parts_of_one_recording_share_a_single_per_meeting_allowance(): void
     {
         $plan = SubscriptionPlan::query()->create([
