@@ -179,6 +179,10 @@ img, video, canvas, svg {
     min-width: 1080px !important;
 }
 
+.pm-invoice-templates-table {
+    min-width: 600px !important;
+}
+
 .pm-receipts-horizontal-table {
     min-width: 900px !important;
 }

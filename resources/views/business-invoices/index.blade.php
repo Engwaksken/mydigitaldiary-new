@@ -85,13 +85,13 @@
                     <div class="flex min-h-[2.75rem] items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5"><input id="template-is-default" type="checkbox" name="is_default" value="1" @checked(old('is_default')) class="h-4 w-4 shrink-0 rounded border-slate-300"><label for="template-is-default" class="cursor-pointer text-sm font-medium leading-5 text-slate-700">Make this the default template</label></div>
                     <button class="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-upload mr-1" aria-hidden="true"></i> Upload template</button>
                 </form>
-                <div class="mt-5 overflow-x-auto border-t border-slate-100 pt-4">
-                    <table class="w-full min-w-[600px] text-left text-sm">
+                <div class="mt-5 overflow-x-auto pm-horizontal-table-wrap border-t border-slate-100 pt-4">
+                    <table class="pm-horizontal-data-table pm-invoice-templates-table w-full min-w-[600px] text-left text-sm">
                         <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-3 py-3">Template</th><th class="px-3 py-3">Format</th><th class="px-3 py-3">Default</th><th class="px-3 py-3">Actions</th></tr></thead>
                         <tbody class="divide-y divide-slate-100">
                             @forelse ($templates as $template)
                                 <tr>
-                                    <td class="max-w-64 truncate px-3 py-3 font-semibold text-slate-800">{{ $template->name }}</td>
+                                    <td class="pm-table-wrap-text px-3 py-3 font-semibold text-slate-800">{{ $template->name }}</td>
                                     <td class="whitespace-nowrap px-3 py-3 text-slate-600">{{ strtolower(pathinfo($template->storage_path, PATHINFO_EXTENSION)) === 'pdf' ? 'PDF stationery' : 'HTML layout' }}</td>
                                     <td class="whitespace-nowrap px-3 py-3">{{ $template->is_default ? 'Yes' : 'No' }}</td>
                                     <td class="whitespace-nowrap px-3 py-3"><div class="flex items-center gap-4">
@@ -120,8 +120,8 @@
                 <p class="text-sm text-slate-600"><span id="invoice-selection-count">0</span> selected <span class="text-xs text-slate-500">· Paid invoices cannot be bulk deleted</span></p>
                 <button id="invoice-bulk-delete-button" type="submit" disabled class="rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 enabled:hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"><i class="fa-solid fa-trash mr-1" aria-hidden="true"></i> Delete selected</button>
             </form>
-            <div class="w-full overflow-x-auto">
-                <table class="w-full min-w-[850px] text-sm">
+            <div class="w-full overflow-x-auto pm-horizontal-table-wrap">
+                <table class="pm-horizontal-data-table pm-invoices-horizontal-table w-full min-w-[850px] text-sm">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500"><tr><th class="w-10 px-3 py-3"><input type="checkbox" id="select-visible-invoices" aria-label="Select all deletable invoices on this page" class="rounded border-slate-300"></th><th class="px-3 py-3">Invoice</th><th class="px-3 py-3">Customer</th><th class="px-3 py-3">Dates</th><th class="px-3 py-3">Amount</th><th class="px-3 py-3">Status</th><th class="px-2 py-3">Actions</th></tr></thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse ($invoices as $invoice)
