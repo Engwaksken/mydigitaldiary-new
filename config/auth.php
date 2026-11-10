@@ -109,4 +109,22 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | App Store Review Account
+    |--------------------------------------------------------------------------
+    |
+    | Store reviewers (Google Play, App Store) cannot read the inbox that the
+    | login code is emailed to. When BOTH values are set, this one account
+    | gets the fixed code below instead of an emailed one. The password is
+    | still checked first, and every other account is unaffected. Leave
+    | either value empty to switch it off.
+    |
+    */
+
+    'review_account' => [
+        'email' => env('REVIEW_ACCOUNT_EMAIL'),
+        'otp' => env('REVIEW_ACCOUNT_OTP'),
+    ],
+
 ];
