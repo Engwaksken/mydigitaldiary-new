@@ -638,6 +638,17 @@
 
                                 <div class="meeting-recording-message error mt-4" role="status">
                                     {{ $recording->transcription_error }}
+
+                                    @if(str_contains(strtolower($recording->transcription_error), 'per-meeting transcription limit'))
+                                        <a
+                                            href="{{ route('extra-requests.create') }}"
+                                            class="apple-btn mt-3 inline-flex rounded-xl px-3 py-2 text-xs font-bold"
+                                            data-top-up-link
+                                        >
+                                            <i class="fa-solid fa-plus mr-1"></i>
+                                            Top up recording quota
+                                        </a>
+                                    @endif
                                 </div>
 
                             @endif
