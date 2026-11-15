@@ -4,26 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>You&rsquo;re offline &middot; My Digital Diary</title>
-    <link rel="icon" href="/icons/icon-192.png">
-    <!--
-        Deliberately self-contained: NO Tailwind CDN, no webfont, no icon font.
-        This page is served by the service worker when the network is gone, so
-        anything it loads from a third party would be exactly as unavailable as
-        the app itself.
-    -->
+    <!-- Keep this page self-contained: it must work without network access. -->
     <style>
         *, *::before, *::after { box-sizing: border-box; }
 
         html, body {
-            height: 100%;
+            min-height: 100%;
             margin: 0;
         }
 
         body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
+            min-height: 100vh;
+            min-height: 100svh;
+            display: grid;
+            place-items: center;
+            padding: 24px 16px;
             background: linear-gradient(160deg, #009688 0%, #00695C 100%);
             color: #0f172a;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -33,30 +28,35 @@
 
         .pm-offline-card {
             width: 100%;
-            max-width: 30rem;
-            padding: 2rem 1.75rem;
-            border-radius: 1.25rem;
+            max-width: 26rem;
+            padding: 2rem clamp(1.25rem, 6vw, 2rem);
+            border-radius: 1.5rem;
             background: #ffffff;
             box-shadow: 0 1.5rem 3rem rgba(0, 53, 47, 0.28);
             text-align: center;
         }
 
-        .pm-offline-card img {
-            width: 4.5rem;
-            height: 4.5rem;
-            border-radius: 1rem;
+        .offline-mark {
+            display: grid;
+            place-items: center;
+            width: 4rem;
+            height: 4rem;
+            margin: 0 auto;
+            border-radius: 1.25rem;
+            background: #e6f4f2;
+            color: #00897b;
         }
 
         h1 {
             margin: 1.25rem 0 0.5rem;
-            font-size: 1.375rem;
+            font-size: clamp(1.375rem, 5vw, 1.625rem);
             line-height: 1.3;
             color: #0f172a;
         }
 
         p {
             margin: 0 0 1rem;
-            font-size: 0.9375rem;
+            font-size: 1rem;
             line-height: 1.6;
             color: #475569;
         }
@@ -65,7 +65,7 @@
             margin-top: 1.25rem;
             padding-top: 1rem;
             border-top: 1px solid #e2e8f0;
-            font-size: 0.8125rem;
+            font-size: 0.875rem;
             color: #64748b;
         }
 
@@ -81,7 +81,7 @@
             background: #00897B;
             color: #ffffff;
             font: inherit;
-            font-size: 0.9375rem;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
         }
@@ -96,7 +96,14 @@
 </head>
 <body>
     <main class="pm-offline-card">
-        <img src="/icons/icon-192.png" alt="" width="72" height="72">
+        <div class="offline-mark" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5z"></path>
+                <path d="M7 9h10M7 13h6"></path>
+                <path d="m4 4 16 16"></path>
+            </svg>
+        </div>
         <h1>You&rsquo;re offline</h1>
         <p>
             My Digital Diary needs a connection to load your diary, so this page
