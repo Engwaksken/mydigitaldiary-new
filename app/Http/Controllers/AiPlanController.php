@@ -28,7 +28,7 @@ class AiPlanController extends Controller
             ['label' => 'Via free shared plan', 'value' => (string) (clone $base)->where('used_shared_key', true)->count(), 'icon' => 'fa-solid fa-gift', 'color' => 'amber'],
         ];
 
-        // Last 6 months, oldest first — same trend-chart shape used
+        // Last 6 months, oldest first - same trend-chart shape used
         // elsewhere in the app (dashboard, module charts).
         $months = collect(range(5, 0))->map(fn ($m) => now()->subMonthsNoOverflow($m)->startOfMonth());
         $counts = $months->map(function ($month) use ($userId) {

@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
- * One webhook endpoint, parameterized by gateway_code — every
+ * One webhook endpoint, parameterized by gateway_code - every
  * provider's own payload format is normalized by its driver's
  * parseWebhookPayload() (see PaymentGatewayDriverInterface); the actual
  * "mark payment completed, activate subscription" logic below is
@@ -59,9 +59,9 @@ class PaymentGatewayWebhookController extends Controller
             ->first();
 
         if (! $log) {
-            // Acknowledge with 200 anyway — the provider will otherwise
+            // Acknowledge with 200 anyway - the provider will otherwise
             // retry indefinitely for a reference we simply don't recognize.
-            return response('Unknown transaction reference — acknowledged, no action taken.', 200);
+            return response('Unknown transaction reference - acknowledged, no action taken.', 200);
         }
 
         $log->update([
@@ -125,7 +125,7 @@ class PaymentGatewayWebhookController extends Controller
 
                 // Same "a Family/Team or Organization plan needs an
                 // actual Organization row to manage seats against" logic
-                // as SubscriptionController::ensureOrganizationForPlan() —
+                // as SubscriptionController::ensureOrganizationForPlan() -
                 // duplicated rather than shared since that method is
                 // private to a different controller.
                 if ($plan && ! $plan->isIndividual()) {

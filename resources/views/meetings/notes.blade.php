@@ -943,7 +943,7 @@
 
                                                                 @if(!empty($item['assigned_to']))
                                                                     <span class="text-slate-400">
-                                                                        —
+                                                                        -
                                                                         {{ $item['assigned_to'] }}
                                                                     </span>
                                                                 @endif
@@ -4113,7 +4113,7 @@ document.addEventListener(
                     } catch (error) {
                         showRecordingMessage(
                             (error.message || 'Could not save the recording.')
-                            + ' Your audio is still kept in this browser — try again or download it.',
+                            + ' Your audio is still kept in this browser - try again or download it.',
                             'error'
                         );
                     }
@@ -5104,7 +5104,7 @@ document.addEventListener(
                 showRecordingMessage(
                     (error.message || 'Could not save recording.')
                     + (kept
-                        ? ' Your audio is kept in this browser — use "Save to meeting" to retry or "Download" to keep a copy.'
+                        ? ' Your audio is kept in this browser - use "Save to meeting" to retry or "Download" to keep a copy.'
                         : ''),
                     'error'
                 );
@@ -6240,7 +6240,7 @@ document.addEventListener(
 
             if (!valid) {
                 showAudioEditorValidation(
-                    'Time must be within the recording (0:00 – ' + formatTime(duration) + ').',
+                    'Time must be within the recording (0:00 - ' + formatTime(duration) + ').',
                     'warning'
                 );
                 return;

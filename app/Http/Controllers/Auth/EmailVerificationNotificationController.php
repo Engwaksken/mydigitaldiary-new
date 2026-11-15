@@ -15,7 +15,7 @@ use Throwable;
  * Drop-in replacement for Breeze's default EmailVerificationNotificationController
  * (the "resend verification email" button on the "please verify your
  * email" notice page). Identical to Breeze's version except the actual
- * send is wrapped in a try/catch — see RegisteredUserController and
+ * send is wrapped in a try/catch - see RegisteredUserController and
  * AuthenticatedSessionController for the same fix and the full reasoning:
  * mail sending happens SYNCHRONOUSLY whenever QUEUE_CONNECTION=sync, so an
  * SMTP rejection (a 550 "classified as spam" response is a real, observed

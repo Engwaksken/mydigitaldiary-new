@@ -20,7 +20,7 @@ here's your invoice for the plan you selected. A copy is attached as a PDF.
 @endif
 **{{ $invoice->isQuote() ? 'Quoted Amount' : 'Amount Due' }}:** {{ format_money_in($invoice->amount, $invoice->currency) }}<br>
 @if ($invoice->billing_period_start && $invoice->billing_period_end)
-**Billing Period:** {{ $invoice->billing_period_start->format('M j, Y') }} – {{ $invoice->billing_period_end->format('M j, Y') }}<br>
+**Billing Period:** {{ $invoice->billing_period_start->format('M j, Y') }} - {{ $invoice->billing_period_end->format('M j, Y') }}<br>
 @endif
 @if ($invoice->due_date)
 **{{ $invoice->isQuote() ? 'Valid Until' : 'Due Date' }}:** {{ $invoice->due_date->format('M j, Y') }}<br>
@@ -29,7 +29,7 @@ here's your invoice for the plan you selected. A copy is attached as a PDF.
 @endcomponent
 
 @if ($invoice->isQuote())
-Reply to this email or get in touch if you'd like to move forward — we'll take care of the rest.
+Reply to this email or get in touch if you'd like to move forward - we'll take care of the rest.
 @elseif ($invoice->user)
 @component('mail::button', ['url' => route('subscription.show')])
 Complete Payment

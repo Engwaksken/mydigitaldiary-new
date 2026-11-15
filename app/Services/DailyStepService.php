@@ -44,7 +44,7 @@ class DailyStepService
 
         /*
          * Auto-start the day's tracking session. A person should not have to
-         * remember to press "Start" every morning — the moment today's step
+         * remember to press "Start" every morning - the moment today's step
          * record is first touched (opening the app, syncing, viewing the
          * dashboard) tracking is already on. Tapping "Stop" still pauses it
          * for the rest of the day.

@@ -1,1 +1,1 @@
-<p>Hello,</p><p>{{ $senderName }} shared notes from <strong>{{ $meeting->title }}</strong>.</p><p style="white-space:pre-wrap">{{ $shareText }}</p><p>— My Digital Diary</p>
+<p>Hello,</p><p>{{ $senderName }} shared notes from <strong>{{ $meeting->title }}</strong>.</p><p style="white-space:pre-wrap">{{ $shareText }}</p><p>- My Digital Diary</p>

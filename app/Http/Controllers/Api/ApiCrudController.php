@@ -12,10 +12,10 @@ use Illuminate\Support\Str;
 use App\Services\OfflineConflictGuard;
 
 /**
- * JSON equivalent of the web app's CrudController — every tracking module
+ * JSON equivalent of the web app's CrudController - every tracking module
  * gets a matching Api\{Module}Controller by setting just $model and
  * $rules (no $fields/$icon/$accent here; those exist only to drive the
- * web app's generic Blade form/table, which the Flutter app doesn't use —
+ * web app's generic Blade form/table, which the Flutter app doesn't use -
  * it builds its own native UI from the JSON shape instead).
  *
  * All 20 web modules now have their API equivalent built this way.
@@ -27,7 +27,7 @@ abstract class ApiCrudController extends Controller
 
     /**
      * ?archived=1 shows ONLY archived items (for a dedicated "Archived"
-     * view); omitted or any other value shows only non-archived ones —
+     * view); omitted or any other value shows only non-archived ones -
      * archived items never mix into the normal list by default, which
      * is the whole point of archiving something.
      */
@@ -171,7 +171,7 @@ abstract class ApiCrudController extends Controller
      * A breakdown by 'status', matching the same stat-card shape the
      * web app's own list pages already show for status-driven modules
      * (see e.g. PlanController::index()'s Pending/In progress/
-     * Completed cards) — only meaningful for modules that HAVE a
+     * Completed cards) - only meaningful for modules that HAVE a
      * status column, hence the schema check rather than assuming one.
      */
     public function stats(Request $request): JsonResponse
@@ -194,7 +194,7 @@ abstract class ApiCrudController extends Controller
     }
 
     /**
-     * A generic table PDF — every column in $rules except user_id,
+     * A generic table PDF - every column in $rules except user_id,
      * humanized into a header (e.g. "target_date" -> "Target Date").
      * Not as polished as a hand-built per-module PDF would be, but
      * covers all 20 modules sharing this base class at once rather

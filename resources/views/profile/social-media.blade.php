@@ -79,7 +79,7 @@
                                 <tr>
                                     <td class="px-4 py-3 font-bold text-slate-700">{{ $platformLabels[$platform] ?? ucfirst($platform ?: 'Account') }}</td>
                                     <td class="px-4 py-3 font-black text-slate-900">{{ $account->account_name ?? 'Social account' }}</td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $account->username ?: '—' }}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{ $account->username ?: '-' }}</td>
                                     <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[11px] font-bold {{ $active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' }}">{{ $active ? 'Active' : 'Inactive' }}</span></td>
                                     <td class="px-4 py-3 text-xs font-bold {{ $auto ? 'text-sky-700' : 'text-slate-400' }}">{{ $auto ? 'Automatic' : 'Manual' }}</td>
                                     <td class="px-4 py-3 text-right">

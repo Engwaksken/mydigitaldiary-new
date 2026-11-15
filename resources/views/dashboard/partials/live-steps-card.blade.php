@@ -152,7 +152,7 @@
 
             note.textContent = steps !== lastSeenSteps
                 ? 'Updated from your phone just now.'
-                : 'Live sync active — waiting for your next phone step update.';
+                : 'Live sync active - waiting for your next phone step update.';
 
             if (nextGoal) {
                 const achieved = Boolean(data.goal_achieved);

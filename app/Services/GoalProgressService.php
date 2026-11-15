@@ -45,7 +45,7 @@ class GoalProgressService
         if ($valueProgress !== null) {
             // A target/current value pair is the clearest signal of progress, so
             // it drives the percentage directly rather than being averaged with
-            // milestones/tasks/plans (which would otherwise dilute it — e.g. a
+            // milestones/tasks/plans (which would otherwise dilute it - e.g. a
             // goal at 50% of its target but with two unfinished tasks used to
             // read ~17%).
             $automatic = $valueProgress;

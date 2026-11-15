@@ -237,12 +237,12 @@
                         @enderror
                     </div>
 
-                    {{-- Everything below only appears once a document is loaded — see pmLoadDocumentForEditing(). --}}
+                    {{-- Everything below only appears once a document is loaded - see pmLoadDocumentForEditing(). --}}
                     <div id="pm-sign-editor" class="hidden mt-4">
                         <div class="lg:flex lg:gap-6 lg:items-start">
-                            {{-- Signature palette — drag any of these onto a page. On touch
+                            {{-- Signature palette - drag any of these onto a page. On touch
                                  devices (no real drag-and-drop), tapping one arms it, then
-                                 tapping a page drops it there — see pmHandlePageTap(). --}}
+                                 tapping a page drops it there - see pmHandlePageTap(). --}}
                             <div class="lg:w-56 lg:shrink-0 mb-4 lg:mb-0 lg:sticky lg:top-4">
                                 <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-4">
                                     <h2 class="text-sm font-semibold text-slate-700 mb-3">Your Signatures</h2>
@@ -269,7 +269,7 @@
                                 <p id="pm-placement-count" class="text-xs text-slate-400 text-center mt-2">No signatures placed yet.</p>
                             </div>
 
-                            {{-- Pages render here — one .pm-page-container per page, each
+                            {{-- Pages render here - one .pm-page-container per page, each
                                  holding a canvas/img and any placements dropped onto it. --}}
                             <div id="pm-pages-container" class="flex-1 space-y-4 max-w-full overflow-x-auto"></div>
                         </div>
@@ -346,7 +346,7 @@
                 if (wrapper) { wrapper.style.display = select.value === 'range' ? 'flex' : 'none'; }
             }
             // Filtering re-submits the whole page (GET), which would
-            // otherwise dump the user back on "My Signatures" — this
+            // otherwise dump the user back on "My Signatures" - this
             // keeps them on the Documents tab across that reload.
             function pmSubmitDocFilterForm() {
                 sessionStorage.setItem('pmSigActiveTab', 'documents');
@@ -412,7 +412,7 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-3 align-top whitespace-nowrap">{{ $doc->placements->count() }}</td>
-                                <td class="px-4 py-3 align-top whitespace-nowrap">{{ $doc->placements->pluck('page_number')->unique()->sort()->implode(', ') ?: '—' }}</td>
+                                <td class="px-4 py-3 align-top whitespace-nowrap">{{ $doc->placements->pluck('page_number')->unique()->sort()->implode(', ') ?: '-' }}</td>
                                 <td class="px-4 py-3 align-top whitespace-nowrap">{{ $doc->signed_at?->format('Y-m-d H:i') ?? $doc->created_at->format('Y-m-d H:i') }}</td>
                                 <td class="px-4 py-3 align-top text-right whitespace-nowrap">
                                     <a href="{{ route('signature.documents.view', $doc->id) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-[var(--brand-1)] hover:underline mr-3">
@@ -510,8 +510,8 @@
             selectAll.checked = allCheckboxes.length > 0 && selected.length === allCheckboxes.length;
         }
 
-        // Bulk share can't actually attach files — mailto:/wa.me only
-        // carry text — so this builds one message listing every selected
+        // Bulk share can't actually attach files - mailto:/wa.me only
+        // carry text - so this builds one message listing every selected
         // document's name and link, same idea as the single-document
         // share buttons just combined into one message.
         function pmShareSelectedDocuments(channel) {
@@ -580,7 +580,7 @@
     <script>
         // ===== Multi-page signature placement editor =====
         // Renders every page of the uploaded document (PDF via PDF.js,
-        // reading the file straight from the browser's memory — no
+        // reading the file straight from the browser's memory - no
         // upload round-trip needed just to preview it; a single image
         // is treated as one "page"). Signatures are dragged from the
         // palette (or tap-to-arm/tap-to-place on touch devices, since
@@ -888,7 +888,7 @@
 
         function pmHandlePageTap(event, container) {
             // Ignore taps on an existing placement (its own handlers deal
-            // with those) — only bare page taps place a new signature.
+            // with those) - only bare page taps place a new signature.
             if (event.target.closest('.pm-placement')) { return; }
             if (!pmArmedSignature) { return; }
 

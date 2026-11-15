@@ -7,7 +7,7 @@ use App\Models\SiteSetting;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Public — reachable before login, since the login/register/splash
+ * Public - reachable before login, since the login/register/splash
  * screens need the site logo before any auth token exists. No
  * sensitive data here, only what's already shown to any anonymous web
  * visitor.

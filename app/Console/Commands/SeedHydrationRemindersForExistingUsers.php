@@ -6,7 +6,7 @@ use App\Models\User;
 use Illuminate\Console\Command;
 
 /**
- * A one-time, manually-run command — createDefaultHydrationReminder() (see
+ * A one-time, manually-run command - createDefaultHydrationReminder() (see
  * User model) only ever ran automatically for NEW self-registrations after
  * that feature was added. Anyone who registered before then never got one.
  * Run this once to backfill it for every existing user who doesn't already
@@ -40,7 +40,7 @@ class SeedHydrationRemindersForExistingUsers extends Command
         });
 
         if ($dryRun) {
-            $this->info('Dry run complete — no reminders were actually created. Re-run without --dry-run to apply.');
+            $this->info('Dry run complete - no reminders were actually created. Re-run without --dry-run to apply.');
         } else {
             $this->info("Done. Created {$created} hydration reminder(s).");
         }

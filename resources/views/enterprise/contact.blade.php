@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Talk to Sales — {{ $siteSettings->site_name ?? config('app.name') }}</title>
+    <title>Talk to Sales - {{ $siteSettings->site_name ?? config('app.name') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -131,7 +131,7 @@
 
     <script>
         // Same behavior as the shared authenticated layout's flash
-        // messages — shown for 5 seconds, then faded out over 0.7s and
+        // messages - shown for 5 seconds, then faded out over 0.7s and
         // removed from the DOM. Duplicated here rather than shared since
         // this is a standalone page (guests need to reach it) that
         // doesn't extend that layout.

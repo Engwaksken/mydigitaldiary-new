@@ -1,4 +1,4 @@
-{{-- Legacy orphan — no longer @include'd anywhere. The responsive tab CSS
+{{-- Legacy orphan - no longer @include'd anywhere. The responsive tab CSS
 lives in profile/edit.blade.php; kept only for older external deployments. --}}
 <style>
     .profile-tabs,

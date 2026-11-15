@@ -42,7 +42,7 @@
     // $name plus a per-render counter: two <x-input name="x"> on one page (array
     // / repeated rows) would otherwise share an id and every <label for> would
     // point at the first control. The counter lives on the request, so the same
-    // page renders the same ids every time — Str::random() would not be stable
+    // page renders the same ids every time - Str::random() would not be stable
     // across a re-render.
     $passedId = $attributes->get('id');
     $counterKey = 'pm.field_id_seq.' . $name;

@@ -26,7 +26,7 @@
                         <tr class="align-top hover:bg-slate-50/70">
                             <td class="px-4 py-4">
                                 <div class="font-semibold text-slate-800">{{ $conversation->user?->name ?? 'Deleted user' }}</div>
-                                <div class="mt-0.5 text-xs text-slate-500">{{ $conversation->user?->email ?? '—' }}</div>
+                                <div class="mt-0.5 text-xs text-slate-500">{{ $conversation->user?->email ?? '-' }}</div>
                             </td>
                             <td class="px-4 py-4">
                                 @if($conversation->ended_at)
@@ -70,10 +70,10 @@
                                         @endfor
                                     </span>
                                 @else
-                                    <span class="text-slate-400">—</span>
+                                    <span class="text-slate-400">-</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-slate-500">{{ optional($conversation->last_message_at)->diffForHumans() ?? '—' }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-slate-500">{{ optional($conversation->last_message_at)->diffForHumans() ?? '-' }}</td>
                             <td class="px-4 py-4 text-right">
                                 <a href="{{ route('admin.support.show',$conversation) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-comments"></i> Open Chat</a>
                             </td>

@@ -9,10 +9,10 @@ use Illuminate\Http\Request;
 
 /**
  * The Flutter app calls store() once after login (and again any time
- * Firebase hands it a rotated token — FCM tokens are NOT permanent) so
+ * Firebase hands it a rotated token - FCM tokens are NOT permanent) so
  * SendReminders / FcmService knows where to push reminder notifications
  * for this user. Keyed on (user_id, device_id) rather than just user_id,
- * since a user might have the app on more than one device — all of them
+ * since a user might have the app on more than one device - all of them
  * should get the push, and each device's token needs to be updated
  * independently as it rotates.
  */

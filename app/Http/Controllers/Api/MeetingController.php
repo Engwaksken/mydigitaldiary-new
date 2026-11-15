@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 /**
- * Mobile equivalent of the web app's MeetingController overrides —
+ * Mobile equivalent of the web app's MeetingController overrides -
  * same recurrence support (RecurringMeetingService generates upcoming
  * instances immediately after a recurring meeting is created).
  * recurrence_days_of_week is a genuine JSON array here rather than
@@ -114,7 +114,7 @@ class MeetingController extends ApiCrudController
     /**
      * Same reasoning as web's update() override: deliberately doesn't
      * regenerate already-created future instances just because the
-     * rule changed — tomorrow's scheduled top-up picks up the new
+     * rule changed - tomorrow's scheduled top-up picks up the new
      * rule naturally for instances it creates from then on.
      */
     public function update(Request $request, int $id): JsonResponse

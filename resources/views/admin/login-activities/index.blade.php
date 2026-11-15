@@ -109,7 +109,7 @@
                         <tr>
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $login->user?->name ?? 'Deleted user' }}</div>
-                                <div class="text-xs text-slate-400 mt-0.5">{{ $login->user?->email ?? '—' }}</div>
+                                <div class="text-xs text-slate-400 mt-0.5">{{ $login->user?->email ?? '-' }}</div>
                             </td>
                             <td class="whitespace-nowrap">
                                 <div class="font-medium text-slate-700">{{ optional($login->logged_in_at)->format('d M Y, h:i A') }}</div>

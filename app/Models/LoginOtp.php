@@ -34,7 +34,7 @@ class LoginOtp extends Model
     /**
      * Generate a fresh 6-digit OTP for the given user, invalidate any
      * previous unconsumed codes, email it, and return the new record.
-     * The plain code is never persisted or logged — only its hash is.
+     * The plain code is never persisted or logged - only its hash is.
      */
     public static function createFor(User $user): self
     {

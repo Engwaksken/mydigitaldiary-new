@@ -1,5 +1,5 @@
 {{--
-    Design tokens — shared CSS custom properties for the "My Digital Diary"
+    Design tokens - shared CSS custom properties for the "My Digital Diary"
     UI component library.
 
     Maps to the existing brand palette (--brand-1 / --brand-2 defined in the
@@ -16,10 +16,10 @@
         --color-primary: var(--brand-1, #00897B);
         --color-secondary: var(--brand-2, #73BEB6);
         /* Contrast on white, measured (WCAG 1.4.3 AA for text needs 4.5:1):
-             success #15803d = 4.83:1  (was #16a34a = 3.30:1 — FAILED)
-             warning #b45309 = 4.53:1  (was #d97706 = 3.19:1 — FAILED)
+             success #15803d = 4.83:1  (was #16a34a = 3.30:1 - FAILED)
+             warning #b45309 = 4.53:1  (was #d97706 = 3.19:1 - FAILED)
              danger  #b91c1c = 6.30:1  (was #dc2626 = 4.46:1 on
-                                       --color-background #f4f6f8 — FAILED by 0.04)
+                                       --color-background #f4f6f8 - FAILED by 0.04)
            These darker steps are already used elsewhere in this codebase. Please
            do not "brighten" them back: the previous values are the green/amber/
            red-500 family and they are not AA-compliant as text. */

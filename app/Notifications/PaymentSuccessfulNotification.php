@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Fired from all three payment-completion paths (card callback,
- * gateway webhook, admin manual approval) — a receipt email already
+ * gateway webhook, admin manual approval) - a receipt email already
  * gets sent separately (see PaymentReceiptMail); this is specifically
  * for the in-app/mobile notification list, which nothing populated
  * for payment events before this existed at all.

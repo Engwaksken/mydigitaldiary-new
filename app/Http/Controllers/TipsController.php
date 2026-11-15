@@ -20,7 +20,7 @@ class TipsController extends Controller
 
     /**
      * A small set of tips generated from the user's OWN current data state
-     * — not static advice, but "here's something worth noticing about your
+     * - not static advice, but "here's something worth noticing about your
      * own tracked data right now." Each candidate has a condition; only
      * ones that are actually true for this user get shown, capped at 5.
      * An empty result (nothing looked concerning) shows an encouraging
@@ -38,7 +38,7 @@ class TipsController extends Controller
             $tips[] = [
                 'icon' => 'fa-solid fa-bell',
                 'color' => 'amber',
-                'text' => "You have {$overdueReminders} overdue reminder(s) that haven't fired yet — worth checking your Reminders page and the scheduler is running.",
+                'text' => "You have {$overdueReminders} overdue reminder(s) that haven't fired yet - worth checking your Reminders page and the scheduler is running.",
             ];
         }
 
@@ -48,8 +48,8 @@ class TipsController extends Controller
                 'icon' => 'fa-solid fa-bed',
                 'color' => 'violet',
                 'text' => $lastSleep
-                    ? 'You last logged sleep on ' . $lastSleep->sleep_date->format('M j') . ' — logging most nights gives your averages more meaning.'
-                    : "You haven't logged any sleep yet — even a few nights gives you a real 7-day average on your dashboard.",
+                    ? 'You last logged sleep on ' . $lastSleep->sleep_date->format('M j') . ' - logging most nights gives your averages more meaning.'
+                    : "You haven't logged any sleep yet - even a few nights gives you a real 7-day average on your dashboard.",
             ];
         }
 
@@ -62,7 +62,7 @@ class TipsController extends Controller
             $tips[] = [
                 'icon' => 'fa-solid fa-receipt',
                 'color' => 'rose',
-                'text' => "You're {$this->money($over)} over your monthly budget so far — check Expenses to see where.",
+                'text' => "You're {$this->money($over)} over your monthly budget so far - check Expenses to see where.",
             ];
         }
 
@@ -75,7 +75,7 @@ class TipsController extends Controller
             $tips[] = [
                 'icon' => 'fa-solid fa-stethoscope',
                 'color' => 'pink',
-                'text' => "Your {$upcomingCheckup->checkup_type} checkup is coming up on {$upcomingCheckup->next_due_date->format('M j, g:ia')} — a good time to confirm the appointment.",
+                'text' => "Your {$upcomingCheckup->checkup_type} checkup is coming up on {$upcomingCheckup->next_due_date->format('M j, g:ia')} - a good time to confirm the appointment.",
             ];
         }
 
@@ -84,7 +84,7 @@ class TipsController extends Controller
             $tips[] = [
                 'icon' => 'fa-solid fa-person-running',
                 'color' => 'lime',
-                'text' => "No exercise logged in the last 7 days — even a short walk is worth logging to keep your streak visible.",
+                'text' => "No exercise logged in the last 7 days - even a short walk is worth logging to keep your streak visible.",
             ];
         }
 
@@ -96,7 +96,7 @@ class TipsController extends Controller
             $tips[] = [
                 'icon' => 'fa-solid fa-piggy-bank',
                 'color' => 'green',
-                'text' => "Your \"{$goalWithNoProgress->name}\" savings goal has no contributions logged yet — even a small first one gets it moving.",
+                'text' => "Your \"{$goalWithNoProgress->name}\" savings goal has no contributions logged yet - even a small first one gets it moving.",
             ];
         }
 

@@ -103,7 +103,7 @@
             <div>
                 <label for="stripe_secret_key" class="block text-sm font-medium text-slate-700 mb-1">Secret Key</label>
                 <input type="password" id="stripe_secret_key" name="stripe_secret_key"
-                       placeholder="{{ $gateway->configValue('stripe_secret_key') ? '•••••••• (saved — leave blank to keep it)' : 'sk_live_...' }}"
+                       placeholder="{{ $gateway->configValue('stripe_secret_key') ? '•••••••• (saved - leave blank to keep it)' : 'sk_live_...' }}"
                        autocomplete="off"
                        class="pm-input">
             </div>
@@ -204,18 +204,18 @@
                 <div>
                     <label for="client_id" class="block text-sm font-medium text-slate-700 mb-1">API Key</label>
                     <input type="password" id="client_id" name="client_id" autocomplete="off"
-                           placeholder="{{ $gateway->client_id ? '•••••••• (saved — leave blank to keep it)' : '' }}" class="pm-input">
+                           placeholder="{{ $gateway->client_id ? '•••••••• (saved - leave blank to keep it)' : '' }}" class="pm-input">
                 </div>
                 <div>
                     <label for="client_secret" class="block text-sm font-medium text-slate-700 mb-1">API Secret</label>
                     <input type="password" id="client_secret" name="client_secret" autocomplete="off"
-                           placeholder="{{ $gateway->client_secret ? '•••••••• (saved — leave blank to keep it)' : '' }}" class="pm-input">
+                           placeholder="{{ $gateway->client_secret ? '•••••••• (saved - leave blank to keep it)' : '' }}" class="pm-input">
                 </div>
             </div>
             <div>
                 <label for="wallet_guid" class="block text-sm font-medium text-slate-700 mb-1">Merchant / Account ID</label>
                 <input type="password" id="wallet_guid" name="wallet_guid" autocomplete="off"
-                       placeholder="{{ $gateway->wallet_guid ? '•••••••• (saved — leave blank to keep it)' : '' }}" class="pm-input">
+                       placeholder="{{ $gateway->wallet_guid ? '•••••••• (saved - leave blank to keep it)' : '' }}" class="pm-input">
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
@@ -279,7 +279,7 @@
             // The aggregator fieldset is a second, OPTIONAL section for
             // mobile_money (automated collection on top of the manual
             // fields above) as well as the primary section for the pure
-            // 'aggregator' type — shown for both, not mutually exclusive
+            // 'aggregator' type - shown for both, not mutually exclusive
             // with fields-mobile_money the way the others are.
             var showAggregatorFields = (type === 'mobile_money' || type === 'aggregator');
             document.getElementById('fields-aggregator').style.display = showAggregatorFields ? 'block' : 'none';

@@ -227,7 +227,7 @@ class Meeting extends Model
     }
 
     /**
-     * "Missed" isn't a status anyone sets manually — it's derived: a
+     * "Missed" isn't a status anyone sets manually - it's derived: a
      * meeting that was scheduled, never got marked completed or
      * cancelled, and whose start time has now passed. Computed on read
      * rather than needing a scheduled job to flip a stored value, since

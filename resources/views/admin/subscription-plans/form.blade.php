@@ -115,7 +115,7 @@
                 </div>
                 <div>
                     <label for="discount_percent" class="block text-sm font-medium text-slate-700 mb-1">Discount (%)</label>
-                    <input type="number" id="discount_percent" name="discount_percent" min="0" max="100" step="0.01" placeholder="e.g. 10 (5–15% is typical)"
+                    <input type="number" id="discount_percent" name="discount_percent" min="0" max="100" step="0.01" placeholder="e.g. 10 (5-15% is typical)"
                            value="{{ old('discount_percent', $plan->discount_percent) }}"
                            class="pm-input">
                     @error('discount_percent')
@@ -172,18 +172,18 @@
                 <div class="grid grid-cols-6 gap-2 mb-3">
                     @php
                         $suggestedColors = [
-                            '#334155' => 'Navy — Monthly',
-                            '#1D4ED8' => 'Blue — 3 Months',
-                            '#7C3AED' => 'Purple — 6 Months',
-                            '#0F766E' => 'Teal — Annual',
-                            '#475569' => 'Slate — 3 Years',
-                            '#EA580C' => 'Orange — Family & Small Team',
-                            '#059669' => 'Emerald — Enterprise 5 Staff',
-                            '#0891B2' => 'Cyan — Enterprise 10 Staff',
-                            '#4F46E5' => 'Indigo — Enterprise 15 Staff',
-                            '#D97706' => 'Amber — Enterprise 20 Staff',
-                            '#E11D48' => 'Rose — Enterprise 25 Staff',
-                            '#6D28D9' => 'Deep Purple — Enterprise 50 Staff',
+                            '#334155' => 'Navy - Monthly',
+                            '#1D4ED8' => 'Blue - 3 Months',
+                            '#7C3AED' => 'Purple - 6 Months',
+                            '#0F766E' => 'Teal - Annual',
+                            '#475569' => 'Slate - 3 Years',
+                            '#EA580C' => 'Orange - Family & Small Team',
+                            '#059669' => 'Emerald - Enterprise 5 Staff',
+                            '#0891B2' => 'Cyan - Enterprise 10 Staff',
+                            '#4F46E5' => 'Indigo - Enterprise 15 Staff',
+                            '#D97706' => 'Amber - Enterprise 20 Staff',
+                            '#E11D48' => 'Rose - Enterprise 25 Staff',
+                            '#6D28D9' => 'Deep Purple - Enterprise 50 Staff',
                         ];
                         $currentColor = old('color', $plan->color ?: '#475569');
                     @endphp
@@ -284,7 +284,7 @@
             document.getElementById('fields-flat-duration').style.display = type === 'flat' ? 'block' : 'none';
             document.getElementById('fields-flat-price').style.display = (type === 'flat' || type === 'lifetime') ? 'block' : 'none';
 
-            // Hidden fields still submit their value — only the field for
+            // Hidden fields still submit their value - only the field for
             // the ACTIVE pricing type should carry a real number, so the
             // others are blanked out to avoid saving stale leftover values
             // from a type that was previously selected.

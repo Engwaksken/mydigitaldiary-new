@@ -110,7 +110,7 @@
                     reminders you'd rather receive quietly by email only.</li>
                 <li>A brand-new account gets a default "Drink water" reminder every 2 hours edit its
                     frequency or delete it from Reminders if it's not for you.</li>
-                <li>You'll get a daily email around 6am with your top 3 open items for the day —
+                <li>You'll get a daily email around 6am with your top 3 open items for the day -
                     turn this off from your account if you'd rather not receive it.</li>
             </ul>
         </div>

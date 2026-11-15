@@ -15,7 +15,7 @@
             <p class="mt-3 text-slate-700">
                 {{ $meeting->start_at?->format('D, M j, Y · g:i A') }}
                 @if ($meeting->end_at)
-                    – {{ $meeting->end_at->format('g:i A') }}
+                    - {{ $meeting->end_at->format('g:i A') }}
                 @endif
             </p>
             @if ($meeting->location)

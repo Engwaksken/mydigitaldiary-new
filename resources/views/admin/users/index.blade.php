@@ -420,7 +420,7 @@
                                     <div class="text-xs font-semibold text-slate-700">{{ $joinedAt->format('d M Y') }}</div>
                                     <div class="mt-0.5 text-[10px] text-slate-400">{{ $joinedAt->diffForHumans() }}</div>
                                 @else
-                                    <span class="text-xs text-slate-400">—</span>
+                                    <span class="text-xs text-slate-400">-</span>
                                 @endif
                             </td>
 
@@ -460,7 +460,7 @@
                                 @if($user->subscription_expires_at)
                                     {{ \Illuminate\Support\Carbon::parse($user->subscription_expires_at)->format('d M Y') }}
                                 @else
-                                    —
+                                    -
                                 @endif
                             </td>
 
@@ -564,7 +564,7 @@
                         <div class="rounded-xl bg-slate-50 p-2.5">
                             <span class="text-slate-400">Joined</span>
                             <p class="mt-0.5 truncate font-bold text-slate-700">
-                                {{ $joinedAt?->format('d M Y') ?? '—' }}
+                                {{ $joinedAt?->format('d M Y') ?? '-' }}
                             </p>
                         </div>
 

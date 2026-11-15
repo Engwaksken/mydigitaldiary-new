@@ -30,7 +30,7 @@ class DashboardController extends Controller
     {
         // Whoever just logged in or registered from an emailed invite
         // link (see OrganizationController::acceptInvite()) gets linked
-        // to that organization here, before they see anything else —
+        // to that organization here, before they see anything else -
         // every login/registration path eventually lands on this route,
         // so this is a single, low-risk place to catch it rather than
         // touching the auth controllers themselves.
@@ -336,7 +336,7 @@ class DashboardController extends Controller
 
         // --- Subscription expiry notice (in-app "notification upon login") --
         // Unread database-channel notifications from
-        // SendSubscriptionExpiryReminders — shown once, then marked read,
+        // SendSubscriptionExpiryReminders - shown once, then marked read,
         // so it surfaces right after logging in without nagging on every
         // single page load (the persistent banner in layouts/app.blade.php
         // already covers ongoing visibility while actually expired).
@@ -369,7 +369,7 @@ class DashboardController extends Controller
             ->where('plan_year', now()->year)
             ->avg('progress_percent') ?? 0));
 
-        // Only shown on the dashboard when actually relevant — a plain
+        // Only shown on the dashboard when actually relevant - a plain
         // individual subscriber never sees a "manage your team" prompt
         // for something they don't have.
         $ownedOrganization = \App\Models\Organization::where('owner_user_id', $userId)->with('plan')->first();
@@ -492,11 +492,11 @@ class DashboardController extends Controller
 
 
     /**
-     * The full activity log — same underlying data as the dashboard's
+     * The full activity log - same underlying data as the dashboard's
      * "Recent Activity" preview, just pulling a much larger batch (up to
      * 300, vs. the dashboard's 5) and paginating it 20 per page. There's
-     * no single `activity` table backing this — it's a merge across
-     * several modules — so pagination (and search) are built by hand over
+     * no single `activity` table backing this - it's a merge across
+     * several modules - so pagination (and search) are built by hand over
      * an in-memory collection, rather than Eloquent's usual ->paginate()/
      * ->where('...', 'like', ...), which only work against one query.
      */
@@ -511,7 +511,7 @@ class DashboardController extends Controller
         $all = $this->buildRecentActivity($userId, 30, 300);
 
         // Stats reflect the FULL pulled batch (up to 300), not just the
-        // current page or the search-filtered result — a summary of
+        // current page or the search-filtered result - a summary of
         // "what's been happening lately" shouldn't shrink to near-zero
         // just because you typed a search term.
         $stats = [
@@ -528,7 +528,7 @@ class DashboardController extends Controller
             $all = $all->filter(fn ($item) => ($item['type'] ?? null) === $type)->values();
         }
 
-        // Period filter — same daily/weekly/monthly/range vocabulary as
+        // Period filter - same daily/weekly/monthly/range vocabulary as
         // every module's own crud/index.blade.php filter, applied here
         // against each activity item's own timestamp instead of a single
         // DB column (this feed is merged in-memory from several models,
@@ -573,11 +573,11 @@ class DashboardController extends Controller
      * normalized into the same shape (icon, color, text, time) so the view
      * can render one uniform list rather than needing per-module markup.
      * Deliberately a representative sample of modules, not literally all
-     * 20 — a "recent activity" feed is meant to give a quick pulse of what
+     * 20 - a "recent activity" feed is meant to give a quick pulse of what
      * you've been doing lately, not be an exhaustive audit log.
      *
      * @param int $perModelLimit how many rows to pull from EACH module
-     *                           before merging — needs to be at least as
+     *                           before merging - needs to be at least as
      *                           large as $take, or an early-created-but-
      *                           still-recent-overall item from a quiet
      *                           module could get excluded before the merge
@@ -589,7 +589,7 @@ class DashboardController extends Controller
         $items = collect();
 
         Expense::where('user_id', $userId)->latest()->limit($perModelLimit)->get()->each(function ($e) use (&$items) {
-            $items->push(['type' => 'expense', 'icon' => 'fa-solid fa-receipt', 'color' => 'rose', 'text' => "Logged expense: {$e->category} — " . format_money($e->amount), 'time' => $e->created_at]);
+            $items->push(['type' => 'expense', 'icon' => 'fa-solid fa-receipt', 'color' => 'rose', 'text' => "Logged expense: {$e->category} - " . format_money($e->amount), 'time' => $e->created_at]);
         });
 
         Income::where('user_id', $userId)->latest()->limit($perModelLimit)->get()->each(function ($i) use (&$items) {

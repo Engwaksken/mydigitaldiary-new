@@ -178,7 +178,7 @@
                                     : 'User OAuth' }}
                             </td>
                             <td class="px-4 py-3 text-xs text-slate-500">
-                                {{ $provider->base_url ?: '—' }}
+                                {{ $provider->base_url ?: '-' }}
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-wrap gap-1">

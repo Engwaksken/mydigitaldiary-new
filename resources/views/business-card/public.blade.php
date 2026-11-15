@@ -1,5 +1,5 @@
 {{--
-    Standalone page, not extending layouts.app — whoever scans the QR
+    Standalone page, not extending layouts.app - whoever scans the QR
     code or opens the shared link is almost never a logged-in user, and
     that layout's sidebar assumes auth()->user() exists.
 --}}
@@ -8,7 +8,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $card->name }}{{ $card->title ? ' — ' . $card->title : '' }}</title>
+    <title>{{ $card->name }}{{ $card->title ? ' - ' . $card->title : '' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -96,7 +96,7 @@
     </div>
 
     <script>
-        // A .vcf (vCard) file — every phone/email app knows how to import
+        // A .vcf (vCard) file - every phone/email app knows how to import
         // one on tap, no server round-trip or extra library needed.
         function pmSaveContact() {
             var lines = [

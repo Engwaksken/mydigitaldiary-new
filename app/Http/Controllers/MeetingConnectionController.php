@@ -164,7 +164,7 @@ class MeetingConnectionController extends Controller
         $to=!empty($data['sync_to_date'])?Carbon::parse($data['sync_to_date']):$from->copy()->addMonth();
         $result=$syncService->syncUser((int)$request->user()->id,$from,$to,$data['provider'] ?? null,(bool)($data['include_recurring'] ?? true));
         app(DailyInsightService::class)->invalidateFor($request->user());
-        $message="Calendar sync complete for {$from->format('d M Y')} – {$to->format('d M Y')}: {$result['imported']} new, {$result['updated']} updated.";
+        $message="Calendar sync complete for {$from->format('d M Y')} - {$to->format('d M Y')}: {$result['imported']} new, {$result['updated']} updated.";
         if($result['errors']) return redirect()->route('meetings.index')->with('success',$message)->withErrors(['calendar_sync'=>implode(' ',$result['errors'])]);
         return redirect()->route('meetings.index')->with('success',$message);
     }

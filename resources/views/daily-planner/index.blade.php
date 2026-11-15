@@ -684,7 +684,7 @@
                 <div class="px-5 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div>
                         <h3 class="font-bold text-slate-900">
-                            Week of {{ $weekStart->format('d M') }} – {{ $weekEnd->format('d M Y') }}
+                            Week of {{ $weekStart->format('d M') }} - {{ $weekEnd->format('d M Y') }}
                         </h3>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
@@ -1379,7 +1379,7 @@
         <div class="flex items-center justify-between px-5 py-4 border-b">
             <div>
                 <h3 id="planWeekTitle" class="font-bold text-lg">Plan the Week</h3>
-                <p class="text-xs text-slate-500">{{ $weekStart->format('D d M') }} – {{ $weekEnd->format('D d M Y') }}</p>
+                <p class="text-xs text-slate-500">{{ $weekStart->format('D d M') }} - {{ $weekEnd->format('D d M Y') }}</p>
             </div>
             <button type="button" class="p-2 text-slate-500" onclick="closeDpModal('planWeekModal')" aria-label="Close"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
@@ -1427,7 +1427,7 @@
                 <span class="text-sm font-medium">Days <span class="text-rose-600">*</span></span>
                 <div class="flex flex-wrap gap-1 text-xs">
                     <button type="button" class="dp-chip" data-week-preset="all">All week</button>
-                    <button type="button" class="dp-chip" data-week-preset="weekdays">Mon–Fri</button>
+                    <button type="button" class="dp-chip" data-week-preset="weekdays">Mon-Fri</button>
                     <button type="button" class="dp-chip" data-week-preset="weekend">Weekend</button>
                     <button type="button" class="dp-chip" data-week-preset="none">Clear</button>
                 </div>

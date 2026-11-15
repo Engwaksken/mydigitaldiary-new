@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
 
 /**
  * Searches the highest-value, most commonly-used modules rather than
- * literally every one of the app's 20+ tables — Plans, Expenses,
+ * literally every one of the app's 20+ tables - Plans, Expenses,
  * Income, Budgets, Projects, Project Tasks, Reminders, Education
  * Plans, Network Contacts, and Personal Relationships. Each result's
  * "module" field matches a mobile ModuleConfig endpoint string

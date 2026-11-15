@@ -133,7 +133,7 @@ class DailyPlannerTaskReminderService
 
     /**
      * Deactivate any reminder rows for this task whose nudge is no longer in
-     * the desired set — e.g. a task rescheduled closer to now no longer needs
+     * the desired set - e.g. a task rescheduled closer to now no longer needs
      * its "day before" nudge.
      */
     private function cancelStaleNudges(DailyPlanItem $item, User $user, array $activeSignatures, array $columns): void

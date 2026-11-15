@@ -21,12 +21,12 @@
         $value = data_get($item, 'practiced_at')
             ?: data_get($item, 'created_at');
 
-        if (!$value) return '—';
+        if (!$value) return '-';
 
         try {
             return \Illuminate\Support\Carbon::parse($value)->format('d M Y');
         } catch (\Throwable) {
-            return '—';
+            return '-';
         }
     };
 @endphp
@@ -554,7 +554,7 @@ async function generateSpiritualAiDraft() {
             if (refs.length) {
                 refsBox.classList.remove('hidden');
                 refsBox.innerHTML = '<p class="font-bold text-slate-900">Bible references (' + refs.length + ')</p>' +
-                    refs.map(ref => '<p class="mt-1">' + String(ref.reference || '') + ' — ' + String(ref.text || '') + '</p>').join('');
+                    refs.map(ref => '<p class="mt-1">' + String(ref.reference || '') + ' - ' + String(ref.text || '') + '</p>').join('');
             } else {
                 refsBox.classList.add('hidden');
                 refsBox.innerHTML = '';

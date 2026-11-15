@@ -24,13 +24,13 @@
 
     @if ($hasOwnActiveKey)
         <x-alert type="success" :dismissible="false" :autoDismiss="false" class="mb-4">
-            You're using your own API key — unlimited AI plan generations.
+            You're using your own API key - unlimited AI plan generations.
         </x-alert>
     @elseif ($settings->hasDefaultAiKey())
         <x-alert type="warning" :dismissible="false" :autoDismiss="false" class="mb-4">
             <span class="flex items-center justify-between gap-3 flex-wrap">
                 <span>
-                Using the free shared plan — {{ $sharedUsedThisMonth }} of {{ $settings->default_ai_free_limit_per_month }} used this month.
+                Using the free shared plan - {{ $sharedUsedThisMonth }} of {{ $settings->default_ai_free_limit_per_month }} used this month.
                 </span>
                 <button type="button" onclick="document.getElementById('api-credential-modal').showModal()"
                         class="text-xs font-medium underline hover:no-underline">
@@ -40,7 +40,7 @@
         </x-alert>
     @else
         <x-alert type="info" :dismissible="false" :autoDismiss="false" class="mb-4">
-            No free shared plan is configured — add your own API key below to use the AI Planner.
+            No free shared plan is configured - add your own API key below to use the AI Planner.
         </x-alert>
     @endif
 
@@ -102,7 +102,7 @@
         <div class="mt-4">{{ $credentials->withQueryString()->links() }}</div>
     @endif
 
-    {{-- Add API Key modal — replaces the old full-page /create navigation.
+    {{-- Add API Key modal - replaces the old full-page /create navigation.
          The dedicated route/view still exist for direct-URL access, same
          progressive-enhancement pattern as every other module. --}}
     <dialog id="api-credential-modal" aria-labelledby="api-credential-modal-title" class="rounded-2xl p-0 pm-dialog-lg shadow-2xl backdrop:bg-slate-900/50">

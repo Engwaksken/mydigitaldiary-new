@@ -59,7 +59,7 @@ class MonthlyReviewService
         }
 
         if (! $wins) {
-            $wins[] = 'You kept building your personal record this month — that history makes future planning more useful.';
+            $wins[] = 'You kept building your personal record this month - that history makes future planning more useful.';
         }
         if (! $focus) {
             $focus[] = 'Keep the habits that worked and choose one meaningful improvement for next month.';
@@ -83,7 +83,7 @@ class MonthlyReviewService
         return [
             'month' => $month->format('F Y'),
             'month_key' => $month->format('Y-m'),
-            'period' => $current['start']->format('d M').' – '.$current['end']->format('d M Y'),
+            'period' => $current['start']->format('d M').' - '.$current['end']->format('d M Y'),
             'money' => [
                 'income' => $current['income'],
                 'expenses' => $current['expenses'],

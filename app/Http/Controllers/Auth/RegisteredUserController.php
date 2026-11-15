@@ -51,8 +51,8 @@ class RegisteredUserController extends Controller
 
         // The account record above is already saved at this point. Sending
         // the verification email happens SYNCHRONOUSLY whenever
-        // QUEUE_CONNECTION=sync (the recommended local/dev setting — see
-        // the Reminder scheduling section of this README) — so if the mail
+        // QUEUE_CONNECTION=sync (the recommended local/dev setting - see
+        // the Reminder scheduling section of this README) - so if the mail
         // server rejects the message (a 550 "classified as spam" response
         // is a real, observed failure mode), the exception used to
         // propagate all the way up and crash the entire registration

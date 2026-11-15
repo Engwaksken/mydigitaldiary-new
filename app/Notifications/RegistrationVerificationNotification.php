@@ -21,7 +21,7 @@ class RegistrationVerificationNotification extends VerifyEmail
         }
 
         return (new MailMessage)
-            ->subject("Verify your email — {$siteName}")
+            ->subject("Verify your email - {$siteName}")
             ->view('emails.registration-verification', [
                 'siteName' => $siteName,
                 'primaryColor' => $primaryColor,

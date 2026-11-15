@@ -9,16 +9,16 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Runs daily (see routes/console.php) — a real push notification (not
+ * Runs daily (see routes/console.php) - a real push notification (not
  * an in-app/email one) summarizing everything due TODAY across
  * reminders and every module with a meaningful due-date-like field:
  * Plans (target_date), Debts (due_date), Health Checkups
  * (next_due_date), Education Plans (target_completion_date), Projects
  * (deadline), Project Tasks (due_date), Savings Goals (target_date).
- * Same "SafeBoda/Jumia-style daily nudge" idea the person asked for —
+ * Same "SafeBoda/Jumia-style daily nudge" idea the person asked for -
  * one combined notification per user per day, not one per item.
  *
- * Reuses the existing FcmService (already proven via SendReminders —
+ * Reuses the existing FcmService (already proven via SendReminders -
  * see that class/DeviceTokenController for the full setup this
  * depends on) rather than adding a second, separate push mechanism.
  */
@@ -48,7 +48,7 @@ class SendDailyDueItemsPush extends Command
             $items = $reminders->dueTodayFor($user, $date);
 
             if (empty($items)) {
-                continue; // nothing due today — skip rather than sending an empty nudge
+                continue; // nothing due today - skip rather than sending an empty nudge
             }
 
             $title = count($items) === 1 ? '1 item due today' : count($items) . ' items due today';

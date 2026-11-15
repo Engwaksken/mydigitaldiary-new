@@ -28,7 +28,7 @@ class ReminderController extends ApiCrudController
 
     // Injected via the constructor for the same PHP signature-
     // compatibility reason the web ReminderController documents on its
-    // own constructor — store()/update() below override
+    // own constructor - store()/update() below override
     // ApiCrudController's versions, and PHP requires an overriding
     // method's signature to stay compatible with its parent's.
     public function __construct(
@@ -79,7 +79,7 @@ class ReminderController extends ApiCrudController
     }
 
     /**
-     * Mobile equivalent of the web app's AJAX itemsForModule() — the
+     * Mobile equivalent of the web app's AJAX itemsForModule() - the
      * "which specific item(s)" picker's data source, fetched fresh
      * whenever the Related Module selection changes.
      */
@@ -123,7 +123,7 @@ class ReminderController extends ApiCrudController
     }
 
     /**
-     * Same logic as the web app's private method of the same name —
+     * Same logic as the web app's private method of the same name -
      * clears and recreates the reminder's linked items, then checks
      * for a 30-minute-window clash between them and the reminder's
      * own next_run_at. Advisory only, returned as a response header
@@ -159,7 +159,7 @@ class ReminderController extends ApiCrudController
         }
 
         if ($this->lookup->hasOverlap($datetimes)) {
-            return "Heads up — some of this reminder's linked items (and/or its own scheduled time) fall within 30 minutes of each other. Double-check they're not clashing.";
+            return "Heads up - some of this reminder's linked items (and/or its own scheduled time) fall within 30 minutes of each other. Double-check they're not clashing.";
         }
 
         return null;
@@ -167,7 +167,7 @@ class ReminderController extends ApiCrudController
 
     /**
      * Mobile equivalent of the web app's polling endpoint behind its
-     * alarm popup — same query, same alarms_muted short-circuit. The
+     * alarm popup - same query, same alarms_muted short-circuit. The
      * mobile app is expected to poll this periodically while active
      * and show its own popup/sound, mirroring the web behavior.
      */
@@ -203,7 +203,7 @@ class ReminderController extends ApiCrudController
     }
 
     /**
-     * Same one-click global mute as the web dashboard's bell icon —
+     * Same one-click global mute as the web dashboard's bell icon -
      * flips users.alarms_muted, doesn't touch any individual
      * reminder's own alarm_enabled setting.
      */

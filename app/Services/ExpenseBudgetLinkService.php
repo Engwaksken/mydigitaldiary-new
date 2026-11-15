@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Linking an Expense to one of the user's Budget items — shared by the web
+ * Linking an Expense to one of the user's Budget items - shared by the web
  * ExpenseController (budget picker on the Add Expense form) and the mobile
  * Api\ExpenseController, so both offer the same items, labels and
  * "Also add to <Month Year> budget" behaviour.
@@ -96,13 +96,13 @@ class ExpenseBudgetLinkService
         }
     }
 
-    /** "Groceries — UGX 1,000 planned · UGX 700 left" */
+    /** "Groceries - UGX 1,000 planned · UGX 700 left" */
     public function optionLabel(Budget $budget): string
     {
         $planned = (float) $budget->amount;
         $remaining = (float) $budget->remaining_amount;
 
-        return $budget->category.' — '.format_money($planned).' planned · '
+        return $budget->category.' - '.format_money($planned).' planned · '
             .($remaining >= 0 ? format_money($remaining).' left' : format_money(abs($remaining)).' over');
     }
 

@@ -16,7 +16,7 @@
 </head>
 <body>
     {{-- Border/name/company use the card's own primary color inline
-         rather than a gradient — DomPDF's support for CSS gradients is
+         rather than a gradient - DomPDF's support for CSS gradients is
          historically unreliable, so a solid color is the safer choice
          here even though the web/public page can use one freely. --}}
     <div class="card" style="border: 2px solid {{ $card->cardColor() }};">

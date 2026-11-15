@@ -29,7 +29,7 @@ final class TodaysInsightNotification extends Notification implements ShouldQueu
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("Today's Insight — ".$this->title)
+            ->subject("Today's Insight - ".$this->title)
             ->greeting('Hello '.($notifiable->name ?: 'there').',')
             ->line($this->message)
             ->action('Open Today’s Insight', $this->actionUrl ?: route('dashboard'))

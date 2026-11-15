@@ -34,8 +34,8 @@ use Illuminate\Support\Str;
  * evening_review on-off, morning_time / evening_time, plus a per-slot
  * "sent on" date that makes delivery idempotent per local day.
  *
- * The existing digest commands do the sending — SendDailyTopTasksDigest is
- * the morning slot, SendEndOfDayDigest the evening slot — and ask this
+ * The existing digest commands do the sending - SendDailyTopTasksDigest is
+ * the morning slot, SendEndOfDayDigest the evening slot - and ask this
  * service whether a user is due, what to say, and to record that it was sent.
  */
 class DailyReminderService
@@ -203,9 +203,9 @@ class DailyReminderService
 
         if ($count > 0) {
             $top = Str::limit((string) data_get($open->first(), 'title', ''), 48);
-            $body = 'Good morning — '.$count.' '.Str::plural('task', $count).' today. Top: '.$top.'.';
+            $body = 'Good morning - '.$count.' '.Str::plural('task', $count).' today. Top: '.$top.'.';
         } else {
-            $body = 'Good morning — plan your day in 1 minute.';
+            $body = 'Good morning - plan your day in 1 minute.';
         }
 
         if ($due > 0) {
@@ -244,7 +244,7 @@ class DailyReminderService
                 : ' Keep your '.$streak.'-day streak alive';
         }
 
-        $body .= ' — close your day?';
+        $body .= ' - close your day?';
 
         return [
             'title' => 'Close your day',
@@ -254,7 +254,7 @@ class DailyReminderService
     }
 
     /**
-     * Everything with a due date of today across modules — also used by
+     * Everything with a due date of today across modules - also used by
      * push:daily-due-items for people who switched the morning reminder off.
      *
      * @return array<int, array{label: string}>
@@ -346,8 +346,8 @@ class DailyReminderService
     }
 
     /**
-     * Recurring daily habit nudges. These modules have no future "due date" —
-     * they are logged every day — so they are listed whenever they have not
+     * Recurring daily habit nudges. These modules have no future "due date" -
+     * they are logged every day - so they are listed whenever they have not
      * yet been done today, reminding the user each day until completed.
      *
      * @param  \Illuminate\Support\Collection<int, array{label: string}>  $items

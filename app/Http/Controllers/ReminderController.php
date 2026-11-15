@@ -55,11 +55,11 @@ class ReminderController extends CrudController
 
     /**
      * Injected via the constructor, not as a store()/update() method
-     * parameter — those two methods override CrudController's own
+     * parameter - those two methods override CrudController's own
      * store()/update(), and PHP requires an overriding method's
      * signature to stay compatible with its parent's. Adding an extra
      * parameter there breaks that (a real fatal error, only caught once
-     * the class actually loads — php -l can't detect this).
+     * the class actually loads - php -l can't detect this).
      */
     public function __construct(
         protected ReminderItemLookupService $lookup,
@@ -68,7 +68,7 @@ class ReminderController extends CrudController
     }
 
     /**
-     * AJAX endpoint — called by crud/extras/reminders-extra.blade.php
+     * AJAX endpoint - called by crud/extras/reminders-extra.blade.php
      * whenever "Related Module" changes, to populate the "which specific
      * item(s)" multi-select with that user's actual records from the
      * chosen module.
@@ -125,10 +125,10 @@ class ReminderController extends CrudController
 
     /**
      * Replaces a reminder's linked items wholesale (same "no diffing,
-     * just clear and recreate" approach as expense line items — simple
+     * just clear and recreate" approach as expense line items - simple
      * and safe since nothing else references a reminder_items.id), then
-     * checks whether any of those items' own datetimes — plus the
-     * reminder's own next_run_at — land within 30 minutes of each other,
+     * checks whether any of those items' own datetimes - plus the
+     * reminder's own next_run_at - land within 30 minutes of each other,
      * flashing a warning if so. This is advisory only: it never blocks
      * saving, it just tells the user their linked items appear to clash.
      */
@@ -163,7 +163,7 @@ class ReminderController extends CrudController
         }
 
         if ($lookup->hasOverlap($datetimes)) {
-            return "Heads up — some of this reminder's linked items (and/or its own scheduled time) fall within 30 minutes of each other. Double-check they're not clashing.";
+            return "Heads up - some of this reminder's linked items (and/or its own scheduled time) fall within 30 minutes of each other. Double-check they're not clashing.";
         }
 
         return null;
@@ -220,7 +220,7 @@ class ReminderController extends CrudController
             ->first(['title', 'next_run_at']);
 
         if (! $next) {
-            return 'No upcoming reminders — add one so nothing important slips by.';
+            return 'No upcoming reminders - add one so nothing important slips by.';
         }
 
         return 'Next up: ' . \Illuminate\Support\Str::limit((string) $next->title, 40) . ' · ' . $next->next_run_at->diffForHumans();
@@ -254,18 +254,18 @@ class ReminderController extends CrudController
     /**
      * Polled by a small script in layouts/app.blade.php every ~60s while a
      * user has the app open, to show an immediate in-app "alarm" modal
-     * (with sound) for anything due right now — a real-time layer on top
+     * (with sound) for anything due right now - a real-time layer on top
      * of, not a replacement for, the email/database notification sent by
      * the `reminders:send` scheduled command. This endpoint only reads;
      * it does NOT reschedule recurring reminders or mark anything as
-     * fired — that stays exclusively `reminders:send`'s job, so the two
+     * fired - that stays exclusively `reminders:send`'s job, so the two
      * never fight over whose turn it is to advance next_run_at.
      *
-     * Only returns reminders with alarm_enabled=true — a user can keep a
+     * Only returns reminders with alarm_enabled=true - a user can keep a
      * reminder emailing without ever seeing the in-app popup, by
      * unchecking "Also pop up an in-app alarm" on that reminder. Returns
      * nothing at all, regardless of per-reminder settings, if the user has
-     * globally muted alarms (the dashboard bell icon) — a fast "mute
+     * globally muted alarms (the dashboard bell icon) - a fast "mute
      * everything right now" that doesn't require editing every reminder.
      */
     public function dueNow(Request $request)
@@ -287,7 +287,7 @@ class ReminderController extends CrudController
     }
 
     /**
-     * The dashboard bell icon — flips users.alarms_muted. Deliberately a
+     * The dashboard bell icon - flips users.alarms_muted. Deliberately a
      * single boolean rather than per-reminder, so it's a one-click "quiet
      * please" that doesn't touch any reminder's own alarm_enabled setting;
      * un-muting later restores exactly what was configured before.

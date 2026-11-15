@@ -69,7 +69,7 @@
                             {{ $plan->isLifetime() ? 'Never expires' : $plan->duration_months . ' month(s)' }}
                         </td>
                         <td class="px-4 py-3 text-slate-600">
-                            {{ $plan->isLifetime() ? '—' : number_format($plan->discount_percent, 0) . '%' }}
+                            {{ $plan->isLifetime() ? '-' : number_format($plan->discount_percent, 0) . '%' }}
                         </td>
                         <td class="px-4 py-3 font-semibold text-slate-800">
                             {{ format_money($plan->computedPrice($monthlyPrice)) }}
@@ -108,7 +108,7 @@
                 @empty
                     <tr>
                         <td colspan="{{ $canManagePlans ? 7 : 6 }}" class="px-4 py-6 text-center text-slate-500">
-                            No plans configured — users will see only the demo "Subscribe" fallback.
+                            No plans configured - users will see only the demo "Subscribe" fallback.
                         </td>
                     </tr>
                 @endforelse

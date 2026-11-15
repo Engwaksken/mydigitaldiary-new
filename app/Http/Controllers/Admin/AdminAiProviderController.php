@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
  * (Anthropic/OpenAI, seeded by migration, protected from edit/delete
  * here since AiPlannerService has genuinely different request-handling
  * code for those two specifically). Anything added here is assumed
- * OpenAI-compatible — see the ai_providers migration and
+ * OpenAI-compatible - see the ai_providers migration and
  * AiPlannerService::callCustomProvider() for the full reasoning.
  */
 class AdminAiProviderController extends Controller

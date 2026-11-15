@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Site-wide, admin-managed pricing tiers — NOT scoped to a user (unlike
+ * Site-wide, admin-managed pricing tiers - NOT scoped to a user (unlike
  * every tracking module), so this deliberately doesn't extend
  * CrudController. Prices for duration-based plans (everything except
  * lifetime) are computed from SiteSetting::monthly_price plus this plan's
- * own discount_percent, rather than stored as a raw dollar amount — so
+ * own discount_percent, rather than stored as a raw dollar amount - so
  * changing the site's base monthly price automatically recalculates every
  * tier's price too, and an admin only ever has to think in terms of
  * "X% off," not keep four separate dollar figures in sync by hand.
@@ -68,7 +68,7 @@ class SubscriptionPlan extends Model
     }
 
     /**
-     * The effective per-seat rate for an organization tier — what the
+     * The effective per-seat rate for an organization tier - what the
      * "decreasing per-user pricing at higher tiers" requirement actually
      * shows an admin/buyer: computedPrice() divided across included_seats.
      * Not meaningful for individual plans (seats = 1, so this equals the
@@ -82,7 +82,7 @@ class SubscriptionPlan extends Model
     }
 
     /**
-     * A plan with no `features` set restricts nothing — every module is
+     * A plan with no `features` set restricts nothing - every module is
      * included by default, and an admin only narrows this down
      * deliberately per plan.
      */
@@ -98,7 +98,7 @@ class SubscriptionPlan extends Model
 
     /**
      * What a user actually pays for one purchase of this plan. A flat
-     * price (if set) always wins, regardless of duration — that's what
+     * price (if set) always wins, regardless of duration - that's what
      * lets an organization tier bill monthly with a fixed total instead
      * of going through the "duration x site base price" formula, which
      * only makes sense for individual plans priced as a discount off
@@ -119,7 +119,7 @@ class SubscriptionPlan extends Model
 
     /**
      * "20% off" style badge text, or null when there's nothing meaningful
-     * to show (monthly itself, an undiscounted plan, or lifetime — which
+     * to show (monthly itself, an undiscounted plan, or lifetime - which
      * isn't a percentage-off-monthly comparison at all).
      */
     public function savingsLabel(): ?string
@@ -132,7 +132,7 @@ class SubscriptionPlan extends Model
     }
 
     /**
-     * A light, ~8% tint of the plan's color for the card background —
+     * A light, ~8% tint of the plan's color for the card background -
      * computed from the hex directly (appending alpha in 8-digit hex
      * notation, which every modern browser supports) rather than
      * relying on Tailwind to generate a matching -50/-100 shade

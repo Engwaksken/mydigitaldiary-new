@@ -96,7 +96,7 @@
 
             <p class="text-xs text-slate-500 mt-1">
                 @if(method_exists($goals, 'total'))
-                    Showing {{ $goals->firstItem() ?? 0 }}–{{ $goals->lastItem() ?? 0 }}
+                    Showing {{ $goals->firstItem() ?? 0 }}-{{ $goals->lastItem() ?? 0 }}
                     of {{ $goals->total() }} result(s)
                 @else
                     {{ $goals->count() }} result(s)

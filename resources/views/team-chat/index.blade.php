@@ -305,7 +305,7 @@
                 >
                     @foreach($members as $membership)
                         <option value="{{ $membership->user->id }}">
-                            {{ $membership->user->name }} — {{ $membership->user->email }}
+                            {{ $membership->user->name }} - {{ $membership->user->email }}
                         </option>
                     @endforeach
                 </select>

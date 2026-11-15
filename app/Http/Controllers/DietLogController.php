@@ -388,7 +388,7 @@ class DietLogController extends CrudController
             'meal_type' => $data['meal_type'],
             'food_items' => $data['food_items'],
             'daily_food_notes' => ucfirst($data['meal_type'])
-                .' — '.implode(', ', $data['food_items']),
+                .' - '.implode(', ', $data['food_items']),
         ])->save();
 
         app(HealthAiCoachService::class)
@@ -496,7 +496,7 @@ class DietLogController extends CrudController
                     ?: config('app.timezone', 'Africa/Kampala')
                 )->toDateString(),
             'daily_food_notes' => ucfirst($mealType)
-                .' — '.implode(', ', $foodItems),
+                .' - '.implode(', ', $foodItems),
         ];
 
         if (Schema::hasColumn('daily_food_journals', 'meal_type')) {
@@ -582,9 +582,9 @@ class DietLogController extends CrudController
         $avgDailyCalories = $daily->whereNotNull('calories')->avg('calories');
 
         return [
-            ['label' => 'Avg calories/day (7d)', 'value' => $avgDailyCalories ? (string) round($avgDailyCalories) : '—', 'icon' => 'fa-solid fa-bolt', 'color' => 'orange'],
+            ['label' => 'Avg calories/day (7d)', 'value' => $avgDailyCalories ? (string) round($avgDailyCalories) : '-', 'icon' => 'fa-solid fa-bolt', 'color' => 'orange'],
             ['label' => 'Meals logged (7d)', 'value' => (string) (clone $base)->where('logged_at', '>=', now()->subDays(7))->count(), 'icon' => 'fa-solid fa-utensils', 'color' => 'amber'],
-            ['label' => 'Today calories', 'value' => (string) ((clone $base)->whereDate('logged_at', today())->sum('calories') ?: '—'), 'icon' => 'fa-solid fa-bowl-food', 'color' => 'emerald'],
+            ['label' => 'Today calories', 'value' => (string) ((clone $base)->whereDate('logged_at', today())->sum('calories') ?: '-'), 'icon' => 'fa-solid fa-bowl-food', 'color' => 'emerald'],
             ['label' => 'Total meals logged', 'value' => (string) $base->count(), 'icon' => 'fa-solid fa-list-ol', 'color' => 'slate'],
         ];
     }

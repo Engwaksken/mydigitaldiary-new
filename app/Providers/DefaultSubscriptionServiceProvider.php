@@ -249,7 +249,7 @@ final class DefaultSubscriptionServiceProvider extends ServiceProvider
 
     /**
      * A plan may only be auto-assigned as a default trial when its trial
-     * semantics are verified — a paid-only plan must never be handed out
+     * semantics are verified - a paid-only plan must never be handed out
      * as a free trial. Checks are schema-aware so older installations
      * without the newer columns keep working:
      *

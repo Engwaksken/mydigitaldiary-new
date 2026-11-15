@@ -28,7 +28,7 @@ class SubscriptionExpiredWeeklyReminderNotification extends Notification impleme
             ->greeting('Hi ' . $notifiable->name . ',')
             ->line("We noticed your subscription to My Digital Diary has expired. You can still log in and view everything you've already entered, but adding and editing are on hold until you renew.")
             ->action('Renew Subscription', route('subscription.show'))
-            ->line('This is a weekly reminder — it stops as soon as you renew.');
+            ->line('This is a weekly reminder - it stops as soon as you renew.');
     }
 
     public function toArray(object $notifiable): array

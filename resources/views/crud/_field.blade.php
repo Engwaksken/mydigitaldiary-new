@@ -129,7 +129,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1" for="{{ $fieldId }}-hour">Hour (1–12)</label>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1" for="{{ $fieldId }}-hour">Hour (1-12)</label>
                     <select id="{{ $fieldId }}-hour"
                             class="pm-input text-center"
                             data-pm-datetime12-hour

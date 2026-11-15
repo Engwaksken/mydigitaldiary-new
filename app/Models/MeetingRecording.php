@@ -62,7 +62,7 @@ class MeetingRecording extends Model
 
     /**
      * Size of the audio file on the public disk, in megabytes (1 decimal).
-     * Derived attribute (not a stored column) — returns 0 when there is no
+     * Derived attribute (not a stored column) - returns 0 when there is no
      * audio_path, the file is missing, or the disk read fails, so listing
      * pages can render it without a per-recording AJAX round-trip.
      */

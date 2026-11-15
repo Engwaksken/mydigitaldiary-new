@@ -43,7 +43,7 @@
         <div class="col-span-2 rounded-xl bg-slate-50 p-3 sm:col-span-1">
             <p class="text-[11px] font-bold text-slate-400">AVAILABLE</p>
             <p class="mt-1 text-xl font-black">
-                {{ $seatLimit === null ? '—' : max(0, $seatLimit - $seatsUsed) }}
+                {{ $seatLimit === null ? '-' : max(0, $seatLimit - $seatsUsed) }}
             </p>
         </div>
     </div>

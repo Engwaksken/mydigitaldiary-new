@@ -1,5 +1,5 @@
 /*
- * My Digital Diary — PWA install + service worker registration.
+ * My Digital Diary - PWA install + service worker registration.
  *
  * Plain ES5-ish browser script, served from /js/pwa.js rather than bundled, for
  * the same reason /js/time-12h.js is: layouts/app.blade.php loads its assets
@@ -254,7 +254,7 @@
                 .catch(function () {
                     /*
                      * No service worker means no offline shell. The app still
-                     * works and the install banner simply never appears —
+                     * works and the install banner simply never appears -
                      * this must not break the page.
                      */
                 });

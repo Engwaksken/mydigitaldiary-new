@@ -1,5 +1,5 @@
 {{--
-    App layout sidebar — inline sidebar extracted from layouts/app.blade.php.
+    App layout sidebar - inline sidebar extracted from layouts/app.blade.php.
 
     NOTE: resources/views/partials/sidebar.blade.php is a different, more
     sophisticated implementation with organization-aware permissions. This

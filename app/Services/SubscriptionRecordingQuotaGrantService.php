@@ -113,7 +113,7 @@ class SubscriptionRecordingQuotaGrantService
     {
         // Lifetime grant (candidate is null).
         if (! $candidate) {
-            // Preserve a future expiry — don't silently upgrade expiring
+            // Preserve a future expiry - don't silently upgrade expiring
             // purchased quota into permanent quota.
             if ($current && $current->isFuture()) {
                 return $current;
@@ -124,7 +124,7 @@ class SubscriptionRecordingQuotaGrantService
             return null;
         }
 
-        // Non-lifetime grant — return the later of the two dates.
+        // Non-lifetime grant - return the later of the two dates.
         if (! $current || $candidate->gt($current)) {
             return $candidate;
         }

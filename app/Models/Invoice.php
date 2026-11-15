@@ -19,7 +19,7 @@ class Invoice extends Model
     ];
 
     /**
-     * A "quotation" isn't a separate document type — it's this same
+     * A "quotation" isn't a separate document type - it's this same
      * model with status='quote', sent before a deal has closed and no
      * user/payment necessarily exists yet. Once accepted, the same row
      * flips to 'unpaid' (see AdminEnterpriseInquiryController::
@@ -33,7 +33,7 @@ class Invoice extends Model
 
     /**
      * Only a quotation that was never accepted, or an invoice that was
-     * never paid, is safe to delete — a 'paid' record is a real
+     * never paid, is safe to delete - a 'paid' record is a real
      * financial transaction that has to stay for audit/accounting
      * purposes no matter how old or cluttered the list gets, and
      * 'cancelled' already reflects a deliberate decision worth keeping
@@ -77,7 +77,7 @@ class Invoice extends Model
 
     /**
      * Same YEAR-0001 scheme as Payment::assignReceiptNumber(), kept as
-     * its own independent sequence — invoices and receipts aren't the
+     * its own independent sequence - invoices and receipts aren't the
      * same document and numbering them together would be misleading.
      */
     public static function generateInvoiceNumber(): string

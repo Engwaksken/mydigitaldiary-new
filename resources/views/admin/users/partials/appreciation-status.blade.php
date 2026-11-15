@@ -5,5 +5,5 @@
 @elseif ($status['last_sent_at'] ?? null)
     <span class="text-xs font-semibold text-slate-600" title="Last appreciation email">{{ $status['last_sent_at']->copy()->timezone(config('app.timezone'))->format('d M Y') }}</span>
 @else
-    <span class="text-xs text-slate-400">—</span>
+    <span class="text-xs text-slate-400">-</span>
 @endif

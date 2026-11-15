@@ -22,7 +22,7 @@
 
 {{--
     Shared markup for both the create modal and each gateway's own edit
-    modal (see index.blade.php's @foreach) — $gateway is either a fresh
+    modal (see index.blade.php's @foreach) - $gateway is either a fresh
     `new PaymentGateway` (create) or an existing row (edit), $modalId is
     unique per dialog, $action/$method drive the form target.
 --}}
@@ -140,7 +140,7 @@
                 <div>
                     <label for="stripe_secret_key-{{ $modalId }}" class="block text-sm font-medium text-slate-700 mb-1">Secret Key</label>
                     <input type="password" id="stripe_secret_key-{{ $modalId }}" name="stripe_secret_key"
-                           placeholder="{{ $gateway->configValue('stripe_secret_key') ? '•••••••• (saved — leave blank to keep it)' : 'sk_live_...' }}"
+                           placeholder="{{ $gateway->configValue('stripe_secret_key') ? '•••••••• (saved - leave blank to keep it)' : 'sk_live_...' }}"
                            autocomplete="off" class="pm-input">
                 </div>
             </div>
@@ -153,7 +153,7 @@
                 Shown for BOTH mobile_money and aggregator types (see
                 pmToggleGatewayFields() below, which treats this fieldset
                 specially rather than mutually-exclusively like the others)
-                — mobile_money can OPTIONALLY be upgraded from the purely
+                - mobile_money can OPTIONALLY be upgraded from the purely
                 manual flow above to automated collection through an
                 aggregator's API, without that being a separate gateway
                 "type" of its own.
@@ -162,7 +162,7 @@
                 <div class="pm-aggregator-warning rounded-lg bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 text-xs mb-2" style="display: none;">
                     <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                     Some but not all of Token URL, Collect URL, API Key, and API Secret are filled in.
-                    <strong>All four</strong> are required for automated collection to actually activate —
+                    <strong>All four</strong> are required for automated collection to actually activate -
                     with only some set, this gateway will silently stay in manual mode.
                 </div>
 
@@ -238,18 +238,18 @@
                     <div>
                         <label for="client_id-{{ $modalId }}" class="block text-sm font-medium text-slate-700 mb-1">API Key</label>
                         <input type="password" id="client_id-{{ $modalId }}" name="client_id" autocomplete="off"
-                               placeholder="{{ $gateway->client_id ? '•••••••• (saved — leave blank to keep it)' : '' }}" class="pm-input">
+                               placeholder="{{ $gateway->client_id ? '•••••••• (saved - leave blank to keep it)' : '' }}" class="pm-input">
                     </div>
                     <div>
                         <label for="client_secret-{{ $modalId }}" class="block text-sm font-medium text-slate-700 mb-1">API Secret</label>
                         <input type="password" id="client_secret-{{ $modalId }}" name="client_secret" autocomplete="off"
-                               placeholder="{{ $gateway->client_secret ? '•••••••• (saved — leave blank to keep it)' : '' }}" class="pm-input">
+                               placeholder="{{ $gateway->client_secret ? '•••••••• (saved - leave blank to keep it)' : '' }}" class="pm-input">
                     </div>
                 </div>
                 <div>
                     <label for="wallet_guid-{{ $modalId }}" class="block text-sm font-medium text-slate-700 mb-1">Merchant / Account ID</label>
                     <input type="password" id="wallet_guid-{{ $modalId }}" name="wallet_guid" autocomplete="off"
-                           placeholder="{{ $gateway->wallet_guid ? '•••••••• (saved — leave blank to keep it)' : '' }}" class="pm-input">
+                           placeholder="{{ $gateway->wallet_guid ? '•••••••• (saved - leave blank to keep it)' : '' }}" class="pm-input">
                 </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
@@ -353,7 +353,7 @@
         // The aggregator fieldset is a second, OPTIONAL section for
         // mobile_money (automated collection on top of the manual
         // fields above) as well as the primary section for the pure
-        // 'aggregator' type — shown for both, unlike the loop above
+        // 'aggregator' type - shown for both, unlike the loop above
         // which otherwise only shows the one exactly-matching type.
         var usesAggregator = type === 'mobile_money' || type === 'aggregator';
         dialog.querySelectorAll('[data-type="aggregator"]').forEach(function (el) {
@@ -373,8 +373,8 @@
         pmCheckAggregatorCompleteness(modalId);
     }
 
-    // Warns if the aggregator section is PARTIALLY filled — e.g.
-    // token_url set but collect_url left blank — since
+    // Warns if the aggregator section is PARTIALLY filled - e.g.
+    // token_url set but collect_url left blank - since
     // PaymentGateway::isConfigured() requires ALL FOUR fields
     // (client_id, client_secret, token_url, collect_url) before
     // collectsAutomatically() ever returns true, and silently falling
@@ -390,7 +390,7 @@
             if (!el) return false;
             // A password field showing the "saved" placeholder already
             // has a value server-side even though it's visually blank
-            // right now — only a genuinely never-set field with no
+            // right now - only a genuinely never-set field with no
             // "saved" placeholder AND no typed value counts as missing.
             var hasSavedPlaceholder = (el.placeholder || '').indexOf('saved') !== -1;
             return el.value.trim() !== '' || hasSavedPlaceholder;

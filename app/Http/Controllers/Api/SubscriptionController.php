@@ -18,11 +18,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Mobile equivalent of SubscriptionController — same logic, duplicated
+ * Mobile equivalent of SubscriptionController - same logic, duplicated
  * rather than shared (that controller's relevant helpers are private,
  * and this lives in a different area of the app). Card payments open
  * Stripe's checkout URL in an external browser (the mobile app has no
- * way to embed a secure card form itself) — payWithCardCallback() on
+ * way to embed a secure card form itself) - payWithCardCallback() on
  * the web side handles the redirect back and was updated to not require
  * an authenticated session, since Stripe redirects a browser with none.
  */
@@ -122,7 +122,7 @@ class SubscriptionController extends Controller
             'supports_airtel' => (bool) $g->supports_airtel,
             'instructions' => $g->instructions,
             // Only meaningful for the manual flow (collects_automatically
-            // false) — the account/merchant details a user needs to see
+            // false) - the account/merchant details a user needs to see
             // to actually know where to send money before submitting a
             // reference for admin verification.
             'bank_name' => $g->configValue('bank_name'),
@@ -219,8 +219,8 @@ class SubscriptionController extends Controller
             ->withToken($gateway->configValue('stripe_secret_key'))
             ->post('https://api.stripe.com/v1/checkout/sessions', [
                 'mode' => 'payment',
-                // No mobile deep link back into the app here — the web
-                // callback route (public, no session needed — see its
+                // No mobile deep link back into the app here - the web
+                // callback route (public, no session needed - see its
                 // own comment) is what actually completes this, and the
                 // user can just switch back to the app afterward.
                 'success_url' => url('/subscription/pay/card/callback') . '?session_id={CHECKOUT_SESSION_ID}',
@@ -231,7 +231,7 @@ class SubscriptionController extends Controller
                     'price_data' => [
                         'currency' => $currencyCode,
                         'unit_amount' => $unitAmount,
-                        'product_data' => ['name' => $settings->site_name . ' Subscription — ' . $plan->name],
+                        'product_data' => ['name' => $settings->site_name . ' Subscription - ' . $plan->name],
                     ],
                 ]],
             ]);
@@ -307,7 +307,7 @@ class SubscriptionController extends Controller
                 $payment->update(['gateway_transaction_id' => $log->external_reference]);
             }
 
-            return response()->json(['message' => 'A payment prompt has been sent to ' . $data['phone_number'] . ' — approve it on your phone.']);
+            return response()->json(['message' => 'A payment prompt has been sent to ' . $data['phone_number'] . ' - approve it on your phone.']);
         } catch (\Throwable $e) {
             Log::warning('IoTec collection request failed (mobile)', ['error' => $e->getMessage()]);
             $payment->update(['status' => 'failed']);
@@ -416,13 +416,13 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Mobile equivalent of the web app's submitManualPayment() — a
+     * Mobile equivalent of the web app's submitManualPayment() - a
      * user has ALREADY sent money themselves (bank transfer, or
      * manually to a mobile money merchant number) using the account
      * details shown by gateways() above, and is now submitting their
      * own reference/transaction ID for admin verification. Creates a
      * pending Payment, same as the automated flows, just without a
-     * live API confirming it — that's why it stays "pending" rather
+     * live API confirming it - that's why it stays "pending" rather
      * than being marked completed here.
      */
     public function submitManualPayment(Request $request): JsonResponse
@@ -461,7 +461,7 @@ class SubscriptionController extends Controller
 
         $this->createAndSendInvoice($payment, $plan, $request->user());
 
-        return response()->json(['message' => 'Thanks — your payment reference was submitted and is awaiting verification.']);
+        return response()->json(['message' => 'Thanks - your payment reference was submitted and is awaiting verification.']);
     }
 
     private function createAndSendInvoice(Payment $payment, SubscriptionPlan $plan, $user): Invoice

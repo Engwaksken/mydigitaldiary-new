@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 /**
  * Lets an admin register THIS APP as an "OAuth app" on each meeting
  * platform's own developer console, then paste the resulting client
- * ID/secret here. This alone doesn't fetch anyone's meetings — it's what
+ * ID/secret here. This alone doesn't fetch anyone's meetings - it's what
  * lets a USER then connect their own account (see
  * MeetingConnectionController) to fetch theirs. The four platform rows
  * are seeded once by migration; this only ever updates them, never

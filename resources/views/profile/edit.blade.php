@@ -61,7 +61,7 @@
             'data' => ['label' => 'Backup & Usage', 'icon' => 'fa-solid fa-database'],
         ];
 
-        // Classic sticky-note colors — saturated enough to still read
+        // Classic sticky-note colors - saturated enough to still read
         // clearly with white text (used across buttons/badges), rather
         // than the pale pastel versions real sticky notes often are,
         // which would look washed out there.
@@ -583,7 +583,7 @@
 
     <style>
         /* ================================================================
-           MY DIGITAL DIARY — PROFILE PHONE RESPONSIVENESS
+           MY DIGITAL DIARY - PROFILE PHONE RESPONSIVENESS
            Isolated from global label/span/grid rules.
         ================================================================= */
 
@@ -784,7 +784,7 @@
 
         // Typing a hex code directly: only commit it (updating the picker,
         // hidden field, and swatch highlight) once it's a complete, valid
-        // #RRGGBB — otherwise the user couldn't type past the 2nd
+        // #RRGGBB - otherwise the user couldn't type past the 2nd
         // character without every other control fighting an incomplete value.
         function pmHandleThemeHexInput(value) {
             var hexField = document.getElementById('theme_color_hex_input');
@@ -825,7 +825,7 @@
         function pmHandleThemeSecondaryHexInput(value) {
             var hexField = document.getElementById('theme_color_secondary_hex_input');
 
-            // Blank is valid here — it means "follow the primary color".
+            // Blank is valid here - it means "follow the primary color".
             if (value === '') {
                 hexField.setCustomValidity('');
                 document.getElementById('theme_color_secondary_input').value = '';
@@ -903,7 +903,7 @@
 
          pwa.js is loaded by partials/pwa-install in the layout, so this waits
          for it rather than assuming the two script tags arrived in a particular
-         order. When it never arrives — no service workers, JS off — the row is
+         order. When it never arrives - no service workers, JS off - the row is
          removed entirely instead of leaving a dead button on the page. --}}
     <script>
         (function () {

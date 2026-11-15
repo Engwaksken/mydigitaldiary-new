@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 /**
- * Review queue for payments — auto-completed card payments show up here
+ * Review queue for payments - auto-completed card payments show up here
  * for record-keeping, while bank/mobile_money submissions need an admin to
  * manually approve or reject them (there's no live API integration for
  * arbitrary banks/mobile money providers, so verification is manual by
@@ -49,7 +49,7 @@ class AdminPaymentsController extends Controller
 
         $payments = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
 
-        // "Amount collected" is completed payments only — pending/failed/
+        // "Amount collected" is completed payments only - pending/failed/
         // rejected haven't actually landed, so counting them toward a
         // "collected" figure would overstate real revenue. Scoped to the
         // SAME period filter as the table below it, so switching "This
@@ -77,7 +77,7 @@ class AdminPaymentsController extends Controller
     /**
      * Shared by the main table query and both stats sub-queries above so
      * "daily/weekly/monthly/annual/range" is defined in exactly one
-     * place — filters on created_at (when the payment record was made),
+     * place - filters on created_at (when the payment record was made),
      * not on whatever the gateway's own timestamp might be.
      */
     private function applyPeriod(\Illuminate\Database\Eloquent\Builder $query, ?string $period, ?string $from, ?string $to): void
@@ -108,7 +108,7 @@ class AdminPaymentsController extends Controller
         $plan = $payment->plan;
 
         // Same "extend from current expiry if still future, else from now"
-        // logic as the automated card path (SubscriptionController) —
+        // logic as the automated card path (SubscriptionController) -
         // duplicated rather than shared since this controller and
         // SubscriptionController live in different areas of the app and
         // this is a small, self-contained calculation.
@@ -156,7 +156,7 @@ class AdminPaymentsController extends Controller
             ]);
         }
 
-        return back()->with('success', "Payment approved — {$subscriber->name}'s subscription is now active.");
+        return back()->with('success', "Payment approved - {$subscriber->name}'s subscription is now active.");
     }
 
     public function reject(Request $request, Payment $payment): RedirectResponse

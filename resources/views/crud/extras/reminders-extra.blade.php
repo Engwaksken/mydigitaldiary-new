@@ -16,7 +16,7 @@
 @push('styles')
 <style id="pm-reminder-responsive-modal-fix">
     /* ================================================================
-       REMINDER MODAL — AUTHORITATIVE RESPONSIVE CONTRACT
+       REMINDER MODAL - AUTHORITATIVE RESPONSIVE CONTRACT
        Scoped to .pm-reminder-dialog so other CRUD modules are untouched.
        ================================================================ */
     dialog.pm-reminder-dialog {

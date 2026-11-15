@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Not a CrudController subclass — bank/mobile_money/card each need a
+ * Not a CrudController subclass - bank/mobile_money/card each need a
  * different set of config fields (account details vs. API keys), so the
  * form and validation are hand-written per type rather than driven by a
  * single generic $fields array.
@@ -91,7 +91,7 @@ class AdminPaymentGatewayController extends Controller
 
     /**
      * Only one gateway can be "the default" used to actually collect
-     * subscription payments — setting one clears the flag on every
+     * subscription payments - setting one clears the flag on every
      * other row first, so there's never ambiguity about which one
      * SubscriptionController::payWithMobileMoney() will use.
      */
@@ -145,7 +145,7 @@ class AdminPaymentGatewayController extends Controller
             'account_number' => ['nullable', 'required_if:type,bank', 'string', 'max:255'],
             'routing_or_swift' => ['nullable', 'string', 'max:255'],
 
-            // Mobile money (manual) — only actually required when the
+            // Mobile money (manual) - only actually required when the
             // admin ISN'T also filling in the aggregator API section
             // below for automated collection instead; a gateway_code
             // present means they're doing that, so these purely-manual
@@ -198,7 +198,7 @@ class AdminPaymentGatewayController extends Controller
             'card' => [
                 'stripe_publishable_key' => $validated['stripe_publishable_key'] ?? null,
                 // Don't overwrite a previously-saved secret key with a blank
-                // resubmission — the edit form never re-displays it in full.
+                // resubmission - the edit form never re-displays it in full.
                 'stripe_secret_key' => ! empty($validated['stripe_secret_key'])
                     ? $validated['stripe_secret_key']
                     : $existing?->configValue('stripe_secret_key'),
@@ -217,7 +217,7 @@ class AdminPaymentGatewayController extends Controller
         if (in_array($validated['type'], ['aggregator', 'mobile_money'], true)) {
             // gateway_code/display_name/token_url/collect_url are only
             // actually REQUIRED (validation-wise) for type=aggregator,
-            // not mobile_money — but this block runs for both types,
+            // not mobile_money - but this block runs for both types,
             // and previously accessed all four unconditionally, which
             // threw "Undefined array key" the moment anyone edited an
             // existing mobile_money gateway that had never had these
@@ -242,7 +242,7 @@ class AdminPaymentGatewayController extends Controller
                 'supports_airtel' => $request->boolean('supports_airtel'),
                 'supported_payment_methods' => $this->parseCommaList($validated['supported_payment_methods'] ?? null),
                 'supported_currencies' => $this->parseCommaList($validated['supported_currencies'] ?? null),
-                // Leave blank on edit to keep the existing encrypted value —
+                // Leave blank on edit to keep the existing encrypted value -
                 // same "don't overwrite with blank" pattern as Stripe above.
                 'client_id' => ! empty($validated['client_id']) ? $validated['client_id'] : $existing?->client_id,
                 'client_secret' => ! empty($validated['client_secret']) ? $validated['client_secret'] : $existing?->client_secret,

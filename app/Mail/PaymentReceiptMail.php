@@ -20,7 +20,7 @@ class PaymentReceiptMail extends Mailable implements ShouldQueue
     {
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('subscription.receipt-pdf', ['payment' => $this->payment])->setPaper('a4');
 
-        return $this->subject('Payment received — receipt #' . ($this->payment->receipt_number ?? $this->payment->id))
+        return $this->subject('Payment received - receipt #' . ($this->payment->receipt_number ?? $this->payment->id))
             ->markdown('emails.payment-receipt')
             ->attachData($pdf->output(), 'receipt-' . ($this->payment->receipt_number ?? $this->payment->id) . '.pdf', [
                 'mime' => 'application/pdf',

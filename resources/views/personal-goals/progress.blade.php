@@ -34,7 +34,7 @@
             <div class="text-xs uppercase tracking-wide text-slate-400">What moved this goal this week?</div>
             <div class="text-2xl font-bold text-slate-900 mt-1">{{ $week['movement_count'] ?? 0 }} action{{ ($week['movement_count'] ?? 0) === 1 ? '' : 's' }}</div>
             <p class="text-sm text-slate-600 mt-2">{{ $week['message'] ?? '' }}</p>
-            <div class="text-xs text-slate-400 mt-3">{{ \Illuminate\Support\Carbon::parse($week['week_start'])->format('d M') }} – {{ \Illuminate\Support\Carbon::parse($week['week_end'])->format('d M Y') }}</div>
+            <div class="text-xs text-slate-400 mt-3">{{ \Illuminate\Support\Carbon::parse($week['week_start'])->format('d M') }} - {{ \Illuminate\Support\Carbon::parse($week['week_end'])->format('d M Y') }}</div>
         </div>
     </section>
 
@@ -58,7 +58,7 @@
         <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <div class="flex items-center justify-between"><div><div class="text-xs uppercase tracking-wide text-slate-400">Weekly check-in</div><div class="font-bold text-slate-900 mt-1">What will move this goal next?</div></div>@if(!empty($acc['checkin']))<span class="text-xs text-emerald-600 font-semibold">Saved this week</span>@endif</div>
             <form method="POST" action="{{ route('personal-goals.checkin.store',$goal) }}" class="mt-4 grid md:grid-cols-[.45fr_1fr] gap-3">@csrf
-                <label class="block"><span class="text-xs font-semibold text-slate-600">Confidence (1–5)</span><select name="confidence" class="mt-1 w-full rounded-xl border-slate-200">@for($i=1;$i<=5;$i++)<option value="{{ $i }}" @selected(($acc['checkin']['confidence'] ?? 3)===$i)>{{ $i }}</option>@endfor</select></label>
+                <label class="block"><span class="text-xs font-semibold text-slate-600">Confidence (1-5)</span><select name="confidence" class="mt-1 w-full rounded-xl border-slate-200">@for($i=1;$i<=5;$i++)<option value="{{ $i }}" @selected(($acc['checkin']['confidence'] ?? 3)===$i)>{{ $i }}</option>@endfor</select></label>
                 <label class="block"><span class="text-xs font-semibold text-slate-600">One action I will complete</span><input name="planned_action" required maxlength="255" value="{{ $acc['checkin']['planned_action'] ?? '' }}" class="mt-1 w-full rounded-xl border-slate-200" placeholder="e.g. Finish the next milestone on Thursday"></label>
                 <label class="block md:col-span-2"><span class="text-xs font-semibold text-slate-600">Optional note</span><textarea name="note" rows="2" class="mt-1 w-full rounded-xl border-slate-200" placeholder="What may get in the way?">{{ $acc['checkin']['note'] ?? '' }}</textarea></label>
                 <div class="md:col-span-2"><button class="px-4 py-2.5 rounded-xl text-white font-semibold text-sm" style="background:var(--brand-1)"><i class="fa-solid fa-check mr-1"></i>Save weekly check-in</button></div>

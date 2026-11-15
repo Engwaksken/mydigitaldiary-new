@@ -42,7 +42,7 @@
                         </div>
                         <h2 class="font-semibold text-slate-800">{{ $item->subject }}</h2>
                         <p class="text-xs text-slate-400 mt-0.5">
-                            {{ $item->user->name ?? 'Unknown user' }} ({{ $item->user->email ?? '—' }}) &middot;
+                            {{ $item->user->name ?? 'Unknown user' }} ({{ $item->user->email ?? '-' }}) &middot;
                             {{ $item->created_at->format('Y-m-d H:i') }}
                         </p>
                     </div>

@@ -27,7 +27,7 @@
     // DOM id for the control, plus the id of the message element it points at.
     // This used to hardcode id="{{ $name }}" AND echo {{ $attributes }}, so a
     // caller passing `id` produced two id attributes on one element and the HTML
-    // parser silently kept the first — the caller's id was ignored. It also
+    // parser silently kept the first - the caller's id was ignored. It also
     // meant two <x-auth-field name="x"> on one page collided. Now an explicitly
     // passed `id` always wins, and otherwise the id is derived from $name plus
     // a per-render counter (stored on the request, so it is stable across a
@@ -64,7 +64,7 @@
             <span class="auth-field-icon"><x-icon :name="$resolvedIcon" /></span>
         @endif
 
-        {{-- A plain <input>, not a nested x-text-input call — attribute
+        {{-- A plain <input>, not a nested x-text-input call - attribute
              forwarding through an extra layer of component indirection
              was the actual cause of the field losing its styling
              entirely (this renders identically to how every other input

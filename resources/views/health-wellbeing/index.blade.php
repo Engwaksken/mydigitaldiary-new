@@ -21,11 +21,11 @@
 
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
         @foreach ([
-            ['Sleep', $daily['sleep_hours'] !== null ? $daily['sleep_hours'].' hrs' : '—', 'fa-bed'],
+            ['Sleep', $daily['sleep_hours'] !== null ? $daily['sleep_hours'].' hrs' : '-', 'fa-bed'],
             ['Exercise', ($daily['exercise_minutes'] ?? 0).' min', 'fa-person-running'],
             ['Meals', $daily['meals_logged'] ?? 0, 'fa-utensils'],
             ['Water', ($daily['water_percent'] ?? 0).'%', 'fa-droplet'],
-            ['Wellbeing', $daily['wellbeing_score'] !== null ? $daily['wellbeing_score'].'/10' : '—', 'fa-heart-pulse'],
+            ['Wellbeing', $daily['wellbeing_score'] !== null ? $daily['wellbeing_score'].'/10' : '-', 'fa-heart-pulse'],
         ] as [$label,$value,$icon])
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
                 <i class="fa-solid {{ $icon }} text-teal-600"></i>
@@ -47,11 +47,11 @@
         <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
             <h2 class="font-bold text-slate-900">Today</h2>
             <dl class="mt-4 grid grid-cols-2 gap-4 text-sm">
-                <div><dt class="text-slate-500">Sleep quality</dt><dd class="font-semibold">{{ ucfirst($daily['sleep_quality'] ?? '—') }}</dd></div>
+                <div><dt class="text-slate-500">Sleep quality</dt><dd class="font-semibold">{{ ucfirst($daily['sleep_quality'] ?? '-') }}</dd></div>
                 <div><dt class="text-slate-500">Exercise sessions</dt><dd class="font-semibold">{{ $daily['exercise_sessions'] ?? 0 }}</dd></div>
-                <div><dt class="text-slate-500">Energy</dt><dd class="font-semibold">{{ $daily['energy_level'] !== null ? $daily['energy_level'].'/5' : '—' }}</dd></div>
-                <div><dt class="text-slate-500">Stress</dt><dd class="font-semibold">{{ $daily['stress_level'] !== null ? $daily['stress_level'].'/5' : '—' }}</dd></div>
-                <div><dt class="text-slate-500">Mood</dt><dd class="font-semibold">{{ ucfirst($daily['mood'] ?? '—') }}</dd></div>
+                <div><dt class="text-slate-500">Energy</dt><dd class="font-semibold">{{ $daily['energy_level'] !== null ? $daily['energy_level'].'/5' : '-' }}</dd></div>
+                <div><dt class="text-slate-500">Stress</dt><dd class="font-semibold">{{ $daily['stress_level'] !== null ? $daily['stress_level'].'/5' : '-' }}</dd></div>
+                <div><dt class="text-slate-500">Mood</dt><dd class="font-semibold">{{ ucfirst($daily['mood'] ?? '-') }}</dd></div>
                 <div><dt class="text-slate-500">Steps</dt><dd class="font-semibold">{{ number_format((int)($daily['steps'] ?? 0)) }}</dd></div>
             </dl>
         </div>
@@ -59,11 +59,11 @@
         <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
             <h2 class="font-bold text-slate-900">Recent trend · {{ $trend['days'] ?? 7 }} days</h2>
             <dl class="mt-4 grid grid-cols-2 gap-4 text-sm">
-                <div><dt class="text-slate-500">Avg sleep</dt><dd class="font-semibold">{{ $trend['avg_sleep_hours'] !== null ? $trend['avg_sleep_hours'].' hrs' : '—' }}</dd></div>
+                <div><dt class="text-slate-500">Avg sleep</dt><dd class="font-semibold">{{ $trend['avg_sleep_hours'] !== null ? $trend['avg_sleep_hours'].' hrs' : '-' }}</dd></div>
                 <div><dt class="text-slate-500">Exercise days</dt><dd class="font-semibold">{{ $trend['exercise_days'] ?? 0 }}</dd></div>
-                <div><dt class="text-slate-500">Avg exercise</dt><dd class="font-semibold">{{ $trend['avg_exercise_minutes'] !== null ? $trend['avg_exercise_minutes'].' min' : '—' }}</dd></div>
-                <div><dt class="text-slate-500">Avg water target</dt><dd class="font-semibold">{{ $trend['avg_water_percent'] !== null ? $trend['avg_water_percent'].'%' : '—' }}</dd></div>
-                <div><dt class="text-slate-500">Avg wellbeing</dt><dd class="font-semibold">{{ $trend['avg_wellbeing_score'] !== null ? $trend['avg_wellbeing_score'].'/10' : '—' }}</dd></div>
+                <div><dt class="text-slate-500">Avg exercise</dt><dd class="font-semibold">{{ $trend['avg_exercise_minutes'] !== null ? $trend['avg_exercise_minutes'].' min' : '-' }}</dd></div>
+                <div><dt class="text-slate-500">Avg water target</dt><dd class="font-semibold">{{ $trend['avg_water_percent'] !== null ? $trend['avg_water_percent'].'%' : '-' }}</dd></div>
+                <div><dt class="text-slate-500">Avg wellbeing</dt><dd class="font-semibold">{{ $trend['avg_wellbeing_score'] !== null ? $trend['avg_wellbeing_score'].'/10' : '-' }}</dd></div>
                 <div><dt class="text-slate-500">Meals logged</dt><dd class="font-semibold">{{ $trend['meals_logged'] ?? 0 }}</dd></div>
             </dl>
         </div>

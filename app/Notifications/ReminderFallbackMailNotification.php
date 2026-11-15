@@ -10,8 +10,8 @@ use Illuminate\Notifications\Notification;
 /**
  * Minimal fallback reminder email.
  *
- * This deliberately uses Laravel's standard notification template — the
- * same low-complexity path used by the login OTP message — so a provider
+ * This deliberately uses Laravel's standard notification template - the
+ * same low-complexity path used by the login OTP message - so a provider
  * that rejects the richer branded HTML can still accept the reminder.
  */
 class ReminderFallbackMailNotification extends Notification

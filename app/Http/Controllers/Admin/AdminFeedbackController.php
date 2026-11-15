@@ -9,10 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Admin review queue for user-submitted feedback — status changes and
+ * Admin review queue for user-submitted feedback - status changes and
  * admin-only notes. Reading feedback message content is the one
  * intentional exception to this app's "admins never see personal tracked
- * data" boundary (see AdminUserController's boundary note) — feedback is
+ * data" boundary (see AdminUserController's boundary note) - feedback is
  * explicitly submitted TO the platform's operators, not personal data
  * being tracked about the user's own life, so it's a different category.
  */

@@ -9,11 +9,11 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 
 /**
- * Sent on the schedule SendSubscriptionExpiryReminders runs — 14, 12, 10,
+ * Sent on the schedule SendSubscriptionExpiryReminders runs - 14, 12, 10,
  * 8, 6, 4, 2 days before expiry, and on the expiry date itself.
  * `database` channel (not just `mail`) so it also shows up as an in-app
  * notification the moment a user logs in, per the "in-system
- * notification/alarm upon login" requirement — see
+ * notification/alarm upon login" requirement - see
  * DashboardController/layout for how unread ones surface.
  */
 class SubscriptionExpiryReminderNotification extends Notification implements ShouldQueue
@@ -40,8 +40,8 @@ class SubscriptionExpiryReminderNotification extends Notification implements Sho
 
         if ($this->daysRemaining > 0) {
             $mail->greeting('Hi ' . $notifiable->name . ',')
-                ->line("Your subscription is set to expire on {$this->expiryDate->format('l, F j, Y')} — that's {$this->daysRemaining} day(s) from now.")
-                ->line('Renewing keeps every feature working without interruption — nothing changes until it actually expires.');
+                ->line("Your subscription is set to expire on {$this->expiryDate->format('l, F j, Y')} - that's {$this->daysRemaining} day(s) from now.")
+                ->line('Renewing keeps every feature working without interruption - nothing changes until it actually expires.');
         } else {
             $mail->greeting('Hi ' . $notifiable->name . ',')
                 ->line("Your subscription expired on {$this->expiryDate->format('l, F j, Y')}.")

@@ -21,7 +21,7 @@
 <div class="font-semibold">{{ $item->user->name ?? 'User' }}</div>
 <div class="text-xs text-slate-500">{{ $item->user->email ?? '' }}</div>
 </td>
-<td class="px-4 py-3">{{ $item->reason ?: '—' }}</td>
+<td class="px-4 py-3">{{ $item->reason ?: '-' }}</td>
 <td class="px-4 py-3">{{ ucfirst($item->status) }}</td>
 <td class="px-4 py-3">{{ $item->created_at?->format('d M Y, g:i A') }}</td>
 <td class="px-4 py-3 text-right">

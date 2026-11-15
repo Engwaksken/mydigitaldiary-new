@@ -46,7 +46,7 @@ class SiteSetting extends Model
     /**
      * DomPDF blocks loading images from remote HTTP URLs unless
      * `isRemoteEnabled` is explicitly turned on in its own package
-     * config — a setting this app doesn't control from application code.
+     * config - a setting this app doesn't control from application code.
      * Embedding the logo as a base64 data URI sidesteps that entirely:
      * DomPDF just reads the bytes straight out of the HTML, no fetch of
      * any kind involved. Used by PDF templates specifically; email
@@ -76,10 +76,10 @@ class SiteSetting extends Model
     }
 
     /**
-     * Formats an amount using the site's BASE currency — "UGX 50,000" by
+     * Formats an amount using the site's BASE currency - "UGX 50,000" by
      * default (0 decimals, since shilling-scale amounts rarely need
      * them), or whatever an admin has configured. Used everywhere a
-     * dollar sign used to be hardcoded — see the `format_money()` global
+     * dollar sign used to be hardcoded - see the `format_money()` global
      * helper in app/helpers.php, which just calls this on the current
      * settings so views don't need `SiteSetting::current()->formatMoney(...)`
      * spelled out everywhere.
@@ -176,12 +176,12 @@ class SiteSetting extends Model
 
     /**
      * For displaying a SPECIFIC record's own stored amount+currency
-     * (a Payment, Invoice, etc.) — NOT the same as formatMoney(), which
+     * (a Payment, Invoice, etc.) - NOT the same as formatMoney(), which
      * always uses the site's CURRENT default currency regardless of
      * what currency that record actually recorded. An old payment made
      * back when the site's default was USD would be silently and
      * incorrectly relabeled as UGX by formatMoney() if the site has
-     * since switched — this looks up the right symbol for whatever
+     * since switched - this looks up the right symbol for whatever
      * currency the record itself says it's in, falling back to just
      * showing the currency code when it's not the site's own default or
      * one of the additional supported ones with a configured symbol.
@@ -203,7 +203,7 @@ class SiteSetting extends Model
 
     /**
      * Returns the admin-edited content if one has been saved, otherwise a
-     * sensible starting default — so the /privacy-policy page never shows
+     * sensible starting default - so the /privacy-policy page never shows
      * blank just because an admin hasn't touched Settings yet. Stored and
      * rendered through LegalContentFormatter, which permits only the small
      * structural tag set documented in Admin Settings.

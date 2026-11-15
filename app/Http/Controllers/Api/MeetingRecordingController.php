@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Mobile equivalent of MeetingRecordingController — same
+ * Mobile equivalent of MeetingRecordingController - same
  * start/pause/resume/stop/transcribe/summarize flow, JSON responses
  * instead of redirects. The Flutter side captures audio with the
  * `record` package and uploads the finished file to stop(), the same

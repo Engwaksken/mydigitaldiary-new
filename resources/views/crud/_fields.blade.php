@@ -1,6 +1,6 @@
 {{--
     Shared field renderer used by:
-      - crud/form.blade.php (the full-page create/edit fallback — still
+      - crud/form.blade.php (the full-page create/edit fallback - still
         reachable by direct URL even though the index page now defaults
         to a modal)
       - crud/index.blade.php's create/edit <dialog> (the default UX)
@@ -9,7 +9,7 @@
     instance, or a fresh `new $model` for "create"). Uses old()-then-item
     fallback so validation-error redisplay works in both contexts. A field
     can set 'default' (e.g. true for a checkbox) used only when there's no
-    old() input AND no $item value — i.e. a brand new "create" form.
+    old() input AND no $item value - i.e. a brand new "create" form.
 --}}
 @php
     /*
@@ -67,7 +67,7 @@
 @endif
 
 {{-- ================================================================
-     AI GENERATE — INSIDE NEW / EDIT CRUD MODAL
+     AI GENERATE - INSIDE NEW / EDIT CRUD MODAL
      Enabled only for Spiritual Practices, Relationships and Networks.
      Because this partial is rendered inside the CRUD form, the control
      is available in BOTH New and Edit modes.

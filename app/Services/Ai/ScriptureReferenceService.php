@@ -150,7 +150,7 @@ class ScriptureReferenceService
         $refs = $this->forTopic($topic, $faithPath);
 
         return collect($refs)
-            ->map(fn ($ref) => $ref['reference'].' — '.$ref['text'])
+            ->map(fn ($ref) => $ref['reference'].' - '.$ref['text'])
             ->implode("\n");
     }
 

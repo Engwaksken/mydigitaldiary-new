@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 
 /**
  * User-facing feedback submission. Deliberately does NOT include 'status'
- * or 'admin_notes' in $fields — those are admin-only (see
+ * or 'admin_notes' in $fields - those are admin-only (see
  * Admin\AdminFeedbackController) and CrudController's generic form always
  * renders whatever is in $fields as an editable control, so keeping them
  * out entirely is what actually prevents a user from setting their own

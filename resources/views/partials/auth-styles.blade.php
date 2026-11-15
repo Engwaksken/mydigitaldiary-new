@@ -39,7 +39,7 @@
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-    /* Room for a leading icon (see x-auth-field's optional icon prop) —
+    /* Room for a leading icon (see x-auth-field's optional icon prop) -
        the icon itself is absolutely positioned inside .auth-field-icon-wrap.
        Not !important: the password-toggle script sets its own inline
        padding-right for the eye icon, and this must not fight it. */

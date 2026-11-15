@@ -17,7 +17,7 @@ use Throwable;
 /**
  * The MORNING slot of the daily rhythm ("Plan your day"), sent at each
  * person's own morning time (communication_preferences.morning_time, default
- * 07:00, in their timezone — see DailyReminderService). The scheduler runs
+ * 07:00, in their timezone - see DailyReminderService). The scheduler runs
  * this every 15 minutes; a per-day "sent on" marker makes it idempotent.
  *
  * Two independent deliveries share the slot:

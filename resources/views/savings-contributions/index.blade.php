@@ -126,7 +126,7 @@
                         <p class="text-sm text-slate-600 mt-1">
                             <span class="font-semibold">Focus:</span>
                             {{ $focus->clean_title ?: 'Untitled goal' }}
-                            <span class="text-slate-400 mx-1">—</span>
+                            <span class="text-slate-400 mx-1">-</span>
                             {{ (int) ($focus->progress_percent ?? 0) }}%
                         </p>
                     @else
@@ -306,7 +306,7 @@
                                     </td>
 
                                     <td class="pm-dt-aux">
-                                        {{ $contribution->contributed_at?->format('d M Y') ?? '—' }}
+                                        {{ $contribution->contributed_at?->format('d M Y') ?? '-' }}
                                     </td>
 
                                     <td class="pm-dt-num text-emerald-700">

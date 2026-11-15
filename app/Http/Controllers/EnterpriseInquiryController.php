@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 /**
- * "Contact Sales" for the Enterprise tier — a sales-assisted lead, not a
+ * "Contact Sales" for the Enterprise tier - a sales-assisted lead, not a
  * self-serve purchase. No payment happens here; an admin follows up
  * manually and, if the deal closes, assigns the customer to one of the
  * existing 'organization'-category plans themselves (see Admin ->
- * Subscription Plans) — those plans still exist for that purpose.
+ * Subscription Plans) - those plans still exist for that purpose.
  */
 class EnterpriseInquiryController extends Controller
 {
@@ -50,6 +50,6 @@ class EnterpriseInquiryController extends Controller
             Mail::to($admin->email)->send(new EnterpriseInquiryReceivedMail($inquiry));
         }
 
-        return redirect()->route('enterprise.contact')->with('success', "Thanks — we've received your details and someone from our team will be in touch shortly.");
+        return redirect()->route('enterprise.contact')->with('success', "Thanks - we've received your details and someone from our team will be in touch shortly.");
     }
 }

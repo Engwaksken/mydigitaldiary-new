@@ -347,7 +347,7 @@
             <div class="stats-detail-card">
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                     <div>
-                        <h2 class="font-semibold text-slate-800">Signups — last 30 days</h2>
+                        <h2 class="font-semibold text-slate-800">Signups - last 30 days</h2>
                         <p class="text-xs text-slate-500 mt-0.5">Daily new-account activity during the most recent 30-day period.</p>
                     </div>
                     <div class="text-xs text-slate-500 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2">

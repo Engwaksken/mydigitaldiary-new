@@ -13,9 +13,9 @@
                         {{ $conversation->ended_at ? 'Ended' : ($conversation->assigned_to_user_id ? 'Human Support' : 'AI Support') }}
                     </span>
                 </div>
-                <p class="mt-1 text-sm text-slate-500">{{ $conversation->user?->email ?? '—' }}</p>
+                <p class="mt-1 text-sm text-slate-500">{{ $conversation->user?->email ?? '-' }}</p>
                 @if($conversation->support_rating)
-                    <p class="mt-2 text-sm text-slate-600">Customer rating: <span class="whitespace-nowrap">@for ($i = 0; $i < 5; $i++)<i class="fa-solid fa-star {{ $i < $conversation->support_rating ? 'text-amber-500' : 'text-slate-300' }}"></i>@endfor</span>@if($conversation->support_rating_comment) — {{ $conversation->support_rating_comment }}@endif</p>
+                    <p class="mt-2 text-sm text-slate-600">Customer rating: <span class="whitespace-nowrap">@for ($i = 0; $i < 5; $i++)<i class="fa-solid fa-star {{ $i < $conversation->support_rating ? 'text-amber-500' : 'text-slate-300' }}"></i>@endfor</span>@if($conversation->support_rating_comment) - {{ $conversation->support_rating_comment }}@endif</p>
                 @endif
             </div>
 

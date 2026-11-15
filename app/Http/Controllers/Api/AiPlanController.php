@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Throwable;
 
 /**
- * Mobile equivalent of AiPlanController — same generate/list/delete
+ * Mobile equivalent of AiPlanController - same generate/list/delete
  * flow, JSON instead of a Blade view. PDF download reuses the existing
  * web route directly (same approach as invoice/receipt downloads
  * elsewhere in this app) rather than duplicating PDF generation here.
@@ -37,7 +37,7 @@ class AiPlanController extends Controller
     {
         $validated = $request->validate(['custom_prompt' => ['nullable','string','max:3000']]);
         $customPrompt = trim((string) ($validated['custom_prompt'] ?? ''));
-        // Optional — the mobile app sends its own local ISO8601
+        // Optional - the mobile app sends its own local ISO8601
         // datetime here (see AiPlanService.generate() on the Flutter
         // side) so the plan's "next 7 days" reasoning uses the
         // phone's actual current time rather than the server's,

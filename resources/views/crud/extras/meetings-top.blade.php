@@ -9,7 +9,7 @@
                 <div class="min-w-0">
                     <p class="text-xs font-bold uppercase tracking-wide text-blue-700">{{ $nearestMeeting->start_at->lessThanOrEqualTo(now()) && $nearestMeeting->end_at && $nearestMeeting->end_at->greaterThan(now()) ? 'Happening now' : 'Next meeting' }}</p>
                     <h2 class="text-lg font-bold text-slate-800 truncate">{{ $nearestMeeting->title }}</h2>
-                    <p class="text-sm text-slate-600">{{ $nearestMeeting->start_at->format('D, M j · g:i A') }}@if($nearestMeeting->end_at) – {{ $nearestMeeting->end_at->format('g:i A') }}@endif</p>
+                    <p class="text-sm text-slate-600">{{ $nearestMeeting->start_at->format('D, M j · g:i A') }}@if($nearestMeeting->end_at) - {{ $nearestMeeting->end_at->format('g:i A') }}@endif</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2 shrink-0">
@@ -348,7 +348,7 @@
                 '<div>' +
                     '<div class="text-xs font-semibold uppercase tracking-wide text-slate-400">' + escapeHtml(sourceLabel(event.source)) + '</div>' +
                     '<h3 class="text-base font-bold text-slate-800 mt-1">' + escapeHtml(event.title) + '</h3>' +
-                    '<div class="text-sm text-slate-600 mt-2"><i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(start) + (end ? ' – ' + escapeHtml(end) : '') + '</div>' +
+                    '<div class="text-sm text-slate-600 mt-2"><i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(start) + (end ? ' - ' + escapeHtml(end) : '') + '</div>' +
                     (event.location ? '<div class="text-sm text-slate-600 mt-1"><i class="fa-solid fa-location-dot mr-1"></i>' + escapeHtml(event.location) + '</div>' : '') +
                     '<div class="text-xs text-slate-400 mt-2">Status: ' + escapeHtml(event.status || 'scheduled') + '</div>' +
                 '</div>' +

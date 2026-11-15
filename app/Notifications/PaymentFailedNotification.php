@@ -9,7 +9,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Fired specifically from an admin's manual rejection of a payment
- * (e.g. a bank transfer that couldn't be verified) — real-time card
+ * (e.g. a bank transfer that couldn't be verified) - real-time card
  * failures already show an error directly to the user mid-checkout,
  * so this covers the "found out later, after the fact" case instead.
  */

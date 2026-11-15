@@ -23,7 +23,7 @@ use Throwable;
  * bump a version string.
  *
  * WHAT IS DELIBERATELY NOT CACHED: anything belonging to a signed-in user.
- * See the fetch handler in the service worker below — a private diary has no
+ * See the fetch handler in the service worker below - a private diary has no
  * business sitting in CacheStorage where the next person holding the phone can
  * read it.
  */
@@ -294,7 +294,7 @@ class PwaController extends Controller
          *
          * This app is a private diary behind a session login. Its HTML, its
          * JSON and its files belong to whoever is signed in, and a diary entry
-         * left in CacheStorage outlives the session that produced it — the
+         * left in CacheStorage outlives the session that produced it - the
          * next person to open the installed app on that phone would read it.
          * So: no authenticated response is ever written to a cache, and the
          * offline experience is a self-contained page that says so.
@@ -326,7 +326,7 @@ class PwaController extends Controller
 
                 /*
                  * One at a time, and failures swallowed. A single 404 must not
-                 * abort the install and leave the app with no worker at all —
+                 * abort the install and leave the app with no worker at all -
                  * a missing icon is not worth that.
                  */
                 await Promise.all(PRECACHE_URLS.map(async (url) => {
@@ -369,7 +369,7 @@ class PwaController extends Controller
          * push subscription through the Firebase SDK; FCM then delivers a
          * plain Web Push message whose JSON carries `notification` and
          * `data`. Handled here directly, so the worker needs no Firebase
-         * script of its own. A reminder is never cached — it only shows.
+         * script of its own. A reminder is never cached - it only shows.
          */
         self.addEventListener('push', (event) => {
             let payload = {};

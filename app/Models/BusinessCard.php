@@ -21,7 +21,7 @@ class BusinessCard extends Model
 
     /**
      * Same two-color-gradient pattern as User::themeColor()/
-     * themeColorLight() — a primary color the user picks explicitly,
+     * themeColorLight() - a primary color the user picks explicitly,
      * and a secondary one that's either their own choice or an
      * auto-derived lighter shade of the primary when left blank.
      */
@@ -31,7 +31,7 @@ class BusinessCard extends Model
     }
 
     /**
-     * Same reasoning as User::themeColorLight() — the paired default
+     * Same reasoning as User::themeColorLight() - the paired default
      * (#73BEB6) only applies when NEITHER color is customized; a
      * custom primary with no custom secondary still derives a lighter
      * shade of that primary specifically, not the app's own default.
@@ -90,7 +90,7 @@ class BusinessCard extends Model
     }
 
     /**
-     * Same DomPDF-blocks-remote-images reasoning as photoDataUri() —
+     * Same DomPDF-blocks-remote-images reasoning as photoDataUri() -
      * the logo needs a base64 data URI to render inside the PDF card.
      */
     public function logoDataUri(): ?string
@@ -107,7 +107,7 @@ class BusinessCard extends Model
 
     /**
      * DomPDF blocks remote HTTP image loads by default (same reasoning
-     * as SiteSetting::logoDataUri()) — this is what the PDF template
+     * as SiteSetting::logoDataUri()) - this is what the PDF template
      * needs instead of photoUrl(), which only works for the public web
      * page and browsers generally.
      */
@@ -130,7 +130,7 @@ class BusinessCard extends Model
 
     /**
      * A free, no-API-key QR service (api.qrserver.com) rather than a new
-     * Composer package or a hand-rolled QR encoder — the app just needs
+     * Composer package or a hand-rolled QR encoder - the app just needs
      * an image URL, not to generate the codes itself.
      */
     public function qrCodeUrl(int $size = 300): string
@@ -139,7 +139,7 @@ class BusinessCard extends Model
     }
 
     /**
-     * Same DomPDF-blocks-remote-images reasoning as photoDataUri() —
+     * Same DomPDF-blocks-remote-images reasoning as photoDataUri() -
      * the PDF template needs this instead of qrCodeUrl(). The fetch
      * itself happens fine since it's the SERVER making the request
      * (not DomPDF), then the result gets embedded as base64 the same
@@ -161,7 +161,7 @@ class BusinessCard extends Model
     }
 
     /**
-     * A unique, URL-friendly slug from the person's name — appends a
+     * A unique, URL-friendly slug from the person's name - appends a
      * short random suffix on collision rather than failing the save.
      */
     public static function generateUniqueSlug(string $name): string

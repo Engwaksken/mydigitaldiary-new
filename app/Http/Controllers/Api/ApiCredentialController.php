@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Mobile equivalent of the web app's ApiCredentialController — same
+ * Mobile equivalent of the web app's ApiCredentialController - same
  * "own key always takes priority, otherwise fall back to the site's
  * shared key up to its monthly per-user limit" logic (see
  * AiPlannerService::generate(), which both web and mobile's AI Plan
@@ -57,7 +57,7 @@ class ApiCredentialController extends Controller
 
         $credential = $request->user()->apiCredentials()->create($data);
 
-        // First key a user adds becomes active automatically — same
+        // First key a user adds becomes active automatically - same
         // rule as web.
         if ($request->user()->apiCredentials()->count() === 1) {
             $credential->update(['is_active' => true]);
@@ -83,7 +83,7 @@ class ApiCredentialController extends Controller
         $credential->delete();
 
         // If we just deleted the active key, promote the next most
-        // recent one — same rule as web.
+        // recent one - same rule as web.
         if ($wasActive) {
             $request->user()->apiCredentials()->latest()->first()?->update(['is_active' => true]);
         }

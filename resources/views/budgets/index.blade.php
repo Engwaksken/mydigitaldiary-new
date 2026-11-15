@@ -378,7 +378,7 @@
                         <option value="">Select outstanding debt</option>
                         @foreach(($debts ?? collect()) as $debt)
                             <option value="{{ $debt->id }}">
-                                {{ data_get($debt, 'person_name', 'Debt #'.data_get($debt, 'id')) }} — {{ $money(data_get($debt, 'amount', 0)) }}
+                                {{ data_get($debt, 'person_name', 'Debt #'.data_get($debt, 'id')) }} - {{ $money(data_get($debt, 'amount', 0)) }}
                             </option>
                         @endforeach
                     </select>

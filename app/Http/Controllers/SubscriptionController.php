@@ -368,7 +368,7 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Given a chosen plan, works out the correct subscription_expires_at —
+     * Given a chosen plan, works out the correct subscription_expires_at -
      * extending from the CURRENT expiry if it's still in the future
      * (so renewing before running out doesn't lose already-paid time),
      * otherwise from now. Null for the lifetime plan (never expires).
@@ -388,7 +388,7 @@ class SubscriptionController extends Controller
 
     /**
      * Raised the moment a user commits to a plan by submitting any
-     * payment method — represents what's owed for this billing period,
+     * payment method - represents what's owed for this billing period,
      * separate from the receipt that follows once payment actually
      * completes. Emailed immediately as a PDF attachment; every step is
      * recorded to billing_event_logs for admin visibility.
@@ -436,7 +436,7 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Demo/no-gateway-configured fallback — flips the account to active
+     * Demo/no-gateway-configured fallback - flips the account to active
      * immediately with no charge. Only reachable from the UI when no
      * payment gateways are configured at all (see subscription/show.blade.php).
      */
@@ -459,12 +459,12 @@ class SubscriptionController extends Controller
             $this->ensureOrganizationForPlan($user, $plan);
         }
 
-        return redirect()->route('dashboard')->with('success', 'Subscription activated — welcome back!');
+        return redirect()->route('dashboard')->with('success', 'Subscription activated - welcome back!');
     }
 
     /**
      * A Family/Team or Organization plan needs an actual Organization
-     * record to manage seats against — nothing else in the app creates
+     * record to manage seats against - nothing else in the app creates
      * one, so every path that activates a subscription (this one, the
      * card callback below, the webhook controller, and admin manual
      * approval) needs to call this. An individual plan does nothing
@@ -621,7 +621,7 @@ class SubscriptionController extends Controller
     /**
      * Creates a Stripe Checkout Session using the admin-configured card
      * gateway's own API keys, and redirects the user to Stripe's hosted
-     * checkout page. Nothing in our own database changes yet — that only
+     * checkout page. Nothing in our own database changes yet - that only
      * happens once payCardCallback() confirms Stripe says it was paid.
      */
     public function payWithCard(Request $request): RedirectResponse
@@ -646,13 +646,13 @@ class SubscriptionController extends Controller
         $price = $personalPrice['price'] ?? $plan->computedPrice((float) $settings->monthly_price);
         $currencyCode = strtolower($personalPrice['currency_code'] ?? $settings->default_currency_code);
 
-        // Stripe expects amounts in the currency's SMALLEST unit — cents
+        // Stripe expects amounts in the currency's SMALLEST unit - cents
         // for USD, but for a handful of currencies Stripe treats as
         // "zero-decimal" (UGX among them), the amount is sent as-is with
         // NO ×100. Multiplying UGX by 100 here would have charged 100x
         // the intended amount. default_currency_decimals is the signal
         // used elsewhere in the app for display formatting, so this
-        // stays consistent with however the admin has that configured —
+        // stays consistent with however the admin has that configured -
         // if they ever set a currency with decimals=0 that Stripe does
         // NOT treat as zero-decimal (or vice versa), this would need
         // adjusting to match Stripe's own fixed list instead.
@@ -673,7 +673,7 @@ class SubscriptionController extends Controller
                             'currency' => $currencyCode,
                             'unit_amount' => $unitAmount,
                             'product_data' => [
-                                'name' => $settings->site_name . ' Subscription — ' . $plan->name,
+                                'name' => $settings->site_name . ' Subscription - ' . $plan->name,
                             ],
                         ],
                     ],
@@ -687,7 +687,7 @@ class SubscriptionController extends Controller
         }
 
         // Record the attempt as pending now, so it shows up even if the
-        // user abandons checkout — payWithCardCallback() flips it to
+        // user abandons checkout - payWithCardCallback() flips it to
         // completed once Stripe confirms payment.
         $payment = Payment::create([
             'user_id' => $request->user()->id,
@@ -709,7 +709,7 @@ class SubscriptionController extends Controller
 
     /**
      * IoTec (or any other 'aggregator'-type gateway marked as default)
-     * mobile money collection — unlike the card flow, this doesn't
+     * mobile money collection - unlike the card flow, this doesn't
      * redirect anywhere; IoTec pushes a payment prompt straight to the
      * phone number entered, and the subscription activates once
      * PaymentGatewayWebhookController receives their confirmation (or the status
@@ -774,7 +774,7 @@ class SubscriptionController extends Controller
 
             return redirect()->route('subscription.show')->with(
                 'success',
-                'A payment prompt has been sent to ' . $data['phone_number'] . ' — approve it on your phone to activate your subscription.'
+                'A payment prompt has been sent to ' . $data['phone_number'] . ' - approve it on your phone to activate your subscription.'
             );
         } catch (\Throwable $e) {
             Log::warning('IoTec collection request failed', ['error' => $e->getMessage()]);
@@ -916,14 +916,14 @@ class SubscriptionController extends Controller
 
     /**
      * Stripe redirects here after checkout (success_url above). Verifies
-     * the session directly with Stripe's API before trusting it — never
+     * the session directly with Stripe's API before trusting it - never
      * activates a subscription based solely on the redirect happening.
      */
     public function payWithCardCallback(Request $request): RedirectResponse
     {
         $sessionId = $request->query('session_id');
         // Looked up by the Stripe session ID alone, not tied to the
-        // current request's session — Stripe redirects the BROWSER back
+        // current request's session - Stripe redirects the BROWSER back
         // here, which has no session at all if checkout was started from
         // the mobile app (a Bearer-token API request, opened in an
         // external browser via a plain link). The session id itself is
@@ -969,7 +969,7 @@ class SubscriptionController extends Controller
                 // Cleared so the NEXT expiry cycle's reminders start
                 // fresh against the new expiry date, rather than
                 // carrying over a milestone number from before this
-                // renewal — this is also what stops any reminder in
+                // renewal - this is also what stops any reminder in
                 // flight for the old expiry date from being mistaken
                 // for still relevant.
                 'last_expiry_reminder_days' => null,
@@ -994,7 +994,7 @@ class SubscriptionController extends Controller
                 ]);
             }
 
-            return redirect()->route('dashboard')->with('success', 'Payment received — subscription activated!');
+            return redirect()->route('dashboard')->with('success', 'Payment received - subscription activated!');
         }
 
         $payment->update(['status' => 'failed']);
@@ -1006,8 +1006,8 @@ class SubscriptionController extends Controller
     /**
      * Bank / mobile money: the user has already paid OUTSIDE the app
      * (following the gateway's displayed instructions) and is submitting
-     * proof — a transaction reference — for an admin to verify at
-     * /admin/payments. This does NOT activate the subscription by itself —
+     * proof - a transaction reference - for an admin to verify at
+     * /admin/payments. This does NOT activate the subscription by itself -
      * AdminPaymentsController::approve() is what actually sets
      * subscription_status/expires_at, using this payment's own plan.
      */
@@ -1047,7 +1047,7 @@ class SubscriptionController extends Controller
 
         $this->createAndSendInvoice($payment, $plan, $request->user());
 
-        return back()->with('success', 'Thanks — your payment reference was submitted and is awaiting verification.');
+        return back()->with('success', 'Thanks - your payment reference was submitted and is awaiting verification.');
     }
 
     public function downloadReceipt(Request $request, Payment $payment)

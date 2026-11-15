@@ -115,7 +115,7 @@
                                 {{ format_money($budgetItem->amount) }}
                             </td>
                             <td class="px-4 py-3 text-slate-600 max-w-sm">
-                                {{ \Illuminate\Support\Str::limit((string) $budgetItem->notes, 80) ?: '—' }}
+                                {{ \Illuminate\Support\Str::limit((string) $budgetItem->notes, 80) ?: '-' }}
                             </td>
                             <td class="px-4 py-3">
                                 <span

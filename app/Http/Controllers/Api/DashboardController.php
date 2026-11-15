@@ -25,7 +25,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * A lighter-weight version of the web DashboardController's stat cards
- * PLUS the same chart data and recent-activity feed — the Flutter app
+ * PLUS the same chart data and recent-activity feed - the Flutter app
  * renders its own native charts (fl_chart) and cards from this JSON
  * rather than any Blade view or Chart.js config.
  */
@@ -40,7 +40,7 @@ class DashboardController extends Controller
         $startOfMonth = $localNow->copy()->startOfMonth();
         $endOfMonth = $localNow->copy()->endOfMonth();
 
-        // ---- Spending by category (this month) — doughnut chart ----
+        // ---- Spending by category (this month) - doughnut chart ----
         $expensesByCategory = Expense::where('user_id', $userId)
             ->whereBetween('spent_at', [$startOfMonth, $endOfMonth])
             ->selectRaw('category, SUM(amount) as total')
@@ -48,7 +48,7 @@ class DashboardController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        // ---- Income vs Expenses, last 6 months — bar chart ----
+        // ---- Income vs Expenses, last 6 months - bar chart ----
         $trendMonths = collect(range(5, 0))->map(
             fn ($monthsAgo) => Carbon::now()->subMonthsNoOverflow($monthsAgo)->startOfMonth()
         );
@@ -100,7 +100,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Same idea as the web DashboardController's buildRecentActivity() —
+     * Same idea as the web DashboardController's buildRecentActivity() -
      * a handful of the most recent items across a few modules, newest
      * first. Kept intentionally smaller/simpler than the web version
      * (fewer source modules) since this is a quick glance list, not a
@@ -109,7 +109,7 @@ class DashboardController extends Controller
     /**
      * Same logic as SendDailyTopTasksDigest::topTasksFor() (duplicated
      * rather than shared, per this project's usual pattern for small
-     * self-contained queries) — but called live here so the Home
+     * self-contained queries) - but called live here so the Home
      * screen can show "top 3 upcoming" any time the dashboard loads,
      * not only once a day via the async email/notification digest.
      */
@@ -168,7 +168,7 @@ class DashboardController extends Controller
 
     /**
      * Same logic as the compact recentActivity() shown inline on the
-     * dashboard, just with a much higher cap — for a dedicated "View
+     * dashboard, just with a much higher cap - for a dedicated "View
      * All" screen rather than the home screen's quick-glance version.
      */
     public function recentActivityFull(Request $request): JsonResponse

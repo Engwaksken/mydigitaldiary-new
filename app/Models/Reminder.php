@@ -37,7 +37,7 @@ class Reminder extends Model
      *
      * NOTE: for 'every_n_minutes'/'hourly' reminders to actually fire on
      * time, routes/console.php must run `reminders:send` frequently
-     * (everyMinute(), not hourly()) — see the comment there. This method
+     * (everyMinute(), not hourly()) - see the comment there. This method
      * only decides what the NEXT run time should be; how often the
      * scheduler checks for due reminders is a separate setting.
      */

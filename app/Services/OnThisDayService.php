@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
 /**
  * "On this day" memories for the dashboard and the morning reminder: what
  * the person wrote, finished, saved or practised exactly a week, a month,
- * three months and a year ago — from their own data only.
+ * three months and a year ago - from their own data only.
  *
  * Every source is one bounded query over the four anchor days (date columns
  * use whereIn, datetime columns four OR'ed ranges), all scoped by user_id, so
@@ -228,7 +228,7 @@ class OnThisDayService
     }
 
     /**
-     * "Same week last month you saved X and completed Y tasks." — two cheap
+     * "Same week last month you saved X and completed Y tasks." - two cheap
      * aggregates; null when both are zero.
      */
     private function comparison(User $user, Carbon $today): ?string

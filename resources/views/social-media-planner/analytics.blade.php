@@ -226,7 +226,7 @@
                             @forelse($snapshotRows as $snapshot)
                                 <tr>
                                     <td class="px-4 py-3 text-xs text-slate-500">
-                                        {{ data_get($snapshot, 'captured_at') ? \Illuminate\Support\Carbon::parse(data_get($snapshot, 'captured_at'))->timezone(auth()->user()?->timezone ?: 'Africa/Kampala')->format('d M Y, g:i A') : '—' }}
+                                        {{ data_get($snapshot, 'captured_at') ? \Illuminate\Support\Carbon::parse(data_get($snapshot, 'captured_at'))->timezone(auth()->user()?->timezone ?: 'Africa/Kampala')->format('d M Y, g:i A') : '-' }}
                                     </td>
                                     <td class="px-4 py-3 font-bold">{{ $platformLabels[data_get($snapshot, 'platform')] ?? ucwords(str_replace('_', ' ', (string) data_get($snapshot, 'platform', ''))) }}</td>
                                     <td class="px-4 py-3">{{ number_format((int) data_get($snapshot, 'views', 0)) }}</td>

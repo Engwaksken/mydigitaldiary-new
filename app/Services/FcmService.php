@@ -10,17 +10,17 @@ use Illuminate\Support\Facades\Log;
 /**
  * Sends push notifications via Firebase Cloud Messaging's current HTTP v1
  * API (NOT the legacy server-key API, which Google has been shutting
- * down) — implemented with plain PHP/openssl rather than pulling in
+ * down) - implemented with plain PHP/openssl rather than pulling in
  * kreait/firebase-php or google/auth, so it works with zero new Composer
  * dependencies. If you'd rather use kreait/firebase-php for its nicer
- * API, this class is a drop-in replacement target — nothing outside this
+ * API, this class is a drop-in replacement target - nothing outside this
  * file needs to change, everything calls FcmService::sendToUser().
  *
  * Setup (one-time):
  *   1. Firebase Console -> Project Settings -> Service Accounts ->
  *      "Generate new private key" -> downloads a JSON file.
  *   2. Put that file somewhere OUTSIDE your web root (e.g.
- *      storage/app/firebase-service-account.json — already .gitignore'd
+ *      storage/app/firebase-service-account.json - already .gitignore'd
  *      via storage/app/.gitignore's default rules, but double check).
  *   3. .env:
  *        FIREBASE_PROJECT_ID=your-firebase-project-id
@@ -34,7 +34,7 @@ class FcmService
 
     /**
      * Sends the same notification to every device this user has
-     * registered (see DeviceTokenController) — a user with the app open
+     * registered (see DeviceTokenController) - a user with the app open
      * on both a phone and a tablet gets it on both. Removes any device
      * token FCM reports as invalid/unregistered along the way, so a
      * uninstalled app or a stale token doesn't keep getting (harmlessly
@@ -45,7 +45,7 @@ class FcmService
         $accessToken = $this->getAccessToken();
 
         if (! $accessToken) {
-            return; // Not configured, or Google's token endpoint is unreachable — fail silently, same "push is a bonus, not critical" philosophy as the in-app alarm sound.
+            return; // Not configured, or Google's token endpoint is unreachable - fail silently, same "push is a bonus, not critical" philosophy as the in-app alarm sound.
         }
 
         $projectId = config('services.firebase.project_id');
@@ -98,7 +98,7 @@ class FcmService
                 // UNREGISTERED, or a token FCM says is not a valid
                 // registration token, means the app was uninstalled, the
                 // browser revoked permission, or the token rotated and the
-                // device hasn't re-registered yet — clean it up rather than
+                // device hasn't re-registered yet - clean it up rather than
                 // retrying it forever on every future reminder.
                 $device->delete();
             } elseif ($response->failed()) {
@@ -125,7 +125,7 @@ class FcmService
 
     /**
      * Public Firebase web-app identifiers for browser push, or null when any
-     * is missing — the UI then hides the "Turn on daily reminders" control
+     * is missing - the UI then hides the "Turn on daily reminders" control
      * instead of offering a button that can never work.
      *
      * @return array{apiKey:string,appId:string,messagingSenderId:string,projectId:string,vapidKey:string}|null
@@ -153,7 +153,7 @@ class FcmService
     /**
      * 404 is always UNREGISTERED. A 400 only means a dead token when FCM says
      * so (INVALID_ARGUMENT about the registration token, or an UNREGISTERED
-     * detail) — any other 400 is a payload problem on our side, and deleting
+     * detail) - any other 400 is a payload problem on our side, and deleting
      * a healthy device token for it would silently stop all future pushes.
      */
     private function isDeadToken(\Illuminate\Http\Client\Response $response): bool
@@ -210,7 +210,7 @@ class FcmService
     }
 
     /**
-     * Google's OAuth2 access tokens are valid for ~1 hour — cached for 55
+     * Google's OAuth2 access tokens are valid for ~1 hour - cached for 55
      * minutes so a burst of reminders firing close together (e.g. the
      * per-minute scheduler catching several at once) doesn't re-authenticate
      * with Google on every single one.
@@ -221,7 +221,7 @@ class FcmService
             $credentialsPath = config('services.firebase.credentials_path');
 
             if (! $credentialsPath || ! file_exists(base_path($credentialsPath)) && ! file_exists($credentialsPath)) {
-                Log::warning('FCM not configured — FIREBASE_CREDENTIALS_PATH is missing or the file does not exist.');
+                Log::warning('FCM not configured - FIREBASE_CREDENTIALS_PATH is missing or the file does not exist.');
                 return null;
             }
 
@@ -254,7 +254,7 @@ class FcmService
     /**
      * Builds and RS256-signs a Google service-account JWT by hand (base64url
      * header + claims + a raw openssl_sign over that), rather than pulling
-     * in firebase/php-jwt or google/auth as a dependency — this is the
+     * in firebase/php-jwt or google/auth as a dependency - this is the
      * standard "JWT bearer" flow Google documents for server-to-server auth.
      */
     private function buildSignedJwt(array $credentials): string

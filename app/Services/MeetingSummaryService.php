@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * Turns a meeting transcript into a structured summary — main points,
+ * Turns a meeting transcript into a structured summary - main points,
  * decisions, action items (with assignee/deadline where the transcript
  * actually states one), and open questions. Uses the same two-tier key
  * resolution as AiPlannerService (user's own key, else the site's shared
- * default) — duplicated here rather than shared, specifically so a
+ * default) - duplicated here rather than shared, specifically so a
  * change to one doesn't risk breaking the other; they're two small,
  * independent call sites into the same provider APIs.
  */
@@ -69,7 +69,7 @@ after) with exactly these keys:
 }
 
 Only include an action item's assigned_to or deadline if the transcript
-actually states one — use null rather than guessing. If a section has
+actually states one - use null rather than guessing. If a section has
 nothing to report, use an empty array for it. Do not invent content that
 isn't supported by the transcript.
 Use a standard hyphen (-), never an en dash or em dash, in generated text.
@@ -160,7 +160,7 @@ PROMPT;
 
     /**
      * The prompt asks for pure JSON, but models sometimes wrap it in a
-     * ```json fence anyway despite instructions not to — strip that
+     * ```json fence anyway despite instructions not to - strip that
      * defensively before decoding rather than trusting it was followed.
      */
     private function parseResponse(string $raw): array

@@ -70,7 +70,7 @@ class OtpVerificationController extends Controller
         $user = User::findOrFail($userId);
 
         // The code was emailed to $user->email, so entering it proves the
-        // person controls that mailbox — the same proof the verification link
+        // person controls that mailbox - the same proof the verification link
         // gives. It is email (never SMS) only: LoginOtpNotification::via()
         // returns ['mail']. If an SMS channel is ever added, this must only
         // run for codes delivered by email.
@@ -128,7 +128,7 @@ class OtpVerificationController extends Controller
     /**
      * Abandon a pending OTP login (e.g. "this isn't me" / wrong account)
      * and send the user back to the login form. No session is authenticated
-     * at this stage, so there's nothing to log out of — just clear the
+     * at this stage, so there's nothing to log out of - just clear the
      * pending state.
      */
     public function cancel(Request $request): RedirectResponse

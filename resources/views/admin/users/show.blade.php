@@ -28,7 +28,7 @@
                 </ul>
             </x-alert>
         @endif
-        {{-- Account info is always visible, never tabbed — same reasoning
+        {{-- Account info is always visible, never tabbed - same reasoning
              as stat cards elsewhere: a quick-reference summary shouldn't
              be hidden behind a click. --}}
         <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl p-6 mb-6">
@@ -107,7 +107,7 @@
         @if ($isSelf)
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
                 This is your own account. Suspension, role, and deletion changes to your own account
-                aren't available here — ask another admin, or use your own
+                aren't available here - ask another admin, or use your own
                 <a href="{{ route('privacy.show') }}" class="underline font-medium">Privacy &amp; Data</a> page.
             </div>
         @else

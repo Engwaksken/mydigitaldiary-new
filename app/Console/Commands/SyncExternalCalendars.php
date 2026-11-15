@@ -35,7 +35,7 @@ class SyncExternalCalendars extends Command
                 $userId,
                 $result['imported'],
                 $result['updated'],
-                $result['errors'] ? ' — ' . implode('; ', $result['errors']) : ''
+                $result['errors'] ? ' - ' . implode('; ', $result['errors']) : ''
             ));
         }
 

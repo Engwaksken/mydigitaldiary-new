@@ -206,7 +206,7 @@ class DailyFoodJournalController extends Controller
 
     private function notes(string $mealType, array $items): string
     {
-        return ucfirst($mealType).' — '.implode(', ', $items);
+        return ucfirst($mealType).' - '.implode(', ', $items);
     }
 
     private function syncDietLog(
@@ -285,7 +285,7 @@ class DailyFoodJournalController extends Controller
             'dinner',
             'supper',
         ] as $meal) {
-            if (str_starts_with($text, $meal.' —')
+            if (str_starts_with($text, $meal.' -')
                 || str_starts_with($text, $meal.' -')) {
                 return $meal;
             }

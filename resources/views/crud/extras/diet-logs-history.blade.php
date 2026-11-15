@@ -183,7 +183,7 @@
 
                             <div class="min-w-0">
                                 <div class="text-sm text-slate-700 whitespace-pre-line">
-                                    {{ trim((string) $meal->food_items) ?: '—' }}
+                                    {{ trim((string) $meal->food_items) ?: '-' }}
                                 </div>
 
                                 @if (filled($meal->notes))

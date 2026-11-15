@@ -5,7 +5,7 @@ use App\Models\SiteSetting;
 if (! function_exists('format_money')) {
     /**
      * Formats an amount using the site's configured base currency (UGX by
-     * default — see SiteSetting::formatMoney()) — the replacement for
+     * default - see SiteSetting::formatMoney()) - the replacement for
      * every hardcoded "${{ number_format($x, 2) }}" that used to assume
      * USD throughout the app.
      */
@@ -18,7 +18,7 @@ if (! function_exists('format_money')) {
 if (! function_exists('format_money_in')) {
     /**
      * For a SPECIFIC record's own stored amount+currency (a Payment,
-     * Invoice, etc.) — use this instead of format_money() whenever
+     * Invoice, etc.) - use this instead of format_money() whenever
      * you're displaying something that has its own currency field.
      * format_money() always assumes the site's CURRENT default
      * currency, which silently mislabels an old record made in a

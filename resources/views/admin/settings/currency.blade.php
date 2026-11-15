@@ -22,7 +22,7 @@
                 <select name="base_currency" class="pm-input mt-1">
                     @foreach($currencies as $code => $meta)
                         <option value="{{ $code }}" @selected(old('base_currency', $settings->base_currency) === $code)>
-                            {{ $code }} — {{ $meta['name'] }}
+                            {{ $code }} - {{ $meta['name'] }}
                         </option>
                     @endforeach
                 </select>
@@ -33,7 +33,7 @@
                 <select name="display_currency" class="pm-input mt-1">
                     @foreach($currencies as $code => $meta)
                         <option value="{{ $code }}" @selected(old('display_currency', $settings->display_currency) === $code)>
-                            {{ $code }} — {{ $meta['name'] }}
+                            {{ $code }} - {{ $meta['name'] }}
                         </option>
                     @endforeach
                 </select>

@@ -202,7 +202,7 @@ class IoTecSubscriptionPaymentController extends Controller
                 'amount' => $amount,
                 'currency' => $currency,
                 'payer_note' => 'My Digital Diary subscription',
-                'payee_note' => 'Subscription — '.$plan->name,
+                'payee_note' => 'Subscription - '.$plan->name,
                 'redirect_url' => route(
                     'subscription.pay.iotec.callback'
                 ),

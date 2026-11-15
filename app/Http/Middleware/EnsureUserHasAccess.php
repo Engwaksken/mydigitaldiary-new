@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Gates the app behind an active trial or paid subscription. A user
  * whose trial/subscription has expired can still log in and reach a
  * small set of essential pages (dashboard, their own profile, billing,
- * privacy, help) — everything else, including every tracking module
+ * privacy, help) - everything else, including every tracking module
  * (Finance, Health & Wellness, Work & Projects, Personal Life,
  * Productivity & AI), is blocked entirely and redirected straight to
  * the subscription page with a clear message, rather than a confusing
@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserHasAccess
 {
     /**
-     * Reachable regardless of subscription state — otherwise an
+     * Reachable regardless of subscription state - otherwise an
      * expired user could get stuck unable to even view their own
      * profile or actually pay to renew.
      */

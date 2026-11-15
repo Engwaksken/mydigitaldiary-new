@@ -196,7 +196,7 @@
     }
     $tdAgenda = $tdAgenda->sortBy(fn ($row) => $row['time'] ? $row['time']->format('H:i') : '99:99')->values();
 
-    // Progress rings — only where data already exists; otherwise a one-tap setup link.
+    // Progress rings - only where data already exists; otherwise a one-tap setup link.
     $tdSavingsPercent = ($totalSavingsTarget ?? 0) > 0 ? (int) min(100, round((($totalSaved ?? 0) / $totalSavingsTarget) * 100)) : null;
     $tdRings = [
         [
@@ -257,7 +257,7 @@
     $tdMemoryMore = data_get($onThisDay ?? [], 'more_url');
     $tdGetStartedDone = collect($tdGetStarted)->where('done', true)->count();
 
-    // App launcher — every module stays one tap away, without shouting.
+    // App launcher - every module stays one tap away, without shouting.
     $tdLauncher = collect([
         ['Planner', 'fa-calendar-day', '#047857', 'daily-planner.index'],
         ['Goals', 'fa-bullseye', '#be123c', 'personal-goals.index'],
@@ -294,7 +294,7 @@
 
 <style>
     /* ------------------------------------------------------------------
-       Today hub — calm, glanceable, one clear next step per card.
+       Today hub - calm, glanceable, one clear next step per card.
        ------------------------------------------------------------------ */
     .td{--td-brand:var(--brand-1,#0f766e);--td-ink:#0f172a;--td-muted:#64748b;--td-line:#e7ecf3;--td-soft:#f6f8fb;width:100%;max-width:1120px;min-width:0;margin:0 auto;padding:2px 0 24px;color:var(--td-ink);container-type:inline-size}
     .td *{box-sizing:border-box}

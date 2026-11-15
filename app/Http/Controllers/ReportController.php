@@ -7,8 +7,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 /**
- * Generates a downloadable "Personal Report" PDF — a human-readable summary
- * across every module — using the same UserSnapshotService the AI Planner
+ * Generates a downloadable "Personal Report" PDF - a human-readable summary
+ * across every module - using the same UserSnapshotService the AI Planner
  * uses, so the two never drift out of sync with each other.
  */
 class ReportController extends Controller

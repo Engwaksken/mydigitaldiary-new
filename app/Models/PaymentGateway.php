@@ -36,7 +36,7 @@ class PaymentGateway extends Model
 
     // Read-only aliases matching the more generic terminology used in
     // the admin form and elsewhere ("API key" / "API secret" /
-    // "merchant ID") — same encrypted columns underneath (client_id,
+    // "merchant ID") - same encrypted columns underneath (client_id,
     // client_secret, wallet_guid), not duplicate storage. Kept as
     // aliases rather than renaming those columns outright, since IoTec
     // was already wired up against the original names and a rename
@@ -86,7 +86,7 @@ class PaymentGateway extends Model
      * credentials (API URL, key, secret, etc.) for automated instant
      * collection, instead of only ever being the manual "submit your
      * transaction reference for admin approval" flow. This is true
-     * once those credentials are actually filled in — false means it's
+     * once those credentials are actually filled in - false means it's
      * still the plain manual gateway it always was.
      */
     public function collectsAutomatically(): bool

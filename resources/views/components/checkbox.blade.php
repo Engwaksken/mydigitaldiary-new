@@ -1,6 +1,6 @@
 {{--
     Drop-in replacement for Breeze's default checkbox component (used by
-    "Remember me" on the login form) — reskinned to the brand palette.
+    "Remember me" on the login form) - reskinned to the brand palette.
 --}}
 @props(['disabled' => false])
 

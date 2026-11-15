@@ -93,7 +93,7 @@
                             @if ($inquiry->phone)
                                 <a href="tel:{{ $inquiry->phone }}" class="text-[var(--brand-1)] hover:underline">{{ $inquiry->phone }}</a>
                             @else
-                                —
+                                -
                             @endif
                         </td>
                         <td class="px-4 py-3">{{ $inquiry->country }}</td>
@@ -128,7 +128,7 @@
                             <dialog id="pm-reply-modal-{{ $inquiry->id }}" class="rounded-2xl p-0 pm-dialog shadow-2xl backdrop:bg-slate-900/50">
                                 <div class="p-6 text-left max-h-[85vh] overflow-y-auto">
                                     <div class="flex items-center justify-between mb-1">
-                                        <h3 class="text-lg font-bold text-slate-800">Reply — {{ $inquiry->email }}</h3>
+                                        <h3 class="text-lg font-bold text-slate-800">Reply - {{ $inquiry->email }}</h3>
                                         <button type="button" onclick="document.getElementById('pm-reply-modal-{{ $inquiry->id }}').close()" class="text-slate-400 hover:text-slate-600" aria-label="Close">
                                             <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                                         </button>
@@ -157,7 +157,7 @@
                             <dialog id="pm-docs-modal-{{ $inquiry->id }}" class="rounded-2xl p-0 pm-dialog shadow-2xl backdrop:bg-slate-900/50">
                                 <div class="p-6 text-left max-h-[85vh] overflow-y-auto">
                                     <div class="flex items-center justify-between mb-4">
-                                        <h3 class="text-lg font-bold text-slate-800">Documents — {{ $inquiry->email }}</h3>
+                                        <h3 class="text-lg font-bold text-slate-800">Documents - {{ $inquiry->email }}</h3>
                                         <button type="button" onclick="document.getElementById('pm-docs-modal-{{ $inquiry->id }}').close()" class="text-slate-400 hover:text-slate-600" aria-label="Close">
                                             <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                                         </button>
@@ -177,7 +177,7 @@
                                                     <div>
                                                         <span class="font-medium">{{ $doc->invoice_number }}</span>
                                                         <span class="text-xs text-slate-400 ms-1">{{ $doc->isQuote() ? 'Quotation' : ucfirst($doc->status) }}</span>
-                                                        <span class="block text-xs text-slate-500">{{ format_money_in($doc->amount, $doc->currency) }} — {{ $doc->plan?->name ?? $doc->description }}</span>
+                                                        <span class="block text-xs text-slate-500">{{ format_money_in($doc->amount, $doc->currency) }} - {{ $doc->plan?->name ?? $doc->description }}</span>
                                                     </div>
                                                     <div class="flex items-center gap-2 whitespace-nowrap">
                                                         <a href="{{ route('subscription.invoice', $doc->id) }}" class="text-[var(--brand-1)] hover:underline text-xs">
@@ -244,7 +244,7 @@
                                                 <form method="POST" action="{{ route('admin.enterprise-inquiries.receipt', $inquiry->id) }}" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm">
                                                     @csrf
                                                     <input type="hidden" name="payment_id" value="{{ $payment->id }}">
-                                                    <span>{{ $payment->receipt_number ?? ('#' . $payment->id) }} — {{ format_money_in($payment->amount, $payment->currency) }}</span>
+                                                    <span>{{ $payment->receipt_number ?? ('#' . $payment->id) }} - {{ format_money_in($payment->amount, $payment->currency) }}</span>
                                                     <button type="submit" class="text-xs text-[var(--brand-1)] hover:underline">Send Receipt</button>
                                                 </form>
                                             @endforeach

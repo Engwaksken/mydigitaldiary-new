@@ -7,7 +7,7 @@
         icon       : Font Awesome icon class (required)
         color      : brand | green | amber | red | blue | purple (default: brand)
         supporting : optional supporting text below the value
-        href       : optional URL — renders the card as a link
+        href       : optional URL - renders the card as a link
 
     Design: icon chip, colored left border, clear label, big value,
     optional supporting text, equal heights, responsive grid (4/2/1 cols).

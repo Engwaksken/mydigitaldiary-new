@@ -5,7 +5,7 @@
         type        : success | error | warning | info  (default: info)
         message     : optional string message (falls back to slot)
         dismissible : whether to show a dismiss button (default: true)
-        autoDismiss : success only — show for 5s, then fade out (default: true)
+        autoDismiss : success only - show for 5s, then fade out (default: true)
 
     Slot: message content (used when `message` prop is not provided).
     Extra attributes (e.g. class="mb-4") are merged onto the alert root.

@@ -94,7 +94,7 @@ class Payment extends Model
 
     /**
      * Assigns a receipt number the first time a payment is actually
-     * completed — never on creation, since a pending/failed attempt
+     * completed - never on creation, since a pending/failed attempt
      * shouldn't consume a receipt number. Format is YEAR-0001, resetting
      * to 0001 at the start of each new year rather than running as one
      * long sequence forever.

@@ -1,5 +1,5 @@
 {{--
-    Form section wrapper — wraps form fields in a card with a heading.
+    Form section wrapper - wraps form fields in a card with a heading.
 
     Props:
         title       : section title (required)

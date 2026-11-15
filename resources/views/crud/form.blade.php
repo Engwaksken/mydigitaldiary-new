@@ -1,7 +1,7 @@
 {{--
     Full-page create/edit fallback. The index page opens a modal for this
     by default now, but this route (GET .../create, GET .../{id}/edit)
-    still works if linked to directly — progressive enhancement, not a
+    still works if linked to directly - progressive enhancement, not a
     replacement.
 --}}
 @extends('layouts.app')

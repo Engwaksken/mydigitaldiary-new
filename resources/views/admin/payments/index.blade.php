@@ -162,23 +162,23 @@
                                        onchange="pmSyncPaymentBulkDelete()"
                                        aria-label="Select payment {{ $payment->reference ?? ('#' . $payment->id) }} for deletion">
                             @else
-                                <span class="text-slate-300" title="Only failed/rejected payments older than 5 days can be deleted">—</span>
+                                <span class="text-slate-300" title="Only failed/rejected payments older than 5 days can be deleted">-</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3">{{ $payment->user->name ?? '—' }}</td>
+                        <td class="px-4 py-3">{{ $payment->user->name ?? '-' }}</td>
                         <td class="px-4 py-3 whitespace-nowrap">
                             @if ($payment->contact_phone)
                                 <a href="tel:{{ $payment->contact_phone }}" class="text-[var(--brand-1)] hover:underline">{{ $payment->contact_phone }}</a>
                             @else
-                                —
+                                -
                             @endif
                         </td>
                         <td class="px-4 py-3">
                             {{ $payment->gateway->name ?? ucfirst(str_replace('_', ' ', $payment->method)) }}
                         </td>
                         <td class="px-4 py-3">{{ format_money_in($payment->amount, $payment->currency) }}</td>
-                        <td class="px-4 py-3 font-mono text-xs">{{ $payment->reference ?? '—' }}</td>
-                        <td class="px-4 py-3 font-mono text-xs break-all">{{ $payment->gateway_transaction_id ?? '—' }}</td>
+                        <td class="px-4 py-3 font-mono text-xs">{{ $payment->reference ?? '-' }}</td>
+                        <td class="px-4 py-3 font-mono text-xs break-all">{{ $payment->gateway_transaction_id ?? '-' }}</td>
                         <td class="px-4 py-3">
                             @php
                                 $badgeColor = match($payment->status) {
@@ -218,7 +218,7 @@
                                     </form>
                                 </dialog>
                             @else
-                                <span class="text-slate-300">—</span>
+                                <span class="text-slate-300">-</span>
                             @endif
                         </td>
                     </tr>

@@ -15,10 +15,10 @@ use RuntimeException;
  * provider to turn it into a concrete, prioritized plan.
  *
  * Two ways a user can generate a plan:
- *   1. Their OWN API key (added at /api-credentials) — unlimited, their
+ *   1. Their OWN API key (added at /api-credentials) - unlimited, their
  *      own cost, always takes priority if they have one active.
  *   2. The site's shared, admin-supplied default key (configured at
- *      /admin/settings) — free, but capped at
+ *      /admin/settings) - free, but capped at
  *      `default_ai_free_limit_per_month` generations per user per month,
  *      since real API cost is incurred on the ADMIN's account for every
  *      shared-key generation, not the user's own.
@@ -30,7 +30,7 @@ class AiPlannerService
     }
 
     /**
-     * $now defaults to server time — unchanged behavior for the web
+     * $now defaults to server time - unchanged behavior for the web
      * app. Mobile passes the phone's own local time instead, same
      * reasoning as UserSnapshotService::build()'s $now parameter,
      * which this passes straight through to.
@@ -89,7 +89,7 @@ class AiPlannerService
 
     /**
      * Any provider that isn't one of the two built-ins is assumed
-     * OpenAI-compatible (see the ai_providers migration's reasoning) —
+     * OpenAI-compatible (see the ai_providers migration's reasoning) -
      * looked up by its `key` for the base URL/model an admin configured,
      * then called with the exact same request shape as callOpenAi(),
      * just against a different endpoint/model.
@@ -131,7 +131,7 @@ class AiPlannerService
 
         return <<<PROMPT
 You are a supportive, practical personal-life coach. Today's date is
-{$today} — use this as the actual current date for any "next 7 days",
+{$today} - use this as the actual current date for any "next 7 days",
 "next 30 days", "overdue", or "coming up" reasoning below; do not assume
 or guess a different date.
 
@@ -141,9 +141,9 @@ personal relationships.
 
 Using ONLY this data, write a concrete, encouraging action plan with three
 sections:
-1. "Next 7 days" — a short prioritized checklist.
-2. "Next 30 days" — a few bigger goals worth focusing on.
-3. "Watch out for" — anything urgent or at risk (e.g. over budget, an
+1. "Next 7 days" - a short prioritized checklist.
+2. "Next 30 days" - a few bigger goals worth focusing on.
+3. "Watch out for" - anything urgent or at risk (e.g. over budget, an
    overdue relationship check-in, a health checkup coming up, a stalled
    project).
 
@@ -154,7 +154,7 @@ memory: repeat strategies the user said worked, avoid or adjust patterns they
 said were difficult, and carry forward lessons they explicitly recorded. Never
 present a reflection as a fact beyond what the user wrote.
 
-Formatting: PLAIN TEXT ONLY. Do not use Markdown syntax of any kind — no
+Formatting: PLAIN TEXT ONLY. Do not use Markdown syntax of any kind - no
 "##" headings, no "**bold**", no "-" or "*" bullet markers. Write each
 section's heading as a plain capitalized line (e.g. "Next 7 Days" on its
 own line, followed by a blank line), and write list items as plain numbered

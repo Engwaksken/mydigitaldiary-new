@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Mobile equivalent of ProfileController::updateTheme() plus the new
- * font family/size fields (which don't exist on web either — see
+ * font family/size fields (which don't exist on web either - see
  * User::FONT_FAMILIES for the full reasoning on why that list is
  * fixed rather than free text).
  */
@@ -23,7 +23,7 @@ class ProfileController extends Controller
 {
     /**
      * Mobile equivalent of the web app's ProfileController::update()
-     * — same rules, same email-changes-clear-verification behavior.
+     * - same rules, same email-changes-clear-verification behavior.
      */
     public function updateProfile(Request $request): JsonResponse
     {
@@ -136,7 +136,7 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-        // Only fields actually present in the request get touched —
+        // Only fields actually present in the request get touched -
         // mobile may send just one changed setting at a time (e.g.
         // only font_size), and a blanket "default absent fields to
         // null" here would incorrectly reset every OTHER appearance

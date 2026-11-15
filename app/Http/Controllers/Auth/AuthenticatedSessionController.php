@@ -86,8 +86,8 @@ class AuthenticatedSessionController extends Controller
         // mail server rejects the message (observed in practice: a 550
         // "classified as spam" response), that used to throw all the way
         // up and crash the login request with a 500. Worse than the
-        // registration-email case — there's no point sending someone to
-        // "enter your code" if the code was never actually delivered — so
+        // registration-email case - there's no point sending someone to
+        // "enter your code" if the code was never actually delivered - so
         // this catches it and shows a clear error instead, keeping the
         // pending-login session state intact so they can just retry
         // rather than re-entering their password too.

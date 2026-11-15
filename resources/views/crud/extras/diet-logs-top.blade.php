@@ -160,7 +160,7 @@
                                     ? $entry->food_items
                                     : [];
                                 $entryMeal = $entry->meal_type
-                                    ?: \Illuminate\Support\Str::before($entryText, ' — ');
+                                    ?: \Illuminate\Support\Str::before($entryText, ' - ');
                             @endphp
                             <div class="rounded-xl bg-slate-50 px-3 py-3">
                                 <div class="flex flex-wrap items-center gap-2">
@@ -517,7 +517,7 @@
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Current illness or known health conditions</label>
-                        <textarea class="pm-input" name="health_conditions" rows="2" placeholder="Optional — add this only if you want it considered in your general suggestions.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
+                        <textarea class="pm-input" name="health_conditions" rows="2" placeholder="Optional - add this only if you want it considered in your general suggestions.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
                     </div>
                 </div>
 

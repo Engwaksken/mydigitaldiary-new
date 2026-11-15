@@ -55,7 +55,7 @@
 
     <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl overflow-x-auto pm-admin-table-scroll">
         <table class="min-w-full text-sm pm-admin-horizontal-table">
-            <caption class="sr-only">Billing-related events — invoices, receipts, reminders, and payment status changes.</caption>
+            <caption class="sr-only">Billing-related events - invoices, receipts, reminders, and payment status changes.</caption>
             <thead class="bg-slate-50 text-left border-b border-slate-100">
                 <tr>
                     <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Event</th>
@@ -71,13 +71,13 @@
                 @forelse ($logs as $log)
                     <tr>
                         <td class="px-4 py-3">{{ str_replace('_', ' ', ucfirst($log->event_type)) }}</td>
-                        <td class="px-4 py-3">{{ $log->user?->name ?? '—' }}</td>
-                        <td class="px-4 py-3">{{ $log->recipient_email ?? '—' }}</td>
+                        <td class="px-4 py-3">{{ $log->user?->name ?? '-' }}</td>
+                        <td class="px-4 py-3">{{ $log->recipient_email ?? '-' }}</td>
                         <td class="px-4 py-3 whitespace-nowrap">
                             @if ($log->contact_phone)
                                 <a href="tel:{{ $log->contact_phone }}" class="text-[var(--brand-1)] hover:underline">{{ $log->contact_phone }}</a>
                             @else
-                                —
+                                -
                             @endif
                         </td>
                         <td class="px-4 py-3">
@@ -85,7 +85,7 @@
                                 {{ ucfirst($log->status) }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-slate-500 max-w-xs truncate" title="{{ $log->details }}">{{ $log->details ?? '—' }}</td>
+                        <td class="px-4 py-3 text-slate-500 max-w-xs truncate" title="{{ $log->details }}">{{ $log->details ?? '-' }}</td>
                         <td class="px-4 py-3 whitespace-nowrap">{{ $log->created_at->format('Y-m-d H:i') }}</td>
                     </tr>
                 @empty

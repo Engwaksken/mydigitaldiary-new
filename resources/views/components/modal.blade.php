@@ -3,7 +3,7 @@
 
     New API props:
         id              : unique id for the dialog (required)
-        title           : modal title (optional — shown in a header)
+        title           : modal title (optional - shown in a header)
         size            : sm | md | lg | xl (default: md)
         closeOnBackdrop : close when backdrop is clicked (default: true)
         closeOnEscape   : close on Escape key (default: true)
@@ -56,7 +56,7 @@
 
     // Accessible name for the dialog. Derived from the same $dialogId so it is
     // unique per dialog, and only wired up when there is actually a heading to
-    // point at — a dangling aria-labelledby is worse than none at all.
+    // point at - a dangling aria-labelledby is worse than none at all.
     $dialogTitleId = $dialogId . '-title';
 
     // Map legacy maxWidth to size.

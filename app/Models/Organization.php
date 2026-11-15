@@ -23,7 +23,7 @@ class Organization extends Model
         return $this->hasMany(OrganizationMember::class);
     }
 
-    /** Active + invited seats — a deactivated seat's slot is considered freed. */
+    /** Active + invited seats - a deactivated seat's slot is considered freed. */
     public function seatsUsed(): int
     {
         return $this->members()->whereIn('status', ['invited', 'active'])->count();

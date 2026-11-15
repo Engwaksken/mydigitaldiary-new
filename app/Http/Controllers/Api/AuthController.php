@@ -17,11 +17,11 @@ use Throwable;
 /**
  * Mobile equivalent of Auth/RegisteredUserController +
  * Auth/AuthenticatedSessionController + Auth/OtpVerificationController,
- * combined — the web app uses server-side SESSIONS (cookies), which make
+ * combined - the web app uses server-side SESSIONS (cookies), which make
  * no sense for a native mobile app, so this issues a Sanctum Bearer TOKEN
  * instead. Same two-step login (password, then a 6-digit emailed code)
  * and the same "don't crash if the mail server rejects the message"
- * protection as the web controllers — see README's "Mail delivery
+ * protection as the web controllers - see README's "Mail delivery
  * failures no longer crash requests" section for the full reasoning,
  * which applies identically here.
  *
@@ -171,7 +171,7 @@ class AuthController extends Controller
         $user->markEmailVerifiedByOtp();
 
         // 'flutter-app' names the token so it's identifiable at
-        // /admin — not that admins can see personal DATA there, but this
+        // /admin - not that admins can see personal DATA there, but this
         // ties an active session to "logged in from the mobile app" for
         // support purposes. Each login creates a fresh token rather than
         // reusing one, so logging in on a new device doesn't invalidate a
@@ -215,7 +215,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        // Only revokes the token used for THIS request — logging out on
+        // Only revokes the token used for THIS request - logging out on
         // one device doesn't sign out other devices/sessions.
         $request->user()->currentAccessToken()->delete();
 
@@ -223,12 +223,12 @@ class AuthController extends Controller
     }
 
     /**
-     * Mobile equivalent of Breeze's web-only "forgot password" form —
+     * Mobile equivalent of Breeze's web-only "forgot password" form -
      * calls the exact same underlying Password::sendResetLink() Breeze
      * itself uses, just exposed here without CSRF (Breeze's own
      * password.email route is a standard web form submission and
      * would reject a token-less mobile POST). The resulting email's
-     * reset link points at the existing web reset-password form —
+     * reset link points at the existing web reset-password form -
      * completing it happens in the phone's browser, not in-app, since
      * that flow is already fully built and working via Breeze.
      */
@@ -236,7 +236,7 @@ class AuthController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        // Same generic message regardless of whether the email exists —
+        // Same generic message regardless of whether the email exists -
         // avoids leaking which addresses are registered.
         Password::sendResetLink($request->only('email'));
 
@@ -249,7 +249,7 @@ class AuthController extends Controller
     }
 
     /**
-     * POST /api/email/verification-notification — reachable while
+     * POST /api/email/verification-notification - reachable while
      * unverified (no 'verified.api'), throttled 6/min by the route.
      */
     public function resendVerification(Request $request): JsonResponse
@@ -284,7 +284,7 @@ class AuthController extends Controller
     }
 
     /**
-     * GET /api/email/verification-status — polled by the app after the user
+     * GET /api/email/verification-status - polled by the app after the user
      * taps the link in their email. Reachable while unverified.
      */
     public function verificationStatus(Request $request): JsonResponse

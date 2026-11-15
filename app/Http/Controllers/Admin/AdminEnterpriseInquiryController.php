@@ -17,12 +17,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 /**
- * A "quotation" isn't a separate document type — see Invoice::isQuote():
+ * A "quotation" isn't a separate document type - see Invoice::isQuote():
  * it's an Invoice row with status='quote', sent before a deal closes and
  * not necessarily tied to any user yet. Converting it to a real invoice
  * later just flips that same row's status rather than creating a second
  * record. Receipts, by contrast, only ever exist for a COMPLETED
- * payment — this controller can only resend one that already exists
+ * payment - this controller can only resend one that already exists
  * against the inquiry's linked user, never fabricate one.
  */
 class AdminEnterpriseInquiryController extends Controller
@@ -86,7 +86,7 @@ class AdminEnterpriseInquiryController extends Controller
 
     /**
      * Creates (or reuses, if one was already sent and not yet accepted)
-     * a quotation for this inquiry and emails it as a PDF — either
+     * a quotation for this inquiry and emails it as a PDF - either
      * priced off one of the existing organization/family-team plans, or
      * a custom description and amount for something bespoke.
      */
@@ -122,7 +122,7 @@ class AdminEnterpriseInquiryController extends Controller
 
     /**
      * Flips an existing quotation to a real, payable invoice and
-     * re-sends it — used once the lead has agreed to the quoted price.
+     * re-sends it - used once the lead has agreed to the quoted price.
      * Does NOT create a new document; same row, new status.
      */
     public function convertToInvoice(Request $request, EnterpriseInquiry $enterpriseInquiry, Invoice $invoice): RedirectResponse
@@ -139,7 +139,7 @@ class AdminEnterpriseInquiryController extends Controller
 
     /**
      * Re-sends an EXISTING invoice or quotation for this inquiry, as-is
-     * — no status change, just another copy emailed out (e.g. the lead
+     * - no status change, just another copy emailed out (e.g. the lead
      * says they lost the first one).
      */
     public function resendInvoice(Request $request, EnterpriseInquiry $enterpriseInquiry, Invoice $invoice): RedirectResponse
@@ -167,7 +167,7 @@ class AdminEnterpriseInquiryController extends Controller
 
     /**
      * A receipt only ever exists for a payment that actually completed
-     * — this can only resend one already on file against the inquiry's
+     * - this can only resend one already on file against the inquiry's
      * linked user, never generate one for a lead who hasn't paid.
      */
     public function sendReceipt(Request $request, EnterpriseInquiry $enterpriseInquiry): RedirectResponse

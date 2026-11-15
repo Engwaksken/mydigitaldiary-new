@@ -71,12 +71,12 @@
             <td class="info-card">
                 <span class="label">Billed to</span>
                 <span class="value">{{ $payment->user?->name ?? 'Account holder' }}</span><br>
-                <span class="muted">{{ $payment->user?->email ?? '—' }}</span>
+                <span class="muted">{{ $payment->user?->email ?? '-' }}</span>
                 @if ($payment->paymentContactPhone())<br><span class="muted">{{ $payment->paymentContactPhone() }}</span>@endif
             </td>
             <td class="info-card">
                 <span class="label">Payment date</span>
-                <span class="value">{{ $payment->created_at?->format('F j, Y') ?? '—' }}</span><br>
+                <span class="value">{{ $payment->created_at?->format('F j, Y') ?? '-' }}</span><br>
                 <span class="muted">{{ $payment->created_at?->format('g:i A') }}</span>
             </td>
         </tr>
@@ -91,10 +91,10 @@
             <tr>
                 <td><strong>{{ $payment->plan?->name ?? 'Subscription payment' }}</strong>
                     @if ($payment->invoice?->billing_period_start && $payment->invoice?->billing_period_end)
-                        <br><span class="muted">{{ $payment->invoice->billing_period_start->format('M j, Y') }} – {{ $payment->invoice->billing_period_end->format('M j, Y') }}</span>
+                        <br><span class="muted">{{ $payment->invoice->billing_period_start->format('M j, Y') }} - {{ $payment->invoice->billing_period_end->format('M j, Y') }}</span>
                     @endif
                 </td>
-                <td>{{ ucfirst(str_replace('_', ' ', $payment->method ?? 'payment')) }}<br><span class="muted">{{ $payment->reference ?: '—' }}</span>
+                <td>{{ ucfirst(str_replace('_', ' ', $payment->method ?? 'payment')) }}<br><span class="muted">{{ $payment->reference ?: '-' }}</span>
                     @if ($payment->gateway_transaction_id)<br><span class="muted">Transaction: {{ $payment->gateway_transaction_id }}</span>@endif
                 </td>
                 <td class="amount">{{ format_money_in($payment->amount, $payment->currency) }}</td>

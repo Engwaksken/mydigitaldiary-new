@@ -193,7 +193,7 @@ class PersonalProgressService
                 'recommended_actions' => array_slice($actions, 0, 3),
             ],
             'weekly_review' => [
-                'period' => $weekStart->format('d M').' – '.$weekEnd->format('d M'),
+                'period' => $weekStart->format('d M').' - '.$weekEnd->format('d M'),
                 'is_current_period' => $weekStart->isSameDay($localNow->copy()->startOfWeek()),
                 'completed_tasks' => $completedTasks,
                 'total_tasks' => $totalTasks,

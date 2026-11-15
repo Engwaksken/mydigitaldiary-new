@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * One-off operator action: give current trial users extra trial days and
  * grant expired paid subscribers a free window, then tell admins what was
- * offered. Run manually (or via --dry-run first) — not scheduled, since the
+ * offered. Run manually (or via --dry-run first) - not scheduled, since the
  * day counts are a deliberate promotional decision, not a recurring rule.
  */
 final class GrantSubscriptionExtensions extends Command
@@ -43,7 +43,7 @@ final class GrantSubscriptionExtensions extends Command
 
         // Users who actually subscribed (so they have a paid expiry date) but
         // have since lapsed. Former trial users that never paid are NOT
-        // included here — they're covered by the trial branch above while
+        // included here - they're covered by the trial branch above while
         // still trialing, and a lapsed trial isn't a "subscribed" user.
         $expiredQuery = User::query()
             ->where('role', '!=', 'admin')

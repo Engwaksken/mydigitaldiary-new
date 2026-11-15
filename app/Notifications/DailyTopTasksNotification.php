@@ -23,12 +23,12 @@ class DailyTopTasksNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $mail = (new MailMessage)
-            ->subject('My Digital Diary — Your Top '.count($this->tasks).' for today')
+            ->subject('My Digital Diary - Your Top '.count($this->tasks).' for today')
             ->greeting('Good morning, '.$notifiable->name.'!')
             ->line('Here are your highest-priority items for today:');
 
         foreach ($this->tasks as $i => $task) {
-            $mail->line(($i + 1).'. '.$task['title'].' — '.$task['source']);
+            $mail->line(($i + 1).'. '.$task['title'].' - '.$task['source']);
         }
 
         return $mail

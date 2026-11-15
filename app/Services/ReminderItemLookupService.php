@@ -17,13 +17,13 @@ use App\Models\SpiritualPractice;
 
 /**
  * Powers the "select specific items from the related module" feature on
- * the Reminder form — given a module key (the same ones already used by
+ * the Reminder form - given a module key (the same ones already used by
  * Reminder::module, e.g. 'plan', 'meeting'), returns that user's actual
  * records as {id, label, datetime} options for a multi-select, and knows
  * which field on each different model actually represents "its own
  * date/time" for the overlap check in ReminderController.
  *
- * 'budget' and 'custom' aren't included — budgets don't have a single
+ * 'budget' and 'custom' aren't included - budgets don't have a single
  * relevant date/time of their own, and 'custom' is free text with nothing
  * to link to.
  */
@@ -52,7 +52,7 @@ class ReminderItemLookupService
                 ->all(),
 
             'sleep' => SleepLog::where('user_id', $userId)->orderByDesc('id')->limit(50)->get()
-                ->map(fn ($s) => ['id' => $s->id, 'label' => 'Sleep — ' . optional($s->sleep_date)->format('Y-m-d'), 'datetime' => optional($s->sleep_date)->toIso8601String()])
+                ->map(fn ($s) => ['id' => $s->id, 'label' => 'Sleep - ' . optional($s->sleep_date)->format('Y-m-d'), 'datetime' => optional($s->sleep_date)->toIso8601String()])
                 ->all(),
 
             'health' => HealthCheckup::where('user_id', $userId)->orderByDesc('id')->limit(50)->get()
@@ -64,28 +64,28 @@ class ReminderItemLookupService
                 ->all(),
 
             'meeting' => Meeting::where('user_id', $userId)->orderByDesc('id')->limit(50)->get()
-                ->map(fn ($m) => ['id' => $m->id, 'label' => $m->title . ' — ' . $m->start_at->format('M j, g:ia'), 'datetime' => $m->start_at->toIso8601String()])
+                ->map(fn ($m) => ['id' => $m->id, 'label' => $m->title . ' - ' . $m->start_at->format('M j, g:ia'), 'datetime' => $m->start_at->toIso8601String()])
                 ->all(),
 
             // Personal Life
             'education' => EducationPlan::where('user_id', $userId)->where('is_archived', false)->orderByDesc('id')->limit(50)->get()
                 ->map(fn ($e) => [
                     'id' => $e->id,
-                    'label' => $e->title . ($e->institution ? ' — ' . $e->institution : ''),
+                    'label' => $e->title . ($e->institution ? ' - ' . $e->institution : ''),
                     'datetime' => optional($e->target_completion_date)->toIso8601String(),
                 ])->all(),
 
             'network' => NetworkContact::where('user_id', $userId)->orderByDesc('id')->limit(50)->get()
                 ->map(fn ($n) => [
                     'id' => $n->id,
-                    'label' => $n->name . ($n->company ? ' — ' . $n->company : ''),
+                    'label' => $n->name . ($n->company ? ' - ' . $n->company : ''),
                     'datetime' => optional($n->next_follow_up_date)->toIso8601String(),
                 ])->all(),
 
             'relationship' => PersonalRelationship::where('user_id', $userId)->orderByDesc('id')->limit(50)->get()
                 ->map(fn ($r) => [
                     'id' => $r->id,
-                    'label' => $r->name . ($r->relation_label ? ' — ' . $r->relation_label : ''),
+                    'label' => $r->name . ($r->relation_label ? ' - ' . $r->relation_label : ''),
                     'datetime' => optional($r->next_planned_interaction)->toIso8601String(),
                 ])->all(),
 
@@ -103,7 +103,7 @@ class ReminderItemLookupService
     /**
      * True if any two of the given ISO datetime strings (plus the
      * reminder's own next_run_at) fall within $windowMinutes of each
-     * other — a rough "these are basically happening at the same time"
+     * other - a rough "these are basically happening at the same time"
      * check, not a true calendar-style overlap (most of these source
      * records are single points in time, not spans with a duration).
      */

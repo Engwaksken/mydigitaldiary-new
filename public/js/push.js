@@ -1,5 +1,5 @@
 /*
- * My Digital Diary — daily reminders (browser / installed web app push).
+ * My Digital Diary - daily reminders (browser / installed web app push).
  *
  * Plain browser script served from /js/push.js, like /js/pwa.js, because the
  * app layout loads its scripts from public/ rather than through Vite.

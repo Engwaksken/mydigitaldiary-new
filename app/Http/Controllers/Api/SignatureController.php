@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Mobile — view/download saved signatures and signed documents, plus a
+ * Mobile - view/download saved signatures and signed documents, plus a
  * single-image signing flow (stampImage() below) for actually signing a
  * document. The web app's full multi-page drag/resize PDF editor stays
- * web-only — it depends on PDF.js rendering pages in a browser, which
+ * web-only - it depends on PDF.js rendering pages in a browser, which
  * doesn't translate to a mobile app without a much bigger, harder-to-
  * verify addition (a PDF-rendering package plus multi-page gesture
  * handling). Signing a single scanned/photographed image document is a
@@ -35,7 +35,7 @@ class SignatureController extends Controller
     }
 
     /**
-     * Mobile equivalent of the web app's storeSignature() — same
+     * Mobile equivalent of the web app's storeSignature() - same
      * validation, same storage disk/path.
      */
     public function storeSignature(Request $request, SignatureImageService $signatureImages): JsonResponse
@@ -129,7 +129,7 @@ class SignatureController extends Controller
     }
 
     /**
-     * Mobile equivalent of the web app's bulkDestroyDocuments() — same
+     * Mobile equivalent of the web app's bulkDestroyDocuments() - same
      * ownership-scoped bulk delete, JSON instead of a redirect.
      */
     public function bulkDestroyDocuments(Request $request): JsonResponse
@@ -157,13 +157,13 @@ class SignatureController extends Controller
 
     /**
      * Mobile equivalent of the web app's preview→confirm signing flow,
-     * collapsed into a single request — deliberately scoped to IMAGE
+     * collapsed into a single request - deliberately scoped to IMAGE
      * documents only (JPG/PNG), not PDFs. The web app's multi-page PDF
      * editor depends on PDF.js rendering pages in a browser; porting
      * that natively would need a PDF-rendering package this app
      * doesn't have and hasn't verified, plus much more complex
      * multi-page gesture handling. Signing a single scanned/
-     * photographed document — a common real use case — works exactly
+     * photographed document - a common real use case - works exactly
      * like the web app's image-stamping path (same GD-based logic,
      * duplicated here rather than shared across two different
      * controllers), just without the session-based two-step preview

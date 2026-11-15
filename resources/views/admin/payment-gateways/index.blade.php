@@ -211,7 +211,7 @@
                 @empty
                     <tr>
                         <td colspan="4" class="px-4 py-6 text-center text-slate-500">
-                            No payment gateways configured yet — users will see a demo "Subscribe" button instead.
+                            No payment gateways configured yet - users will see a demo "Subscribe" button instead.
                         </td>
                     </tr>
                 @endforelse
@@ -226,7 +226,7 @@
     {{-- Create modal --}}
     @include('admin.payment-gateways._modal', ['gateway' => new \App\Models\PaymentGateway, 'modalId' => 'gateway-create-modal', 'action' => route('admin.payment-gateways.store'), 'method' => null])
 
-    {{-- One server-rendered edit modal per existing gateway — deliberately
+    {{-- One server-rendered edit modal per existing gateway - deliberately
          NOT a single shared modal populated via JS with json_encode()'d
          row data, since that would mean putting each gateway's Stripe
          secret-key placeholder logic (and potentially the config values

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Read-only audit trail for admins — every invoice/receipt generated or
+ * Read-only audit trail for admins - every invoice/receipt generated or
  * emailed, every expiry reminder sent, every payment status change,
  * whether it succeeded and to whom. Nothing here is editable; it's a
  * record of what already happened.

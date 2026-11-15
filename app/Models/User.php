@@ -30,13 +30,13 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Seeded once at self-registration (web AND mobile — see
+     * Seeded once at self-registration (web AND mobile - see
      * RegisteredUserController and Api\AuthController), not for
      * admin-created accounts, matching the same "defaults a user chooses
      * for themselves, not decided on their behalf" reasoning already
      * applied to data consent. Uses the existing Reminder recurring
      * infrastructure (every_n_minutes) rather than a separate scheduled
-     * command — once created, reminders:send handles it exactly like any
+     * command - once created, reminders:send handles it exactly like any
      * other recurring reminder, including rescheduling itself forward.
      * A user can edit or delete it like any other reminder afterward.
      */
@@ -49,7 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->reminders()->create([
             'title' => 'Drink water',
             'module' => 'health',
-            'message' => "Time to hydrate — drink a glass of water. You can turn this off any time in Reminders.",
+            'message' => "Time to hydrate - drink a glass of water. You can turn this off any time in Reminders.",
             'frequency' => 'every_n_minutes',
             'interval_minutes' => 120,
             'next_run_at' => now()->addMinutes(120),
@@ -130,7 +130,7 @@ class User extends Authenticatable implements MustVerifyEmail
         static::creating(function (User $user) {
             if (! $user->trial_ends_at) {
                 // Admin-configurable at /admin/settings ("Trial period"),
-                // defaulting to 30 if the setting is somehow missing —
+                // defaulting to 30 if the setting is somehow missing -
                 // was hardcoded to exactly one month before.
                 $trialDays = SiteSetting::current()->trial_days ?: 30;
                 $user->trial_ends_at = now()->addDays($trialDays);
@@ -146,13 +146,13 @@ class User extends Authenticatable implements MustVerifyEmail
      * Whether this user currently has paid/trial access to the dashboard
      * and all tracking modules. Used by the `subscribed` route middleware.
      *
-     * Admins always pass — they're staff managing the platform, not
+     * Admins always pass - they're staff managing the platform, not
      * customers of it, so they shouldn't need a trial/subscription to
      * reach the admin area. Suspended users always fail, regardless of
-     * subscription status — suspension is a hard stop.
+     * subscription status - suspension is a hard stop.
      *
      * "Active" also checks subscription_expires_at live here, rather than
-     * needing a separate scheduled job to flip status to "expired" — a
+     * needing a separate scheduled job to flip status to "expired" - a
      * duration-based plan (everything except lifetime) simply stops
      * granting access the moment its term is up, checked fresh on every
      * request. subscription_expires_at is null for the lifetime plan
@@ -169,12 +169,12 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         // A non-owner org member's access comes from the ORGANIZATION's
-        // subscription, not their own — they were never the one who
+        // subscription, not their own - they were never the one who
         // paid, regardless of whether they're plain staff or an
         // org-level admin promoted to manage seats. The owner still goes
         // through the normal checks below (their OWN subscription_status
         // /subscription_expires_at are set directly by the payment flow,
-        // same as any individual subscriber) — checked by identity, not
+        // same as any individual subscriber) - checked by identity, not
         // role, and guarded against ever recursing into itself.
         if ($this->organization_id) {
             $organization = $this->organization;
@@ -318,7 +318,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Whichever expiry date is actually relevant to THIS user's current
-     * status — trial_ends_at while trialing, subscription_expires_at
+     * status - trial_ends_at while trialing, subscription_expires_at
      * once they've paid. Null for a lifetime plan (never expires) or an
      * admin. Used by the expiry-reminder command so it doesn't need to
      * separately handle "which date matters" for every user.
@@ -385,7 +385,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Personal accent color system. A user can independently set BOTH
-     * gradient colors (theme_color + theme_color_secondary) — the
+     * gradient colors (theme_color + theme_color_secondary) - the
      * second one falls back to an auto-derived lighter version of the
      * first only when the user hasn't picked their own, so an existing
      * user who's only ever set theme_color keeps their current look
@@ -402,7 +402,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Uses the specific paired default (#73BEB6) only when the user
-     * hasn't customized EITHER color — those two were chosen together
+     * hasn't customized EITHER color - those two were chosen together
      * as the app's own default look. If they've set a custom primary
      * but left secondary blank, deriving a lighter shade of THEIR
      * color is still correct (matches their choice); jumping straight
@@ -442,7 +442,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * A short, curated list rather than any arbitrary string — mobile
+     * A short, curated list rather than any arbitrary string - mobile
      * only ships a handful of actual font families bundled with the
      * app (see AppTheme on the Flutter side), so anything outside
      * this list wouldn't actually render as anything different.
@@ -456,7 +456,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * A scale factor as a percentage (100 = normal), not a raw point
-     * size — this multiplies every text size in the app rather than
+     * size - this multiplies every text size in the app rather than
      * setting one fixed size, so headings/body/labels all stay
      * proportional to each other instead of all becoming identical.
      */

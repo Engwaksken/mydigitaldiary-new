@@ -1,5 +1,5 @@
 {{--
-    Note: posts to route('password.store') — current Breeze's name for
+    Note: posts to route('password.store') - current Breeze's name for
     this submission. If your routes/auth.php still has the older
     password.update name, change the form action below to match.
 --}}

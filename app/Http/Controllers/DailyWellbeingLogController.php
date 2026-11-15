@@ -34,10 +34,10 @@ class DailyWellbeingLogController extends CrudController
         ['tab'=>'Activity','name'=>'calories_logged','label'=>'Estimated calories','type'=>'readonly'],
         ['tab'=>'Activity','name'=>'sleep_minutes','label'=>'Sleep minutes','type'=>'readonly'],
         ['tab'=>'Mood & Health','table'=>'meta','name'=>'mood','label'=>'Mood','type'=>'select','options'=>['low'=>'Low','okay'=>'Okay','good'=>'Good','great'=>'Great']],
-        ['tab'=>'Mood & Health','name'=>'energy_level','label'=>'Energy (1–5)','type'=>'number'],
-        ['tab'=>'Mood & Health','name'=>'stress_level','label'=>'Stress (1–5)','type'=>'number'],
-        ['tab'=>'Mood & Health','name'=>'pain_level','label'=>'Pain / discomfort (0–10)','type'=>'number'],
-        ['tab'=>'Mood & Health','table'=>'meta','name'=>'wellbeing_score','label'=>'Overall wellbeing (1–10)','type'=>'number'],
+        ['tab'=>'Mood & Health','name'=>'energy_level','label'=>'Energy (1-5)','type'=>'number'],
+        ['tab'=>'Mood & Health','name'=>'stress_level','label'=>'Stress (1-5)','type'=>'number'],
+        ['tab'=>'Mood & Health','name'=>'pain_level','label'=>'Pain / discomfort (0-10)','type'=>'number'],
+        ['tab'=>'Mood & Health','table'=>'meta','name'=>'wellbeing_score','label'=>'Overall wellbeing (1-10)','type'=>'number'],
         ['tab'=>'Mood & Health','name'=>'symptoms','label'=>'Symptoms / how you feel (optional)','type'=>'textarea'],
         ['tab'=>'Self-care','name'=>'self_care_done','label'=>'Self-care completed','type'=>'select','options'=>['1'=>'Yes','0'=>'No']],
         ['tab'=>'Self-care','name'=>'screen_break_done','label'=>'Took a screen break','type'=>'select','options'=>['1'=>'Yes','0'=>'No']],
@@ -276,8 +276,8 @@ class DailyWellbeingLogController extends CrudController
         return [
             ['label'=>'Water today','value'=>(string)($today['water_percent'] ?? 0).'%','icon'=>'fa-solid fa-droplet','color'=>'sky'],
             ['label'=>'Exercise today','value'=>(string)($today['exercise_minutes'] ?? 0).' min','icon'=>'fa-solid fa-person-running','color'=>'emerald'],
-            ['label'=>'Sleep','value'=>$today['sleep_hours'] !== null ? $today['sleep_hours'].' hrs' : '—','icon'=>'fa-solid fa-bed','color'=>'violet'],
-            ['label'=>'Wellbeing','value'=>$today['wellbeing_score'] !== null ? $today['wellbeing_score'].'/10' : '—','icon'=>'fa-solid fa-heart-pulse','color'=>'rose'],
+            ['label'=>'Sleep','value'=>$today['sleep_hours'] !== null ? $today['sleep_hours'].' hrs' : '-','icon'=>'fa-solid fa-bed','color'=>'violet'],
+            ['label'=>'Wellbeing','value'=>$today['wellbeing_score'] !== null ? $today['wellbeing_score'].'/10' : '-','icon'=>'fa-solid fa-heart-pulse','color'=>'rose'],
         ];
     }
 }

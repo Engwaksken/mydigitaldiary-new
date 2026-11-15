@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 /**
  * Reads from Laravel's built-in notifications table (User already uses
- * the Notifiable trait) — the same notifications already being created
+ * the Notifiable trait) - the same notifications already being created
  * elsewhere (subscription expiry reminders, etc.) show up here, rather
  * than needing a second, separate mobile-only notification concept.
  */

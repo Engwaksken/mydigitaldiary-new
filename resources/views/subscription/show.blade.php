@@ -189,7 +189,7 @@
                                             </div>
                                             <div class="rounded-xl bg-white/80 border border-emerald-100 p-3">
                                                 <p class="text-xs text-slate-400 uppercase tracking-wide">Renewal phone</p>
-                                                <p class="font-semibold text-slate-800 mt-1">{{ $autoRenewPhone ?: '—' }}</p>
+                                                <p class="font-semibold text-slate-800 mt-1">{{ $autoRenewPhone ?: '-' }}</p>
                                             </div>
                                         </div>
                                     @endunless
@@ -324,7 +324,7 @@
                 <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-5 text-sm space-y-1.5">
                     <div class="flex justify-between"><span class="text-slate-500">Package</span><strong id="pm-checkout-plan-name" class="text-slate-800"></strong></div>
                     <div class="flex justify-between"><span class="text-slate-500">Billing Period</span><strong id="pm-checkout-plan-period" class="text-slate-800"></strong></div>
-                    <div class="flex justify-between"><span class="text-slate-500">Payment Method</span><strong id="pm-checkout-method-label" class="text-slate-800">—</strong></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Payment Method</span><strong id="pm-checkout-method-label" class="text-slate-800">-</strong></div>
                     <div class="flex justify-between pt-1.5 border-t border-slate-200 mt-1.5">
                         <span class="text-slate-700 font-medium">Total Payable</span>
                         <strong id="pm-checkout-plan-amount" class="text-[var(--brand-1)] text-base"></strong>
@@ -912,7 +912,7 @@
                                                 disabled
                                             >
                                                 <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                                                I've Paid — Submit for Verification
+                                                I've Paid - Submit for Verification
                                             </button>
                                         </form>
                                     @endif
@@ -1023,7 +1023,7 @@
                                 @endphp
                                 <tr>
                                     <td class="pm-dt-main">
-                                        <span class="pm-dt-title">{{ $payment->plan->name ?? '—' }}</span>
+                                        <span class="pm-dt-title">{{ $payment->plan->name ?? '-' }}</span>
                                         <span class="pm-dt-sub">
                                             <span>{{ $paymentMethodLabel }}</span>
                                             @if ($paymentPhone)
@@ -1209,8 +1209,8 @@
                                                             <div class="border border-slate-200 rounded-xl p-4">
                                                                 <dl class="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
                                                                     <div><dt class="text-slate-500">Bank</dt><dd class="font-medium">{{ $bank->configValue('bank_name') ?: $bank->name }}</dd></div>
-                                                                    <div><dt class="text-slate-500">Account Name</dt><dd class="font-medium">{{ $bank->configValue('account_name') ?: '—' }}</dd></div>
-                                                                    <div><dt class="text-slate-500">Account Number</dt><dd class="font-mono font-medium">{{ $bank->configValue('account_number') ?: '—' }}</dd></div>
+                                                                    <div><dt class="text-slate-500">Account Name</dt><dd class="font-medium">{{ $bank->configValue('account_name') ?: '-' }}</dd></div>
+                                                                    <div><dt class="text-slate-500">Account Number</dt><dd class="font-mono font-medium">{{ $bank->configValue('account_number') ?: '-' }}</dd></div>
                                                                     @if ($bank->configValue('routing_or_swift'))
                                                                         <div><dt class="text-slate-500">Routing / SWIFT</dt><dd class="font-mono">{{ $bank->configValue('routing_or_swift') }}</dd></div>
                                                                     @endif

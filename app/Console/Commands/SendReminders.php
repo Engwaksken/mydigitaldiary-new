@@ -120,7 +120,7 @@ class SendReminders extends Command
             }
 
             /*
-             * 2) PUSH — independent from email/database.
+             * 2) PUSH - independent from email/database.
              * A missing Firebase configuration or stale token must never stop
              * database/email delivery or the rest of the reminder batch.
              */
@@ -169,7 +169,7 @@ class SendReminders extends Command
             }
 
             /*
-             * 3) EMAIL — first try the branded template. If the SMTP provider
+             * 3) EMAIL - first try the branded template. If the SMTP provider
              * rejects the richer HTML, immediately retry once with the simpler
              * fallback notification.
              */

@@ -7,7 +7,7 @@ use App\Services\RecurringMeetingService;
 use Illuminate\Console\Command;
 
 /**
- * Runs daily (see routes/console.php) — tops up each recurring
+ * Runs daily (see routes/console.php) - tops up each recurring
  * series' rolling window of future instances (see
  * RecurringMeetingService for why this is a rolling window rather
  * than generating everything up front).
@@ -21,7 +21,7 @@ class GenerateRecurringMeetings extends Command
     public function handle(RecurringMeetingService $service): int
     {
         // Only ever a PARENT (recurrence_parent_id null, but a
-        // recurrence_frequency set) carries the rule — generated
+        // recurrence_frequency set) carries the rule - generated
         // instances themselves have no rule of their own to expand.
         $parents = Meeting::whereNotNull('recurrence_frequency')
             ->whereNull('recurrence_parent_id')

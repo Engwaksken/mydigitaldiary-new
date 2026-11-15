@@ -325,7 +325,7 @@
                     <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Sleep challenges</label>
                         <textarea class="pm-input" name="sleep_challenges" rows="2"
-                                  placeholder="Optional — e.g. waking often, shift work, difficulty falling asleep">{{ old('sleep_challenges', $profile->sleep_challenges ?? '') }}</textarea>
+                                  placeholder="Optional - e.g. waking often, shift work, difficulty falling asleep">{{ old('sleep_challenges', $profile->sleep_challenges ?? '') }}</textarea>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Usual bedtime</label>
@@ -343,7 +343,7 @@
                     <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Current illness or known health conditions</label>
                         <textarea class="pm-input" name="health_conditions" rows="2"
-                                  placeholder="Optional — add this only if you want it considered in your general suggestions.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
+                                  placeholder="Optional - add this only if you want it considered in your general suggestions.">{{ old('health_conditions', $profile->health_conditions ?? '') }}</textarea>
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Food allergies or intolerances</label>

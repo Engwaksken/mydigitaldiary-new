@@ -19,7 +19,7 @@ class AiProvider extends Model
 
     /**
      * Anything that isn't one of the two built-ins is called via the
-     * generic OpenAI-compatible request/response shape — see
+     * generic OpenAI-compatible request/response shape - see
      * AiPlannerService::callOpenAiCompatible().
      */
     public function isCustomOpenAiCompatible(): bool

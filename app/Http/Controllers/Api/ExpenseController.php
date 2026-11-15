@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 use App\Services\OfflineConflictGuard;
 
 /**
- * Mobile equivalent of the web app's ExpenseController overrides —
+ * Mobile equivalent of the web app's ExpenseController overrides -
  * same itemized-expense logic (multiple description/quantity/unit-
  * price rows, total computed from them) rather than the generic
  * single-model create/update ApiCrudController provides.
@@ -35,7 +35,7 @@ class ExpenseController extends ApiCrudController
     ];
 
     /**
-     * Same as the base class, plus eager-loading items — needed so
+     * Same as the base class, plus eager-loading items - needed so
      * editing an existing itemized expense can pre-populate its line
      * items, and so the list can show "3 items" instead of nothing.
      */
@@ -105,7 +105,7 @@ class ExpenseController extends ApiCrudController
         $expense->update($data);
 
         // Same rule as web: only touches items if the request actually
-        // submitted an `items` key at all — a plain edit that doesn't
+        // submitted an `items` key at all - a plain edit that doesn't
         // include one (e.g. just changing notes) must NOT be treated as
         // "clear every existing item."
         if ($request->has('items')) {
@@ -123,7 +123,7 @@ class ExpenseController extends ApiCrudController
 
     /**
      * Budget items the Add Expense picker offers, grouped by budget, with
-     * planned and remaining amounts — same items and labels as the web
+     * planned and remaining amounts - same items and labels as the web
      * form's picker. Pass ?include[]=<id> so an expense being edited keeps
      * its (possibly older) linked item in the list.
      */
@@ -192,7 +192,7 @@ class ExpenseController extends ApiCrudController
                             : 'No budget yet',
                         'tone' => $monthBudget > 0 && $thisMonth > $monthBudget ? 'warning' : 'success',
                     ],
-                    ['key' => 'top', 'label' => 'Top category', 'value' => $topCategory?->category ?? '—'],
+                    ['key' => 'top', 'label' => 'Top category', 'value' => $topCategory?->category ?? '-'],
                     ['key' => 'year', 'label' => 'This year', 'value' => format_money($thisYear)],
                 ],
                 'nudge' => $this->links()->nudge($user),

@@ -227,13 +227,13 @@ class SleepLogController extends CrudController
         return [
             [
                 'label' => 'Sleep today',
-                'value' => $todayMinutes > 0 ? number_format($todayMinutes / 60, 1).' hrs' : '—',
+                'value' => $todayMinutes > 0 ? number_format($todayMinutes / 60, 1).' hrs' : '-',
                 'icon' => 'fa-solid fa-bed',
                 'color' => 'violet',
             ],
             [
                 'label' => 'Avg sleep (7d)',
-                'value' => $avgMinutes > 0 ? number_format($avgMinutes / 60, 1).' hrs' : '—',
+                'value' => $avgMinutes > 0 ? number_format($avgMinutes / 60, 1).' hrs' : '-',
                 'icon' => 'fa-solid fa-moon',
                 'color' => 'indigo',
             ],

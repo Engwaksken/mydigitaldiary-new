@@ -23,7 +23,7 @@ class BusinessInvoicePaymentService
                 Income::query()->create([
                     'user_id' => $user->id,
                     'business_invoice_id' => $locked->id,
-                    'source' => 'Invoice '.$locked->invoice_number.' — '.$locked->customer_name,
+                    'source' => 'Invoice '.$locked->invoice_number.' - '.$locked->customer_name,
                     'category' => 'Business income',
                     'amount' => $locked->total,
                     'frequency' => 'one_time',

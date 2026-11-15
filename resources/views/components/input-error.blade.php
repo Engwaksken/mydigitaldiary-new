@@ -1,6 +1,6 @@
 {{--
     Drop-in replacement for Breeze's default input-error component
-    (plain red-600 text) — adds an icon and matches this app's rose error
+    (plain red-600 text) - adds an icon and matches this app's rose error
     color used everywhere else, plus role="alert" so screen readers
     announce it without the user needing to hunt for it.
 --}}

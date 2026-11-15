@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Site-wide view across every quotation, invoice, and receipt — not
+ * Site-wide view across every quotation, invoice, and receipt - not
  * scoped to one user or one Enterprise inquiry the way the Subscription
  * page and the Enterprise Inquiries "Documents" modal are. Built
  * specifically so this stays manageable as the numbers grow: search,
@@ -94,14 +94,14 @@ class AdminInvoiceController extends Controller
     }
 
     /**
-     * Only a quotation or unpaid invoice can be deleted — a 'paid'
+     * Only a quotation or unpaid invoice can be deleted - a 'paid'
      * record has to stay for audit/accounting purposes regardless of
      * how large the list gets. See Invoice::isDeletable().
      */
     public function destroy(Invoice $invoice): RedirectResponse
     {
         if (! $invoice->isDeletable()) {
-            return back()->withErrors(['invoice' => 'Only quotations and unpaid invoices can be deleted — this one is ' . $invoice->status . '.']);
+            return back()->withErrors(['invoice' => 'Only quotations and unpaid invoices can be deleted - this one is ' . $invoice->status . '.']);
         }
 
         $invoice->delete();
@@ -110,7 +110,7 @@ class AdminInvoiceController extends Controller
     }
 
     /**
-     * Multi-select bulk delete for the Quotations & Invoices tab —
+     * Multi-select bulk delete for the Quotations & Invoices tab -
      * same isDeletable() safeguard as the single-item destroy() above,
      * applied per-row rather than all-or-nothing: a paid invoice
      * accidentally included in the selection is silently skipped

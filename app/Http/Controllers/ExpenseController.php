@@ -351,7 +351,7 @@ class ExpenseController extends CrudController
                 'label' => 'Top category (this month)',
                 'value' => $topCategory
                     ? $topCategory->category . ' (' . format_money($topCategory->total) . ')'
-                    : '—',
+                    : '-',
                 'icon' => 'fa-solid fa-chart-pie',
                 'color' => 'orange',
             ],

@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Sent to each address entered in a meeting's "Attendees" field —
+ * Sent to each address entered in a meeting's "Attendees" field -
  * plain email addresses, not necessarily registered users, so this goes
  * through Mail::to() directly rather than Laravel's Notification system
  * (which expects a Notifiable model). Triggered from

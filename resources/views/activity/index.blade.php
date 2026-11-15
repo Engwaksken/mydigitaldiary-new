@@ -26,7 +26,7 @@
 
     <p class="text-sm text-slate-500 mb-6">
         A pulse of what you've been doing lately across expenses, income, plans, tasks, meetings,
-        sleep, diet, and reminders — not an exhaustive record of every change in every module.
+        sleep, diet, and reminders - not an exhaustive record of every change in every module.
     </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -105,7 +105,7 @@
             @if ($search)
                 <p class="text-sm text-slate-400">No activity matches "{{ $search }}". <a href="{{ route('activity') }}" class="text-[var(--brand-1)] hover:underline">Clear search</a>.</p>
             @else
-                <p class="text-sm text-slate-400">Nothing logged yet — activity across your modules will show up here.</p>
+                <p class="text-sm text-slate-400">Nothing logged yet - activity across your modules will show up here.</p>
             @endif
         @else
             <ol class="relative border-l border-slate-100 ml-3 space-y-5">

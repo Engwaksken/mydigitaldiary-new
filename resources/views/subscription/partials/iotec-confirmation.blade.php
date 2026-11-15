@@ -56,7 +56,7 @@
                     hidden
                 >
                     <span>Transaction</span>
-                    <strong id="pm-iotec-confirmation-transaction">—</strong>
+                    <strong id="pm-iotec-confirmation-transaction">-</strong>
                 </div>
 
                 <div
@@ -65,7 +65,7 @@
                     hidden
                 >
                     <span>Reference</span>
-                    <strong id="pm-iotec-confirmation-reference">—</strong>
+                    <strong id="pm-iotec-confirmation-reference">-</strong>
                 </div>
             </div>
 

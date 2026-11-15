@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
  * Generates upcoming instances of a recurring meeting, keeping a
  * rolling window of future occurrences (see the $targetCount default
  * below) rather than creating every instance up to recurrence_ends_at
- * (or forever, if unset) all at once — that would either be
+ * (or forever, if unset) all at once - that would either be
  * unbounded or waste a lot of rows for a series nobody ever revisits.
  * GenerateRecurringMeetings (the daily scheduled command) calls this
  * for every active recurring series to top the window back up; the
@@ -41,7 +41,7 @@ class RecurringMeetingService
         $needed = $targetCount - $existingFutureCount;
 
         // Start generating from whichever is later: the parent's own
-        // start time, or its most recently generated instance — so
+        // start time, or its most recently generated instance - so
         // topping up an already-partially-generated series continues
         // from where it left off instead of restarting from the
         // parent's original date every time.
@@ -101,7 +101,7 @@ class RecurringMeetingService
     {
         $days = $parent->recurrence_days_of_week;
         if (empty($days)) {
-            // No specific days chosen — treat as "same weekday as the
+            // No specific days chosen - treat as "same weekday as the
             // original meeting, every week."
             return $after->copy()->addWeek();
         }
@@ -114,6 +114,6 @@ class RecurringMeetingService
             $candidate->addDay();
         }
 
-        return null; // shouldn't be reachable — every ISO weekday (0-6) is checked within 7 days
+        return null; // shouldn't be reachable - every ISO weekday (0-6) is checked within 7 days
     }
 }

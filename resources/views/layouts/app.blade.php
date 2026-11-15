@@ -343,7 +343,7 @@
 </script>
 
 <script>
-    // Sidebar group dropdowns — server-rendered initial state + localStorage persistence
+    // Sidebar group dropdowns - server-rendered initial state + localStorage persistence
     function pmToggleSidebarGroup(groupKey) {
         var panel = document.getElementById('sidebar-group-' + groupKey);
         var btn = document.getElementById('sidebar-group-btn-' + groupKey);

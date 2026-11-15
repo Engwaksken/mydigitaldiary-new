@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The mobile "Today" hub — the same calm daily view as the web dashboard
+ * The mobile "Today" hub - the same calm daily view as the web dashboard
  * (resources/views/dashboard.blade.php): greeting, today's task progress,
  * streak with the last 7 days, one nudge line, Start / Close my day state,
  * the get-started checklist, today's top tasks, what's coming up, progress
@@ -204,7 +204,7 @@ class TodayHubService
 
     /**
      * Everything due today across modules (subscriptions, spiritual, diet,
-     * savings, debts, budget, plans, exercise, sleep, expenses, steps, ...) —
+     * savings, debts, budget, plans, exercise, sleep, expenses, steps, ...) -
      * the same aggregation the daily due-items push and morning reminder use.
      *
      * @return array<int, array{label: string}>
@@ -354,7 +354,7 @@ class TodayHubService
         ];
     }
 
-    /** Week / annual plans / savings / money health — only where data exists. */
+    /** Week / annual plans / savings / money health - only where data exists. */
     private function rings(User $user): array
     {
         $progress = $this->safe(fn () => app(PersonalProgressService::class)->summary($user), []);

@@ -316,7 +316,7 @@
                  icon, message, help text and every button on load. Everything
                  outside it is ordinary static content. The wrapper is a plain
                  block box with no margins, and .error-title is margin: 0, so
-                 the rendered layout is unchanged — and the <h1> keeps its
+                 the rendered layout is unchanged - and the <h1> keeps its
                  heading semantics instead of being overwritten by a role. --}}
             <div role="alert">
                 <h1 class="error-title" id="error-page-heading">

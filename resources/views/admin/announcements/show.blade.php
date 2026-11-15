@@ -4,7 +4,7 @@
 
 @section('content')
     @php
-        $fmt = fn ($at) => $at ? $at->copy()->timezone($timezone)->format('D j M Y, H:i') : '—';
+        $fmt = fn ($at) => $at ? $at->copy()->timezone($timezone)->format('D j M Y, H:i') : '-';
         $feature = $announcement->feature();
     @endphp
 
@@ -50,7 +50,7 @@
             <h2 class="font-semibold text-slate-800 mb-3">Details</h2>
             <dl class="space-y-2 text-sm">
                 <div class="flex justify-between gap-3"><dt class="text-slate-500">Type</dt><dd class="text-right">{{ $announcement->typeLabel() }}</dd></div>
-                <div class="flex justify-between gap-3"><dt class="text-slate-500">Feature</dt><dd class="text-right">{{ $feature['label'] ?? '—' }}</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-slate-500">Feature</dt><dd class="text-right">{{ $feature['label'] ?? '-' }}</dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-slate-500">Audience</dt><dd class="text-right">{{ $announcement->audienceLabel() }}</dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-slate-500">Channels</dt><dd class="text-right">{{ implode(', ', $announcement->channels()) }}</dd></div>
                 @if ($announcement->isNewFeature())

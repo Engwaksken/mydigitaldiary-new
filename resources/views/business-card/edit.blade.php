@@ -275,7 +275,7 @@
                     @csrf
                     <button type="submit" class="w-full text-sm text-center px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors {{ $card->is_published ? 'text-slate-600' : 'text-amber-600' }}">
                         <i class="fa-solid {{ $card->is_published ? 'fa-eye' : 'fa-eye-slash' }}" aria-hidden="true"></i>
-                        {{ $card->is_published ? 'Public — tap to hide' : 'Hidden — tap to make public' }}
+                        {{ $card->is_published ? 'Public - tap to hide' : 'Hidden - tap to make public' }}
                     </button>
                 </form>
             @else

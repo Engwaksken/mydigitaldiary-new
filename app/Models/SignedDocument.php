@@ -43,7 +43,7 @@ class SignedDocument extends Model
     }
 
     /**
-     * Whichever file actually represents "the document as it stands" —
+     * Whichever file actually represents "the document as it stands" -
      * the signed version if one exists, otherwise the plain original
      * (e.g. a file type that couldn't be auto-stamped).
      */

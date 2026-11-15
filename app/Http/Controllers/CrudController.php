@@ -54,13 +54,13 @@ abstract class CrudController extends Controller
      * Works out which field fills each slot of the compact list table so
      * no module needs a page-specific template and nothing scrolls
      * sideways. A field may pin its slot with a 'table' key:
-     *   primary – bold title of the row
-     *   meta    – folded into the muted line under the title
-     *   note    – one short preview line (long text)
-     *   status  – coloured pill column
-     *   date    – date column (with countdown where configured)
-     *   amount  – right-aligned money column
-     *   hidden  – only shown in the View modal
+     *   primary - bold title of the row
+     *   meta    - folded into the muted line under the title
+     *   note    - one short preview line (long text)
+     *   status  - coloured pill column
+     *   date    - date column (with countdown where configured)
+     *   amount  - right-aligned money column
+     *   hidden  - only shown in the View modal
      * Unpinned fields are placed automatically: first text field = primary,
      * first money field = amount, "status" = status, this module's
      * $dateField (else the first date) = date, the first textarea = note,
@@ -124,8 +124,8 @@ abstract class CrudController extends Controller
             ->count();
 
         return $thisWeek > 0
-            ? "Nice work — {$thisWeek} " . ($thisWeek === 1 ? \Illuminate\Support\Str::lower($this->title) : $plural) . ' added this week.'
-            : "Nothing added this week yet — a quick entry keeps your {$plural} up to date.";
+            ? "Nice work - {$thisWeek} " . ($thisWeek === 1 ? \Illuminate\Support\Str::lower($this->title) : $plural) . ' added this week.'
+            : "Nothing added this week yet - a quick entry keeps your {$plural} up to date.";
     }
 
     /**
@@ -149,7 +149,7 @@ abstract class CrudController extends Controller
 
     /**
      * Which column represents "when this happened" for the period filter
-     * below — defaults to created_at (always present, works for every
+     * below - defaults to created_at (always present, works for every
      * module with zero per-controller setup) but a subclass can override
      * with something more semantically relevant (e.g. ExpenseController
      * overriding to 'spent_at', so "this month" means the month it was
@@ -170,20 +170,20 @@ abstract class CrudController extends Controller
 
     /**
      * Applies search + period filtering to an arbitrary base query, then
-     * renders crud.index with every variable it needs — search, period,
+     * renders crud.index with every variable it needs - search, period,
      * calendar, etc. Factored out specifically so controllers that
      * OVERRIDE index() with their own custom base query (MeetingController's
      * cross-user visibility join, ProjectTaskController/
      * SavingsContributionController's parent-scoped queries) can still get
      * search/period/calendar support by calling this instead of
-     * duplicating all of it — and, going forward, so adding a new feature
+     * duplicating all of it - and, going forward, so adding a new feature
      * here doesn't silently break those three the way this one did the
      * first time (they'd crashed with "undefined variable" once the base
      * index() started passing variables they didn't know to pass too).
      */
     protected function renderIndex(Request $request, $query, array $extra = [], ?callable $applyOrder = null, int $perPage = 15)
     {
-        // Search — dynamically built from whichever of this module's
+        // Search - dynamically built from whichever of this module's
         // $fields are actual free-text columns (text/textarea), so this
         // works for every module without listing searchable columns by
         // hand per controller.
@@ -202,7 +202,7 @@ abstract class CrudController extends Controller
             }
         }
 
-        // Period filter — daily/weekly/monthly/range, all relative to
+        // Period filter - daily/weekly/monthly/range, all relative to
         // $dateField. 'range' needs both $from and $to; anything else
         // (missing dates, an unrecognized $period value) is ignored
         // rather than erroring, so a half-filled filter form just shows
@@ -281,11 +281,11 @@ abstract class CrudController extends Controller
 
     /**
      * Whichever of THIS module's own $fields actually maps to $dateField
-     * — null if $dateField is 'created_at' or another column that isn't
+     * - null if $dateField is 'created_at' or another column that isn't
      * one of the module's own editable fields. Used by the Calendar tab
      * to know whether clicking a day can pre-fill a date into the create
      * modal (it can, if this returns a name) or should just open the
-     * modal plain (if not — e.g. Feedback, which has no date field of
+     * modal plain (if not - e.g. Feedback, which has no date field of
      * its own to click into).
      */
     private function editableDateFieldName(): ?string
@@ -297,7 +297,7 @@ abstract class CrudController extends Controller
 
     /**
      * Builds one calendar month's worth of this user's items, grouped by
-     * day, for the Calendar tab — a lightweight, from-scratch month grid
+     * day, for the Calendar tab - a lightweight, from-scratch month grid
      * (no FullCalendar.js or similar), consistent with how the rest of
      * this app avoids extra JS dependencies. Navigable via a `cal_month`
      * query param (e.g. ?cal_month=2026-09); defaults to the current
@@ -327,17 +327,17 @@ abstract class CrudController extends Controller
             return $value ? \Illuminate\Support\Carbon::parse($value)->format('Y-m-d') : null;
         })->filter(fn ($group, $key) => $key !== null)
           ->map(function ($dayItems) use ($labelField) {
-              // Deliberately NOT ->all() here — crud/index.blade.php's
+              // Deliberately NOT ->all() here - crud/index.blade.php's
               // calendar day cells call ->take(2) and ->count() on this,
               // both Collection methods. ->all() would convert it to a
               // plain array, which has neither, and would only actually
-              // throw on a day that has items — an empty day falls back
+              // throw on a day that has items - an empty day falls back
               // to the collect() default a few lines below, silently
               // masking the bug until a real item showed up.
               return $dayItems->map(function ($item) use ($labelField) {
                   // Same field-value formatting the table's Edit button
                   // uses (dates/times turned into plain strings their
-                  // <input> types expect) — this is what lets clicking a
+                  // <input> types expect) - this is what lets clicking a
                   // calendar pill open the exact same edit modal the
                   // table's Edit button does, via the same
                   // openCrudEditModal() JS function, no new code needed
@@ -377,7 +377,7 @@ abstract class CrudController extends Controller
      *     'labels' => array,
      *     'datasets' => [['label' => ?string, 'data' => array], ...],
      *   ]
-     * Rendered generically by crud/index.blade.php via Chart.js — no view
+     * Rendered generically by crud/index.blade.php via Chart.js - no view
      * changes needed in the concrete controller.
      */
     protected function chart(Request $request): ?array
@@ -387,7 +387,7 @@ abstract class CrudController extends Controller
 
     /**
      * Small summary cards shown above the table on the index page. Default
-     * implementation is generic (total / this week / this month counts) —
+     * implementation is generic (total / this week / this month counts) -
      * override in a concrete controller for domain-specific numbers, e.g.
      * "Spent this month: $420" instead of just a row count. Each entry:
      * ['label' => string, 'value' => string].
@@ -467,7 +467,7 @@ abstract class CrudController extends Controller
     }
 
     /**
-     * No-op by default — a hook for subclasses that need to react to a
+     * No-op by default - a hook for subclasses that need to react to a
      * create/update without duplicating store()/update() wholesale.
      * MeetingController overrides this to send invitation emails to any
      * attendees entered on the form.
@@ -508,7 +508,7 @@ abstract class CrudController extends Controller
 
     /**
      * Powers the "Also set a reminder for this" checkbox added to every
-     * create/edit modal (see crud/index.blade.php's modal markup) — opt-in
+     * create/edit modal (see crud/index.blade.php's modal markup) - opt-in
      * on purpose, rather than always auto-creating one, since a reminder
      * for every single Expense/Diet Log entry would be far more noise
      * than help. Silently does nothing if this module's date field has no

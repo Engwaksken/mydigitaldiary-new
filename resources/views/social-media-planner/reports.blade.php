@@ -47,9 +47,9 @@
                     Social Media Post Reports
                 </h1>
                 <p class="mt-1 text-sm text-slate-500">
-                    {{ $report['period_start'] ?? '—' }}
-                    —
-                    {{ $report['period_end'] ?? '—' }}
+                    {{ $report['period_start'] ?? '-' }}
+                    -
+                    {{ $report['period_end'] ?? '-' }}
                 </p>
             </div>
 
@@ -353,11 +353,11 @@
                             </td>
 
                             <td>
-                                {{ optional($post->scheduled_at)->format('d M Y H:i') ?: '—' }}
+                                {{ optional($post->scheduled_at)->format('d M Y H:i') ?: '-' }}
                             </td>
 
                             <td>
-                                {{ optional($post->published_at)->format('d M Y H:i') ?: '—' }}
+                                {{ optional($post->published_at)->format('d M Y H:i') ?: '-' }}
                             </td>
 
                             @php
@@ -371,7 +371,7 @@
                             <td>{{ number_format((int) $postReach) }}</td>
                             <td>{{ number_format((int) $postEngagements) }}</td>
                             <td class="whitespace-nowrap text-xs text-slate-500">
-                                {{ $postLastSync ? $postLastSync->timezone(auth()->user()?->timezone ?: 'Africa/Kampala')->format('d M, g:i A') : '—' }}
+                                {{ $postLastSync ? $postLastSync->timezone(auth()->user()?->timezone ?: 'Africa/Kampala')->format('d M, g:i A') : '-' }}
                             </td>
 
                             <td class="text-right">

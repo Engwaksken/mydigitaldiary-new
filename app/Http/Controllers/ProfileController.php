@@ -13,7 +13,7 @@ use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
 /**
- * Drop-in replacement for Breeze's default ProfileController — same
+ * Drop-in replacement for Breeze's default ProfileController - same
  * update()/destroy() shape it ships with, plus updateAvatar(). Written
  * with inline validation (rather than relying on Breeze's own
  * ProfileUpdateRequest class) so this file has no dependency on Breeze's
@@ -101,7 +101,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Personal accent colors — a user can independently set BOTH
+     * Personal accent colors - a user can independently set BOTH
      * gradient colors now; see User::themeColorLight() for how the
      * second one falls back to an auto-derived lighter version of the
      * first when left blank. An empty submission for either resets that
@@ -126,7 +126,7 @@ class ProfileController extends Controller
     /**
      * Kept for compatibility with Breeze's default 'profile.destroy' route
      * name and behavior. The recommended, more complete path for users is
-     * the Privacy & Data page (/privacy) — same cascading deletion, plus
+     * the Privacy & Data page (/privacy) - same cascading deletion, plus
      * data export and consent info in one place.
      */
     public function destroy(Request $request): RedirectResponse

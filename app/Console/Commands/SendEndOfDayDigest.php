@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Log;
 /**
  * The EVENING slot of the daily rhythm ("Close your day"), at each person's
  * own evening time (communication_preferences.evening_time, default 20:00,
- * in their timezone — see DailyReminderService). Runs every 15 minutes and is
+ * in their timezone - see DailyReminderService). Runs every 15 minutes and is
  * idempotent per local day.
  *
  *  - The in-app end-of-day summary notification is always recorded.
- *  - The push is the short, personal "You did 2 of 3 today · 5-day streak —
+ *  - The push is the short, personal "You did 2 of 3 today · 5-day streak -
  *    close your day?", only when the evening reminder is on and the person
  *    has not already closed the day.
  */

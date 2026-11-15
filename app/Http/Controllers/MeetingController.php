@@ -224,7 +224,7 @@ class MeetingController extends CrudController
     /**
      * Parses the comma-separated "1,3,5" text field into the actual
      * int array the model casts recurrence_days_of_week to and
-     * RecurringMeetingService expects — invalid/out-of-range entries
+     * RecurringMeetingService expects - invalid/out-of-range entries
      * are silently dropped rather than rejecting the whole save over
      * a typo in one number.
      */
@@ -240,10 +240,10 @@ class MeetingController extends CrudController
     }
 
     /**
-     * Overrides the generic CrudController::store() — a recurring
+     * Overrides the generic CrudController::store() - a recurring
      * meeting needs its upcoming instances generated immediately
      * after being saved (via RecurringMeetingService), rather than
-     * waiting for tomorrow's scheduled top-up to run — otherwise the
+     * waiting for tomorrow's scheduled top-up to run - otherwise the
      * person who just set up a recurring meeting would see an empty
      * list until the next day.
      */
@@ -276,7 +276,7 @@ class MeetingController extends CrudController
     /**
      * Same day-of-week parsing as store() above. Deliberately does
      * NOT regenerate already-created future instances just because
-     * the rule changed on an edit — that could destructively wipe
+     * the rule changed on an edit - that could destructively wipe
      * out instances a person already customized individually.
      * Tomorrow's scheduled top-up naturally uses whatever rule is
      * current when it runs, so a rule change take effect for future
@@ -308,16 +308,16 @@ class MeetingController extends CrudController
     /**
      * Every meeting the user created, PLUS every meeting anyone else
      * created where the user's own email shows up in that meeting's
-     * free-text "attendees" field — so being invited to someone else's
+     * free-text "attendees" field - so being invited to someone else's
      * meeting (by email) surfaces it in this user's own Meetings page too,
      * for one-place tracking instead of only ever seeing meetings you
      * personally scheduled. `attendees` is a plain text field (not a
      * structured list), so this is a case-insensitive LIKE match, not an
-     * exact-email guarantee — a false positive is possible if someone's
+     * exact-email guarantee - a false positive is possible if someone's
      * email happens to be a substring of another attendee's text, but
      * this is a reasonable trade-off given the field's free-text design.
      *
-     * Edit/delete stay owner-only regardless — CrudController's default
+     * Edit/delete stay owner-only regardless - CrudController's default
      * edit()/update()/destroy() still filter by user_id, so an invited
      * (non-owner) user can see but never modify someone else's meeting.
      */
@@ -391,7 +391,7 @@ class MeetingController extends CrudController
         $query = $this->visibleMeetingsQuery($request);
 
         // "Missed" isn't a stored value (see Meeting::displayStatus()),
-        // so this filters in PHP after fetching rather than in SQL —
+        // so this filters in PHP after fetching rather than in SQL -
         // fine at this app's scale, and keeps the derivation in one
         // place instead of duplicating the "past + still scheduled"
         // logic as a raw SQL condition too.
@@ -580,7 +580,7 @@ class MeetingController extends CrudController
     /**
      * Schedules one meeting across MULTIPLE date/time slots in a single
      * submission (e.g. a recurring standing meeting, or several proposed
-     * times) — shared details (title, location, attendees, notes, status)
+     * times) - shared details (title, location, attendees, notes, status)
      * plus N separate start/end datetime pairs, added dynamically in the
      * UI via crud/extras/meetings-extra.blade.php. Creates one Meeting row
      * per slot; each is independently editable/deletable afterward through
@@ -747,7 +747,7 @@ class MeetingController extends CrudController
     }
 
     /**
-     * Hook from CrudController::store()/update() — sends an invitation
+     * Hook from CrudController::store()/update() - sends an invitation
      * email to every address in the attendees field whenever a meeting
      * is created OR its attendee list changes on edit. Doesn't fire for
      * every OTHER field edit (e.g. just fixing a typo in the notes)
@@ -771,7 +771,7 @@ class MeetingController extends CrudController
     }
 
     /**
-     * Dedicated notes page — the same 'notes' column already editable via
+     * Dedicated notes page - the same 'notes' column already editable via
      * the standard modal, but in a full-page textarea (easier to write a
      * real set of meeting notes in than a small modal field) plus
      * download/share actions.

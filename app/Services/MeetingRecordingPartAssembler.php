@@ -259,7 +259,7 @@ class MeetingRecordingPartAssembler
             $end = $offset + (int) $part->duration_seconds;
 
             if ($part->transcription_status === 'failed') {
-                $ranges[] = 'part ' . $part->part_number . ' (' . $this->clock($offset) . '–' . $this->clock($end) . ')';
+                $ranges[] = 'part ' . $part->part_number . ' (' . $this->clock($offset) . '-' . $this->clock($end) . ')';
             }
 
             $offset = $end;

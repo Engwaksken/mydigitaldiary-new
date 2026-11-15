@@ -101,9 +101,9 @@
     <div class="pdf-subtitle">
         {{ config('app.name', 'My Digital Diary') }}
         ·
-        {{ $report['period_start'] ?? '—' }}
-        —
-        {{ $report['period_end'] ?? '—' }}
+        {{ $report['period_start'] ?? '-' }}
+        -
+        {{ $report['period_end'] ?? '-' }}
     </div>
 </div>
 
@@ -160,11 +160,11 @@
                 </td>
 
                 <td>
-                    {{ optional($post->scheduled_at)->format('d M Y H:i') ?: '—' }}
+                    {{ optional($post->scheduled_at)->format('d M Y H:i') ?: '-' }}
                 </td>
 
                 <td>
-                    {{ optional($post->published_at)->format('d M Y H:i') ?: '—' }}
+                    {{ optional($post->published_at)->format('d M Y H:i') ?: '-' }}
                 </td>
             </tr>
         @empty

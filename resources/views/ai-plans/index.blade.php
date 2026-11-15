@@ -222,7 +222,7 @@
                     <tbody>
                         @foreach ($plans as $plan)
                             @php
-                                $aiPlanProviderName = \App\Models\AiProvider::where('key', $plan->provider)->value('name') ?? ($plan->provider ?? '—');
+                                $aiPlanProviderName = \App\Models\AiProvider::where('key', $plan->provider)->value('name') ?? ($plan->provider ?? '-');
                             @endphp
                             <tr class="has-check">
                                 <td class="pm-dt-check">
@@ -280,7 +280,7 @@
 
     <style>
         /* ================================================================
-           MY DIGITAL DIARY — AI PLANNER RESPONSIVE LAYOUT
+           MY DIGITAL DIARY - AI PLANNER RESPONSIVE LAYOUT
         ================================================================= */
 
         #ai-plans-page,

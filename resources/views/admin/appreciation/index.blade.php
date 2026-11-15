@@ -4,7 +4,7 @@
 
 @section('content')
     @php
-        $fmt = fn ($at) => $at ? $at->copy()->timezone($timezone)->format('D j M Y, H:i') : '—';
+        $fmt = fn ($at) => $at ? $at->copy()->timezone($timezone)->format('D j M Y, H:i') : '-';
     @endphp
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -109,7 +109,7 @@
                     </div>
                     <div class="text-xs font-semibold text-slate-600">{{ $log->week_key }}</div>
                     <div class="min-w-0">
-                        <p class="truncate text-sm text-slate-700" title="{{ $log->subject }}">{{ $log->subject ?: '—' }}</p>
+                        <p class="truncate text-sm text-slate-700" title="{{ $log->subject }}">{{ $log->subject ?: '-' }}</p>
                         <p class="mt-0.5 flex flex-wrap gap-1.5 text-[11px]">
                             <span class="rounded-full {{ $log->source === 'ai' ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-600' }} px-2 py-0.5 font-semibold">{{ $log->sourceLabel() }}</span>
                             <span class="rounded-full {{ $log->originLabel() === 'Weekly run' ? 'bg-teal-50 text-teal-700' : 'bg-sky-50 text-sky-700' }} px-2 py-0.5 font-semibold">{{ $log->originLabel() }}</span>

@@ -464,7 +464,7 @@
                                     Live Rate Base
                                 </div>
                                 <div class="font-semibold text-slate-800 mt-1">
-                                    {{ $currencySetting->base_currency ?? '—' }}
+                                    {{ $currencySetting->base_currency ?? '-' }}
                                 </div>
                             </div>
 
@@ -473,7 +473,7 @@
                                     Default Display
                                 </div>
                                 <div class="font-semibold text-slate-800 mt-1">
-                                    {{ $currencySetting->display_currency ?? '—' }}
+                                    {{ $currencySetting->display_currency ?? '-' }}
                                 </div>
                             </div>
 
@@ -770,7 +770,7 @@
                                 name="default_ai_api_key"
                                 autocomplete="new-password"
                                 placeholder="{{ $hasDefaultAiKey
-                                    ? 'Configured — leave blank to keep the existing key'
+                                    ? 'Configured - leave blank to keep the existing key'
                                     : 'Enter API key' }}"
                                 class="pm-input pr-11">
 
@@ -1361,7 +1361,7 @@
                                             value=""
                                             autocomplete="new-password"
                                             placeholder="{{ filled($platform->client_secret ?? null)
-                                                ? 'Configured — leave blank to keep it'
+                                                ? 'Configured - leave blank to keep it'
                                                 : 'Enter Client Secret' }}"
                                             class="pm-input pr-11 text-sm">
 
@@ -1639,7 +1639,7 @@
                                             value=""
                                             autocomplete="new-password"
                                             placeholder="{{ filled($backupSetting->s3_secret ?? null)
-                                                ? 'Saved — enter only to replace'
+                                                ? 'Saved - enter only to replace'
                                                 : 'Secret key' }}"
                                             class="pm-input">
                                     </div>
@@ -1771,7 +1771,7 @@
                                 @forelse ($backupHistory as $backup)
                                     <tr>
                                         <td class="py-3 pr-4 whitespace-nowrap">
-                                            {{ optional($backup->started_at)->format('d M Y H:i') ?: '—' }}
+                                            {{ optional($backup->started_at)->format('d M Y H:i') ?: '-' }}
                                         </td>
 
                                         <td class="py-3 pr-4">
@@ -1785,7 +1785,7 @@
                                         <td class="py-3 pr-4">
                                             {{ $backup->size_bytes
                                                 ? number_format($backup->size_bytes / 1024 / 1024, 2) . ' MB'
-                                                : '—' }}
+                                                : '-' }}
                                         </td>
 
                                         <td class="py-3 pr-4">

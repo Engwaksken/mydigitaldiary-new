@@ -123,15 +123,15 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3">{{ $invoice->invoice_number }}</td>
-                            <td class="px-4 py-3">{{ $invoice->user->email ?? $invoice->enterpriseInquiry?->email ?? '—' }}</td>
+                            <td class="px-4 py-3">{{ $invoice->user->email ?? $invoice->enterpriseInquiry?->email ?? '-' }}</td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if ($invoice->contact_phone)
                                     <a href="tel:{{ $invoice->contact_phone }}" class="text-[var(--brand-1)] hover:underline">{{ $invoice->contact_phone }}</a>
                                 @else
-                                    —
+                                    -
                                 @endif
                             </td>
-                            <td class="px-4 py-3 pm-table-wrap-text">{{ $invoice->plan?->name ?? $invoice->description ?? '—' }}</td>
+                            <td class="px-4 py-3 pm-table-wrap-text">{{ $invoice->plan?->name ?? $invoice->description ?? '-' }}</td>
                             <td class="px-4 py-3">{{ format_money_in($invoice->amount, $invoice->currency) }}</td>
                             <td class="px-4 py-3">
                                 @php
@@ -223,7 +223,7 @@
         </div>
         <div class="pm-card-bg shadow-sm border border-slate-100 rounded-xl overflow-x-auto pm-horizontal-table-wrap">
             <table class="min-w-full text-sm pm-horizontal-data-table pm-receipts-horizontal-table pm-admin-horizontal-table">
-                <caption class="sr-only">Every completed payment (receipt), site-wide. Receipts are never deletable — they're a real financial record.</caption>
+                <caption class="sr-only">Every completed payment (receipt), site-wide. Receipts are never deletable - they're a real financial record.</caption>
                 <thead class="bg-slate-50 text-left border-b border-slate-100">
                     <tr>
                         <th scope="col" class="px-4 py-3 font-semibold text-slate-500 text-xs uppercase tracking-wide">Receipt #</th>
@@ -240,17 +240,17 @@
                     @forelse ($receipts as $payment)
                         <tr>
                             <td class="px-4 py-3">{{ $payment->receipt_number ?? ('#' . $payment->id) }}</td>
-                            <td class="px-4 py-3">{{ $payment->user->email ?? '—' }}</td>
+                            <td class="px-4 py-3">{{ $payment->user->email ?? '-' }}</td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if ($payment->contact_phone)
                                     <a href="tel:{{ $payment->contact_phone }}" class="text-[var(--brand-1)] hover:underline">{{ $payment->contact_phone }}</a>
                                 @else
-                                    —
+                                    -
                                 @endif
                             </td>
-                            <td class="px-4 py-3">{{ $payment->plan?->name ?? '—' }}</td>
+                            <td class="px-4 py-3">{{ $payment->plan?->name ?? '-' }}</td>
                             <td class="px-4 py-3">{{ format_money_in($payment->amount, $payment->currency) }}</td>
-                            <td class="px-4 py-3 font-mono text-xs break-all">{{ $payment->gateway_transaction_id ?? '—' }}</td>
+                            <td class="px-4 py-3 font-mono text-xs break-all">{{ $payment->gateway_transaction_id ?? '-' }}</td>
                             <td class="px-4 py-3 whitespace-nowrap">{{ $payment->created_at->format('Y-m-d') }}</td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center justify-end gap-3">
@@ -326,7 +326,7 @@
         }
 
         // Builds a real form on the fly rather than wrapping the whole
-        // table in one — a static wrapping form would have illegally
+        // table in one - a static wrapping form would have illegally
         // nested each row's own single-delete <form>, which browsers
         // handle unpredictably.
         function pmSubmitInvoiceBulkDelete() {

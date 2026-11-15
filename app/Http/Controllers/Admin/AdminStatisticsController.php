@@ -10,9 +10,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
- * Platform-level statistics only — user counts, subscription mix, signup
+ * Platform-level statistics only - user counts, subscription mix, signup
  * trend, and real collected payments. Deliberately queries nothing from
- * any personal-tracking table (plans, expenses, health, etc.) — see the
+ * any personal-tracking table (plans, expenses, health, etc.) - see the
  * boundary note on AdminUserController.
  */
 class AdminStatisticsController extends Controller

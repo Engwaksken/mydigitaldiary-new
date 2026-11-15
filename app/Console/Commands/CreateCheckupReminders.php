@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
 /**
  * Scans health_checkups.next_due_date and creates a Reminder a configurable
  * number of days beforehand, so a checkup you scheduled six months ago
- * doesn't get forgotten. Safe to run daily/repeatedly — each checkup+due-date
+ * doesn't get forgotten. Safe to run daily/repeatedly - each checkup+due-date
  * combination only ever gets one reminder (see reminders.source_signature).
  */
 class CreateCheckupReminders extends Command

@@ -18,7 +18,7 @@ class EnterpriseInquiryReceivedMail extends Mailable implements ShouldQueue
 
     public function build()
     {
-        return $this->subject('New Enterprise inquiry — ' . $this->inquiry->email)
+        return $this->subject('New Enterprise inquiry - ' . $this->inquiry->email)
             ->markdown('emails.enterprise-inquiry-received');
     }
 }

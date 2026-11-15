@@ -43,7 +43,7 @@ class PersonalEmailController extends Controller
         $expiresAt = session('personal_email_code_expires_at');
 
         if (! $expected || ! $expiresAt || now()->isAfter($expiresAt)) {
-            return back()->withErrors(['code' => 'That code has expired — request a new one.']);
+            return back()->withErrors(['code' => 'That code has expired - request a new one.']);
         }
 
         if ($data['code'] !== $expected) {
@@ -59,6 +59,6 @@ class PersonalEmailController extends Controller
 
         session()->forget(['personal_email_code', 'personal_email_code_expires_at']);
 
-        return redirect()->route('dashboard')->with('success', 'Your personal email is verified — you can keep using your account under a Free/Individual plan.');
+        return redirect()->route('dashboard')->with('success', 'Your personal email is verified - you can keep using your account under a Free/Individual plan.');
     }
 }

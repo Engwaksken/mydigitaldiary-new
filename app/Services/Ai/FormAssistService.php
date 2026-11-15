@@ -61,7 +61,7 @@ SYS;
                 $result['bible_references'] = $references;
                 $result['bible_references_text'] = mb_substr(
                     collect($references)
-                        ->map(fn ($ref) => $ref['reference'].' — '.$ref['text'])
+                        ->map(fn ($ref) => $ref['reference'].' - '.$ref['text'])
                         ->implode("\n"),
                     0,
                     1500
