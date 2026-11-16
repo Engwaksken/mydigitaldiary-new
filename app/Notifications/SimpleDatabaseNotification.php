@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use App\Services\Ai\AiTextFormatter;
 
 class SimpleDatabaseNotification extends Notification
 {
@@ -14,6 +15,8 @@ class SimpleDatabaseNotification extends Notification
         public string $body,
         public string $type = 'general'
     ) {
+        $this->title = AiTextFormatter::normalize($this->title);
+        $this->body = AiTextFormatter::normalize($this->body);
     }
 
     public function via(object $notifiable): array

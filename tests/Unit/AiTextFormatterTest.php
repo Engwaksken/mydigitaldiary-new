@@ -19,4 +19,9 @@ class AiTextFormatterTest extends TestCase
             'count' => 3,
         ]));
     }
+
+    public function test_removes_emoji_and_ai_dash_characters(): void
+    {
+        $this->assertSame('Hello - world', AiTextFormatter::normalize('Hello 😀 — world'));
+    }
 }

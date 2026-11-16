@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Notifications\Events\NotificationSending;
 use App\Http\Controllers\SupportController as UserSupportController;
 use App\Http\Controllers\Api\SupportController as ApiSupportController;
 use App\Http\Controllers\Api\CurrencyPreferenceController;
@@ -29,6 +31,27 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Event::listen(MessageSending::class, function (MessageSending $event): void {
+            $message = $event->message;
+            if (! method_exists($message, 'getTextBody')) {
+                return;
+            }
+
+            if (is_string($message->getSubject())) {
+                $message->subject(\App\Services\Ai\AiTextFormatter::normalize($message->getSubject()));
+            }
+            if (is_string($message->getTextBody())) {
+                $message->text(\App\Services\Ai\AiTextFormatter::normalize($message->getTextBody()));
+            }
+            if (is_string($message->getHtmlBody())) {
+                $message->html(\App\Services\Ai\AiTextFormatter::normalize($message->getHtmlBody()));
+            }
+        });
+
+        Event::listen(NotificationSending::class, function (NotificationSending $event): void {
+            \App\Services\Ai\AiTextFormatter::normalizeNotification($event->notification);
+        });
+
         // Sanitize the configured sender before Symfony Mailer builds any
         // message. This protects every mail/notification in the application
         // from accidental CR/LF characters copied into .env/settings.
