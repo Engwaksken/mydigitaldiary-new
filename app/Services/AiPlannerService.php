@@ -102,7 +102,9 @@ class AiPlannerService
             throw new RuntimeException('Unknown or disabled AI provider: ' . $providerKey);
         }
 
-        $response = Http::withToken($apiKey)->post($provider->api_base_url, [
+        $url = \App\Services\Ai\ProviderEndpoint::chatCompletions((string) $provider->api_base_url, $apiKey);
+
+        $response = Http::withToken(trim($apiKey))->post($url, [
             'model' => $provider->default_model,
             'messages' => [
                 ['role' => 'user', 'content' => $prompt],

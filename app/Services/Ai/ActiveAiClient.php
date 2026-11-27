@@ -143,7 +143,7 @@ class ActiveAiClient
                 'max_tokens' => $maxTokens,
             ]);
 
-        $this->throwProviderError($response, $cfg['name']);
+        $this->throwProviderError($response, $cfg['name'], $url);
 
         return $this->decodeJson(
             (string) data_get($response->json(), 'choices.0.message.content', '')
@@ -176,7 +176,7 @@ class ActiveAiClient
                 ],
             ]);
 
-        $this->throwProviderError($response, $cfg['name']);
+        $this->throwProviderError($response, $cfg['name'], $url);
 
         return $this->decodeJson(
             collect($response->json('content', []))
@@ -206,7 +206,7 @@ class ActiveAiClient
             );
         }
 
-        $url = $this->normaliseCustomUrl($cfg['api_base_url']);
+        $url = ProviderEndpoint::chatCompletions($cfg['api_base_url'], $cfg['api_key']);
 
         $response = Http::withToken($cfg['api_key'])
             ->acceptJson()
@@ -221,34 +221,11 @@ class ActiveAiClient
                 'max_tokens' => $maxTokens,
             ]);
 
-        $this->throwProviderError($response, $cfg['name']);
+        $this->throwProviderError($response, $cfg['name'], $url);
 
         return $this->decodeJson(
             (string) data_get($response->json(), 'choices.0.message.content', '')
         );
-    }
-
-    private function normaliseCustomUrl(string $url): string
-    {
-        $url = rtrim(trim($url), '/');
-
-        // Preserve a complete endpoint exactly as configured.
-        if (
-            str_ends_with($url, '/chat/completions')
-            || str_contains($url, ':generateContent')
-            || str_ends_with($url, '/responses')
-        ) {
-            return $url;
-        }
-
-        // This application's custom-provider contract is OpenAI compatible.
-        if (str_ends_with($url, '/v1')) {
-            return $url . '/chat/completions';
-        }
-
-        // AiPlannerService historically sends directly to api_base_url.
-        // Keep that behaviour for arbitrary configured endpoints.
-        return $url;
     }
 
     private function normaliseChatCompletionsUrl(string $url): string
@@ -262,7 +239,7 @@ class ActiveAiClient
         return $url . '/chat/completions';
     }
 
-    private function throwProviderError(Response $response, string $providerName): void
+    private function throwProviderError(Response $response, string $providerName, string $url): void
     {
         if ($response->successful()) {
             return;
@@ -281,6 +258,7 @@ class ActiveAiClient
 
         throw new RuntimeException(
             $providerName . ' API error (' . $response->status() . '): ' . mb_substr($message, 0, 500)
+            . ' [endpoint: ' . $url . ']'
         );
     }
 
