@@ -118,6 +118,77 @@ class ActiveAiClient
         }
     }
 
+    /**
+     * Plain-text chat completion on the configured provider (shared key by
+     * default). $messages are prior turns: [['role' => 'user'|'assistant', 'content' => '...'], ...].
+     */
+    public function chat(string $system, array $messages, ?User $user = null, int $maxTokens = 650, float $temperature = 0.45, int $timeout = 30): string
+    {
+        $cfg = $this->configuration($user);
+
+        $messages = array_values(array_filter(
+            array_map(fn (array $m) => [
+                'role' => ($m['role'] ?? 'user') === 'assistant' ? 'assistant' : 'user',
+                'content' => trim((string) ($m['content'] ?? '')),
+            ], $messages),
+            fn (array $m) => $m['content'] !== ''
+        ));
+
+        if ($cfg['key'] === 'anthropic') {
+            $url = $cfg['api_base_url'] !== '' ? rtrim($cfg['api_base_url'], '/') : 'https://api.anthropic.com/v1/messages';
+            if (! str_ends_with($url, '/messages')) {
+                $url .= '/messages';
+            }
+
+            $response = Http::withHeaders([
+                    'x-api-key' => $cfg['api_key'],
+                    'anthropic-version' => '2023-06-01',
+                ])
+                ->acceptJson()
+                ->timeout($timeout)
+                ->post($url, [
+                    'model' => $cfg['model'] !== '' ? $cfg['model'] : 'claude-sonnet-4-6',
+                    'max_tokens' => $maxTokens,
+                    'temperature' => $temperature,
+                    'system' => $system,
+                    'messages' => $this->alternatingTurns($messages),
+                ]);
+
+            $this->throwProviderError($response, $cfg['name'], $url);
+
+            return trim(collect($response->json('content', []))->where('type', 'text')->pluck('text')->implode("\n"));
+        }
+
+        if ($cfg['key'] === 'openai') {
+            $url = $cfg['api_base_url'] !== ''
+                ? $this->normaliseChatCompletionsUrl($cfg['api_base_url'])
+                : 'https://api.openai.com/v1/chat/completions';
+            $model = $cfg['model'] !== '' ? $cfg['model'] : 'gpt-4o-mini';
+        } else {
+            if ($cfg['api_base_url'] === '' || $cfg['model'] === '') {
+                throw new RuntimeException(
+                    $cfg['name'] . ' has no API endpoint or default model configured in Admin AI Providers.'
+                );
+            }
+            $url = ProviderEndpoint::chatCompletions($cfg['api_base_url'], $cfg['api_key']);
+            $model = $cfg['model'];
+        }
+
+        $response = Http::withToken($cfg['api_key'])
+            ->acceptJson()
+            ->timeout($timeout)
+            ->post($url, [
+                'model' => $model,
+                'temperature' => $temperature,
+                'messages' => array_merge([['role' => 'system', 'content' => $system]], $messages),
+                'max_tokens' => $maxTokens,
+            ]);
+
+        $this->throwProviderError($response, $cfg['name'], $url);
+
+        return trim((string) data_get($response->json(), 'choices.0.message.content', ''));
+    }
+
     public function testConnection(?User $user = null): void
     {
         $this->json(
@@ -126,6 +197,27 @@ class ActiveAiClient
             $user,
             40
         );
+    }
+
+    /** Anthropic needs turns that start with the user and alternate roles. */
+    private function alternatingTurns(array $messages): array
+    {
+        $turns = [];
+
+        foreach ($messages as $message) {
+            if ($turns === [] && $message['role'] !== 'user') {
+                continue;
+            }
+
+            $last = array_key_last($turns);
+            if ($last !== null && $turns[$last]['role'] === $message['role']) {
+                $turns[$last]['content'] .= "\n\n" . $message['content'];
+            } else {
+                $turns[] = $message;
+            }
+        }
+
+        return $turns;
     }
 
     private function sendJson(array $cfg, string $system, string $prompt, int $maxTokens): array
