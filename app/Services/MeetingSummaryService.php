@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\Ai\AiTextFormatter;
+use App\Services\Ai\ProviderEndpoint;
 use App\Services\Ai\PromptGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -83,6 +84,11 @@ PROMPT;
 
     private function call(string $provider, string $apiKey, string $prompt): string
     {
+        // A WITU AI key only works against the WITU provider, never ChatGPT.
+        if (ProviderEndpoint::looksLikeWituKey($apiKey)) {
+            $provider = ProviderEndpoint::providerKeyForWituKey($provider) ?? $provider;
+        }
+
         return match ($provider) {
             'anthropic' => $this->callAnthropic($apiKey, $prompt),
             'openai' => $this->callOpenAi($apiKey, $prompt),
@@ -98,7 +104,9 @@ PROMPT;
             throw new RuntimeException('Unknown or disabled AI provider: ' . $providerKey);
         }
 
-        $response = Http::withToken($apiKey)->post($provider->api_base_url, [
+        $url = ProviderEndpoint::chatCompletions((string) $provider->api_base_url, $apiKey);
+
+        $response = Http::withToken(trim($apiKey))->timeout(120)->post($url, [
             'model' => $provider->default_model,
             'messages' => [
                 ['role' => 'user', 'content' => $prompt],

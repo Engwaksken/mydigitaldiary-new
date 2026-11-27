@@ -4,10 +4,16 @@ namespace App\Services;
 
 use App\Models\SiteSetting;
 use App\Models\SupportConversation;
-use Illuminate\Support\Facades\Http;
+use App\Services\Ai\ActiveAiClient;
+use RuntimeException;
+use Throwable;
 
 class SupportAiService
 {
+    public function __construct(private readonly ActiveAiClient $ai)
+    {
+    }
+
     public function reply(SupportConversation $conversation, string $question): ?string
     {
         if ($conversation->assigned_to_user_id || $conversation->status === 'human') {
@@ -16,7 +22,9 @@ class SupportAiService
 
         $settings = SiteSetting::current();
 
-        if (! $settings->hasDefaultAiKey() || strtolower((string) $settings->default_ai_provider) !== 'openai') {
+        // Any configured provider works (ChatGPT, Claude, WITU AI or another
+        // OpenAI-compatible one); only a missing shared key hands straight over.
+        if (! $settings->hasDefaultAiKey() || trim((string) $settings->default_ai_provider) === '') {
             return 'Thanks for your message. I have saved it for the support team, and a support person will attend to you as soon as possible.';
         }
 
@@ -61,28 +69,16 @@ Accuracy and safety:
 - Never claim to have completed an action unless the system actually performed it.
 PROMPT;
 
-        $messages = array_merge(
-            [['role' => 'system', 'content' => $systemPrompt]],
-            $history,
-            [['role' => 'user', 'content' => trim($question)]]
-        );
+        $messages = array_merge($history, [['role' => 'user', 'content' => trim($question)]]);
 
-        $response = Http::withToken($settings->default_ai_api_key)
-            ->timeout(30)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4o-mini',
-                'messages' => $messages,
-                'temperature' => 0.45,
-                'max_tokens' => 650,
-            ]);
-
-        if (! $response->successful()) {
-            report(new \RuntimeException('Support AI failed: '.$response->status().' '.$response->body()));
+        try {
+            // Shared key only: support replies are the site's, not the user's.
+            $reply = $this->ai->chat($systemPrompt, $messages, null, 650, 0.45, 30);
+        } catch (Throwable $e) {
+            report(new RuntimeException('Support AI failed: ' . $e->getMessage(), 0, $e));
 
             return 'I could not prepare an automated answer just now. Your message has been saved for support follow-up.';
         }
-
-        $reply = trim((string) data_get($response->json(), 'choices.0.message.content'));
 
         return $reply !== '' ? self::plainText($reply) : null;
     }
