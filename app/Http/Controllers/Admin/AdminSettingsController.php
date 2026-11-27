@@ -13,6 +13,7 @@ use App\Models\MeetingPlatformConfig;
 use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\Ai\ActiveAiClient;
+use App\Services\Ai\ProviderEndpoint;
 use App\Services\LegalContentFormatter;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -939,6 +940,33 @@ class AdminSettingsController extends Controller
         return mb_substr($key, 0, 4) . '…' . mb_substr($key, -4);
     }
 
+    /**
+     * Explains a 401 for the shared key, naming the endpoint that refused it.
+     * For WITU AI the usual cause is the endpoint, not the key: only
+     * https://ai.witulibrary.org/gw/v1 accepts keys issued by the WITU AI CMS.
+     */
+    private function describeSharedKeyRejection(string $rawMessage): string
+    {
+        $endpoint = preg_match('/\[endpoint: ([^\]]+)\]/', $rawMessage, $m) === 1 ? trim($m[1]) : '';
+        $storedKey = trim((string) SiteSetting::current()->default_ai_api_key);
+        $where = $endpoint !== '' ? ' by ' . $endpoint : '';
+        $masked = ' Stored key: ' . $this->maskApiKey($storedKey) . '.';
+
+        if (ProviderEndpoint::isWitu($endpoint) || ProviderEndpoint::looksLikeWituKey($storedKey)) {
+            if (ProviderEndpoint::looksLikeWituKey($storedKey) && ! ProviderEndpoint::isWituKey($storedKey)) {
+                return 'The shared WITU AI key was rejected (HTTP 401)' . $where . '.' . $masked
+                    . ' It is not a complete WITU AI key (uhk_live_… or uhk_test_…): it may have been cut off or copied with extra characters. Paste the full key in Admin Settings → AI Configuration → Shared API Key, then retry.';
+            }
+
+            return 'The shared WITU AI key was rejected (HTTP 401)' . $where . '.' . $masked
+                . ' Set the API endpoint of this provider in AI Providers to ' . ProviderEndpoint::WITU_BASE_URL
+                . ' (not /v1 or the bare host). If it already is, the key has been revoked, has expired or belongs to another environment: issue a new key for this project in the WITU AI dashboard, make sure the project allows the "chat" task, save the key in Admin Settings → AI Configuration → Shared API Key, then retry.';
+        }
+
+        return 'The shared admin API key was rejected (HTTP 401)' . $where . '.' . $masked
+            . ' Check the key saved in Admin Settings → AI Configuration and the API endpoint of the provider in AI Providers, then retry.';
+    }
+
     private function describeAiConnectionFailure(Throwable $e, ?User $user = null): string
     {
         $message = mb_strtolower(trim((string) $e->getMessage()));
@@ -968,7 +996,7 @@ class AdminSettingsController extends Controller
         if (str_contains($message, 'api error (401)')) {
             return $personal
                 ? 'Your personal API key was rejected (HTTP 401). Set a valid active key under Profile → API Keys, then retry.'
-                : $keyLabel . ' was rejected (HTTP 401). Check the key saved in Admin Settings → AI Configuration, then retry.';
+                : $this->describeSharedKeyRejection((string) $e->getMessage());
         }
 
         if (str_contains($message, 'api error (403)')) {
