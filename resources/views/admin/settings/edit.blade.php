@@ -49,6 +49,12 @@
             || old('privacy_policy_content') !== null
         ) {
             $currentTab = 'privacy';
+        } elseif (
+            old('settings_section') === 'ai'
+            || str_starts_with((string) old('modal_id'), 'ai-provider-')
+            || $errors->hasAny(['default_ai_provider', 'default_ai_api_key', 'ai_connection', 'provider'])
+        ) {
+            $currentTab = 'ai';
         } elseif (old('appreciation_weekly_day') !== null) {
             $currentTab = 'weekly-email';
         } elseif (
@@ -693,7 +699,8 @@
                             <select
                                 id="default_ai_provider"
                                 name="default_ai_provider"
-                                class="pm-input">
+                                @error('default_ai_provider') aria-invalid="true" aria-describedby="default_ai_provider-error" @enderror
+                                class="pm-input @error('default_ai_provider') is-invalid @enderror">
 
                                 <option
                                     value=""
@@ -716,6 +723,12 @@
                                     @endif
                                 @endforeach
                             </select>
+
+                            @error('default_ai_provider')
+                                <p id="default_ai_provider-error" role="alert" class="text-sm text-rose-600 mt-1">
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
 
                         <div>
@@ -772,7 +785,8 @@
                                 placeholder="{{ $hasDefaultAiKey
                                     ? 'Configured - leave blank to keep the existing key'
                                     : 'Enter API key' }}"
-                                class="pm-input pr-11">
+                                @error('default_ai_api_key') aria-invalid="true" aria-describedby="default_ai_api_key-error" @enderror
+                                class="pm-input pr-11 @error('default_ai_api_key') is-invalid @enderror">
 
                             <button
                                 type="button"
@@ -783,8 +797,15 @@
                             </button>
                         </div>
 
+                        @error('default_ai_api_key')
+                            <p id="default_ai_api_key-error" role="alert" class="text-sm text-rose-600 mt-1">
+                                {{ $message }}
+                            </p>
+                        @enderror
+
                         <p class="text-xs text-slate-400 mt-1">
-                            Leave blank to keep the current stored key.
+                            Leave blank to keep the current stored key. For WITU AI, use a key from the WITU AI dashboard
+                            (uhk_live_…) with a WITU AI provider whose endpoint is {{ \App\Services\Ai\ProviderEndpoint::WITU_BASE_URL }}.
                         </p>
                     </div>
 

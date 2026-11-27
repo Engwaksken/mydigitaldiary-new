@@ -46,6 +46,20 @@ class ActiveAiClient
             );
         }
 
+        // A WITU AI key sent to another provider (e.g. ChatGPT -> api.openai.com)
+        // is always rejected with 401, so use the WITU provider instead.
+        if (ProviderEndpoint::looksLikeWituKey($apiKey) && ! ProviderEndpoint::providerIsWitu($providerKey)) {
+            $wituKey = ProviderEndpoint::providerKeyForWituKey($providerKey);
+
+            if ($wituKey === null) {
+                throw new RuntimeException(
+                    'A WITU AI key is saved but the Default Provider (' . $providerKey . ') is not WITU AI and no WITU AI provider is enabled.'
+                );
+            }
+
+            $providerKey = $wituKey;
+        }
+
         $provider = AiProvider::query()
             ->where('key', $providerKey)
             ->first();

@@ -78,6 +78,11 @@ class AiPlannerService
 
     private function call(string $provider, string $apiKey, string $prompt): string
     {
+        // A WITU AI key only works against the WITU provider, never ChatGPT.
+        if (\App\Services\Ai\ProviderEndpoint::looksLikeWituKey($apiKey)) {
+            $provider = \App\Services\Ai\ProviderEndpoint::providerKeyForWituKey($provider) ?? $provider;
+        }
+
         // The snapshot includes text other people wrote (calendar invites,
         // transcripts, copied meetings), so the saved plan is cleaned too.
         return PromptGuard::cleanOutput(AiTextFormatter::normalize(match ($provider) {

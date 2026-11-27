@@ -2,6 +2,8 @@
 
 namespace App\Services\Ai;
 
+use App\Models\AiProvider;
+
 /**
  * Turns the endpoint an admin typed into AI Providers into the URL that
  * OpenAI-compatible chat requests are sent to.
@@ -69,5 +71,46 @@ final class ProviderEndpoint
     public static function looksLikeWituKey(string $apiKey): bool
     {
         return str_starts_with(trim($apiKey), 'uhk_');
+    }
+
+    /** Whether the provider stored under $providerKey points at WITU AI. */
+    public static function providerIsWitu(?string $providerKey): bool
+    {
+        $providerKey = strtolower(trim((string) $providerKey));
+
+        if ($providerKey === '' || in_array($providerKey, ['openai', 'anthropic'], true)) {
+            return false;
+        }
+
+        $provider = AiProvider::query()->where('key', $providerKey)->first();
+
+        return $provider !== null && self::isWitu((string) $provider->api_base_url);
+    }
+
+    /** The first enabled provider whose endpoint is WITU AI, if any. */
+    public static function enabledWituProvider(): ?AiProvider
+    {
+        return AiProvider::query()
+            ->where('is_enabled', true)
+            ->whereNotIn('key', ['openai', 'anthropic'])
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->first(fn (AiProvider $provider) => self::isWitu((string) $provider->api_base_url));
+    }
+
+    /**
+     * A WITU key only works against a WITU provider. When the selected
+     * provider is something else (typically the built-in ChatGPT, which
+     * would send the key to api.openai.com), use the enabled WITU provider.
+     * Returns the provider key to use, or null when no WITU provider exists.
+     */
+    public static function providerKeyForWituKey(string $selectedProviderKey): ?string
+    {
+        if (self::providerIsWitu($selectedProviderKey)) {
+            return strtolower(trim($selectedProviderKey));
+        }
+
+        return self::enabledWituProvider()?->key;
     }
 }
