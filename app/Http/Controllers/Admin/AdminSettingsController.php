@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Throwable;
 
@@ -372,6 +373,10 @@ class AdminSettingsController extends Controller
             (int) $data[
                 'default_ai_free_limit_per_month'
             ];
+
+        if ($request->input('settings_section') === 'ai') {
+            $this->assertAiProviderMatchesKey($data);
+        }
 
         $data['monthly_price'] =
             (float) $data['monthly_price'];
@@ -908,7 +913,7 @@ class AdminSettingsController extends Controller
 
             return redirect()
                 ->route('admin.settings.edit', ['tab' => 'ai'])
-                ->withErrors(['ai_connection' => $this->describeAiConnectionFailure($e)]);
+                ->withErrors([$this->aiConnectionErrorField($e) => $this->describeAiConnectionFailure($e)]);
         }
     }
 
@@ -938,6 +943,71 @@ class AdminSettingsController extends Controller
         }
 
         return mb_substr($key, 0, 4) . '…' . mb_substr($key, -4);
+    }
+
+    /**
+     * A WITU AI key only works with a provider whose endpoint is WITU AI, and
+     * a WITU provider only accepts WITU keys. Reject a mismatched pair on the
+     * field that needs changing, so the AI tab can highlight it.
+     */
+    private function assertAiProviderMatchesKey(array $data): void
+    {
+        $settings = SiteSetting::current();
+        $provider = filled($data['default_ai_provider'] ?? null)
+            ? trim((string) $data['default_ai_provider'])
+            : (string) $settings->default_ai_provider;
+        $newKey = trim((string) ($data['default_ai_api_key'] ?? ''));
+        $key = $newKey !== '' ? $newKey : trim((string) $settings->default_ai_api_key);
+
+        if ($key === '' || $provider === '') {
+            return;
+        }
+
+        $providerIsWitu = ProviderEndpoint::providerIsWitu($provider);
+
+        if (ProviderEndpoint::looksLikeWituKey($key) && ! $providerIsWitu) {
+            $witu = ProviderEndpoint::enabledWituProvider();
+
+            throw ValidationException::withMessages([
+                'default_ai_provider' => $witu
+                    ? 'The Shared API Key is a WITU AI key, so the Default Provider must be ' . $witu->name . ', not ' . $this->aiProviderName($provider) . '.'
+                    : 'The Shared API Key is a WITU AI key, but no WITU AI provider is set up. Add one under AI Providers (Add Provider → Use WITU AI preset), then choose it as the Default Provider.',
+            ]);
+        }
+
+        if ($providerIsWitu && $newKey !== '' && ! ProviderEndpoint::looksLikeWituKey($newKey)) {
+            throw ValidationException::withMessages([
+                'default_ai_api_key' => 'WITU AI only accepts keys issued by the WITU AI dashboard (they start with uhk_live_ or uhk_test_).',
+            ]);
+        }
+    }
+
+    private function aiProviderName(string $key): string
+    {
+        return AiProvider::query()->where('key', $key)->value('name')
+            ?: match ($key) {
+                'openai' => 'ChatGPT',
+                'anthropic' => 'Claude',
+                default => $key,
+            };
+    }
+
+    /** The AI tab field a connection-test failure belongs to, for highlighting. */
+    private function aiConnectionErrorField(Throwable $e): string
+    {
+        $message = mb_strtolower($e->getMessage());
+
+        return match (true) {
+            str_contains($message, 'witu ai key is saved'),
+            str_contains($message, 'no default ai provider'),
+            str_contains($message, 'is disabled'),
+            str_contains($message, 'missing from ai providers') => 'default_ai_provider',
+            str_contains($message, 'api error (401)'),
+            str_contains($message, 'api error (403)'),
+            str_contains($message, 'api error (429)'),
+            str_contains($message, 'incomplete') => 'default_ai_api_key',
+            default => 'ai_connection',
+        };
     }
 
     /**
@@ -972,6 +1042,10 @@ class AdminSettingsController extends Controller
         $message = mb_strtolower(trim((string) $e->getMessage()));
         $personal = $this->usesPersonalOpenAiKey($user);
         $keyLabel = $personal ? 'Your personal API key' : 'The shared admin API key';
+
+        if (str_contains($message, 'witu ai key is saved')) {
+            return 'The Shared API Key is a WITU AI key, but the Default Provider is not WITU AI, so the key was sent to the wrong service. Add a WITU AI provider under AI Providers (Add Provider → Use WITU AI preset), choose it as the Default Provider, save, then retry.';
+        }
 
         if (str_contains($message, 'no default ai provider')) {
             return 'No shared AI provider or API key is configured. Select a Default Provider and enter the Shared API Key in AI Configuration, then retry.';

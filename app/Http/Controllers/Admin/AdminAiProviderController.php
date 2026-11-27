@@ -22,37 +22,42 @@ class AdminAiProviderController extends Controller
         $data = $this->validated($request);
         AiProvider::create($data);
 
-        return back()->with('success', 'AI provider added.');
+        return $this->backToAiTab()->with('success', 'AI provider added.');
     }
 
     public function update(Request $request, AiProvider $aiProvider): RedirectResponse
     {
         if ($aiProvider->isBuiltIn()) {
-            return back()->withErrors(['provider' => 'Claude and ChatGPT are built-in and cannot be edited here.']);
+            return $this->backToAiTab()->withErrors(['provider' => 'Claude and ChatGPT are built-in and cannot be edited here.']);
         }
 
         $data = $this->validated($request, $aiProvider->id);
         $aiProvider->update($data);
 
-        return back()->with('success', 'AI provider updated.');
+        return $this->backToAiTab()->with('success', 'AI provider updated.');
     }
 
     public function toggle(AiProvider $aiProvider): RedirectResponse
     {
         $aiProvider->update(['is_enabled' => ! $aiProvider->is_enabled]);
 
-        return back()->with('success', $aiProvider->name . ' is now ' . ($aiProvider->is_enabled ? 'enabled' : 'disabled') . '.');
+        return $this->backToAiTab()->with('success', $aiProvider->name . ' is now ' . ($aiProvider->is_enabled ? 'enabled' : 'disabled') . '.');
     }
 
     public function destroy(AiProvider $aiProvider): RedirectResponse
     {
         if ($aiProvider->isBuiltIn()) {
-            return back()->withErrors(['provider' => 'Claude and ChatGPT are built-in and cannot be removed.']);
+            return $this->backToAiTab()->withErrors(['provider' => 'Claude and ChatGPT are built-in and cannot be removed.']);
         }
 
         $aiProvider->delete();
 
-        return back()->with('success', 'AI provider removed.');
+        return $this->backToAiTab()->with('success', 'AI provider removed.');
+    }
+
+    private function backToAiTab(): RedirectResponse
+    {
+        return redirect()->route('admin.settings.edit', ['tab' => 'ai']);
     }
 
     private function validated(Request $request, ?int $ignoreId = null): array
